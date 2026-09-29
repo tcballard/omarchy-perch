@@ -66,4 +66,6 @@ The toolkit validator reports zero errors/warnings/security findings, with revie
 
 No live claim is made for these new features until those results are reported. CI status and the final candidate SHA are recorded at publication.
 
-Candidate preparation also passes the inspected upstream `omarchy-plugin-validate` command (manifest validation only) and the static release preflight using the unchanged scripts in the resolved sibling layout. Its two advisory capability warnings are the reviewed FileView read and CI pip install noted above. Full host validation is still pending.
+Candidate preparation also passes the inspected upstream `omarchy-plugin-validate` command (manifest validation only) and the static release preflight using the unchanged scripts in the resolved sibling layout. Its advisory capability categories are the reviewed FileView read and CI dependency installation noted above. Full host validation is still pending.
+
+The first candidate CI run exposed missing libEGL.so.1 on the Ubuntu runner before Qt tests could import. CI now installs libegl1/libopengl0 explicitly; the Qt tests remain required. This CI-only dependency setup does not run during plugin installation.
