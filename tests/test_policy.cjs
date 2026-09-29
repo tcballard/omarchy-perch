@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const p = require('../MediaPolicy.js');
+const paused = {dbusName:'a',isPlaying:false,canControl:true,canPlay:true,canPause:false};
+const playing = {dbusName:'b',isPlaying:true,canControl:true,canPlay:false,canPause:true,canGoNext:true};
+assert.equal(p.select([], ''), null);
+assert.equal(p.select([paused,playing], ''), playing);
+assert.equal(p.select([paused,playing], 'a'), paused);
+assert.equal(p.select([playing], 'a'), playing); // disappearing selected player
+assert.equal(p.select([{dbusName:'org.mpris.MediaPlayer2.playerctld',isPlaying:true},playing], ''), playing);
+assert.equal(p.allowed(paused,'toggle'),true);
+assert.equal(p.allowed(playing,'toggle'),true);
+assert.equal(p.allowed({...playing,canPause:false},'toggle'),false);
+assert.equal(p.allowed({...playing,canControl:false},'next'),false);
+assert.equal(p.allowed(playing,'next'),true);
+assert.equal(p.allowed(playing,'previous'),false);
+assert.equal(p.allowed(null,'toggle'),false);
+assert.equal(p.allowed(playing,'arbitrary'),false);
+for (const source of ['https://example.com/art','http://127.0.0.1/a','data:image/png,xxx','image://provider/a','file://host/a','']) assert.equal(p.localArt(source),'');
+assert.equal(p.localArt('file:///tmp/cover.png'),'file:///tmp/cover.png');
+assert.equal(p.localArt('file:///'+ 'x'.repeat(4096)), '');
+assert.equal(p.bounded('x'.repeat(1000),'fallback').length,256);
+assert.equal(p.bounded(null,'fallback'),'fallback');
+assert.equal(p.time(84),'1:24'); assert.equal(p.time(-1),'0:00'); assert.equal(p.time(Infinity),'0:00');
+assert.equal(p.progress(200,100),1); assert.equal(p.progress(-1,100),0); assert.equal(p.progress(12,0),0);
+for (const input of ['{','null','[]','1','true','"hi"',' '.repeat(2049)]) assert.deepEqual(p.payload(input),{});
+assert.deepEqual(p.payload('{"demo":true}'),{demo:true});
+console.log('Media policy regression assertions passed');

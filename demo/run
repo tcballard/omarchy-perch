@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+state="${1:-playing}"
+case "$state" in playing|paused|empty) ;; *) printf 'Usage: demo/run [playing|paused|empty]\n' >&2; exit 2;; esac
+command -v omarchy-shell >/dev/null || { printf 'Run this inside an Omarchy Quattro session with the plugin enabled.\n' >&2; exit 1; }
+payload=$(python3 -c 'import json,sys;print(json.dumps({"demo":True,"state":sys.argv[1]}))' "$state")
+omarchy-shell shell summon io.github.tcballard.perch "$payload"

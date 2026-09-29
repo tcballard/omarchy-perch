@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.tcballard.perch",
+  "name": "Perch",
+  "version": "0.1.0-dev",
+  "author": "Tom Ballard",
+  "license": "MIT",
+  "description": "A quiet, expanding now-playing notch for Omarchy.",
+  "kinds": [
+    "panel",
+    "service"
+  ],
+  "entryPoints": {
+    "panel": "Panel.qml",
+    "service": "Service.qml"
+  },
+  "keepLoaded": true
+}
