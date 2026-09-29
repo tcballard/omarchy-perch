@@ -3,7 +3,7 @@ import mimetypes
 from pathlib import Path
 import shutil
 from urllib.parse import urlsplit,unquote
-from .storage import Store,read_file
+from .storage import Store,read_head
 from .process import launch
 
 def local(value):
@@ -43,7 +43,7 @@ def handle(op,p):
             if op=='shelf-preview':
                 mime=mimetypes.guess_type(path.name)[0] or ''
                 if path.is_file() and (mime.startswith('text/') or path.suffix.lower() in ('.md','.log','.json','.qml','.py','.rs','.js','.toml','.yaml','.yml','.ics')):
-                    text=read_file(path,65536).decode('utf-8',errors='replace')[:8000]
+                    text=read_head(path,65536).decode('utf-8',errors='replace')[:8000]
                     return {'preview':text,'kind':'text','name':path.name}
                 return {'preview':path.as_uri() if mime in ('image/png','image/jpeg','image/webp') and path.stat().st_size<=2097152 else '', 'kind':'image' if mime in ('image/png','image/jpeg','image/webp') and path.stat().st_size<=2097152 else 'external','name':path.name}
             if op=='shelf-share':

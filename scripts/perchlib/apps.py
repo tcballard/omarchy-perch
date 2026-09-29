@@ -9,10 +9,10 @@ def catalog():
     apps={}
     for folder in [Path('/usr/share/applications'),Path.home()/'.local/share/applications']:
         for path in islice(folder.glob('*.desktop'),1200):
-            if not re.fullmatch(r'[A-Za-z0-9._-]+\.desktop',path.name):continue
+            if not re.fullmatch(r'[A-Za-z0-9._][A-Za-z0-9._-]*\.desktop',path.name):continue
             try:
                 config=configparser.ConfigParser(interpolation=None,strict=False)
-                config.read_string(read_file(path,65536).decode());entry=config['Desktop Entry']
+                config.read_string(read_file(path,65536,follow=True).decode());entry=config['Desktop Entry']
                 if entry.get('Type')!='Application' or entry.get('Hidden')=='true' or entry.get('NoDisplay')=='true':continue
                 apps[path.name]={'id':path.name,'name':entry.get('Name',path.stem)[:100]}
             except (OSError,ValueError,KeyError,configparser.Error):continue

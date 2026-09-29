@@ -5,7 +5,7 @@ Item {
     property var preferences: null
     property var workspace: null
     readonly property var pins: preferences && Array.isArray(preferences.record.pins) ? preferences.record.pins.slice(0, 8).filter(function (p) {
-        return p && /^[A-Za-z0-9._-]+\.desktop$/.test(p.id) && typeof p.name === "string";
+        return p && /^[A-Za-z0-9._][A-Za-z0-9._-]*\.desktop$/.test(p.id) && typeof p.name === "string";
     }) : []
     function pin(app) {
         if (!preferences || !app)

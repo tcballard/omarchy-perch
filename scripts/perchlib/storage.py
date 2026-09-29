@@ -8,8 +8,9 @@ import tempfile
 
 LIMIT = 262144
 
-def read_file(path, limit=LIMIT):
-    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+def read_file(path, limit=LIMIT, follow=False):
+    """Read a regular file of at most `limit` bytes. Dotfile-managed configuration may be a symlink."""
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | (0 if follow else os.O_NOFOLLOW))
     with os.fdopen(fd, 'rb') as source:
         info = os.fstat(source.fileno())
         if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
@@ -18,6 +19,14 @@ def read_file(path, limit=LIMIT):
         if len(data) > limit:
             raise ValueError('File grew beyond the size limit')
         return data
+
+def read_head(path, limit):
+    """The first `limit` bytes of a regular file of any size, for previews."""
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    with os.fdopen(fd, 'rb') as source:
+        if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+            raise ValueError('Only regular files can be previewed')
+        return source.read(limit)
 
 class Store:
     def __init__(self, name):

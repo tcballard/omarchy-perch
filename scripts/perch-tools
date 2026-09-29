@@ -32,6 +32,6 @@ if __name__=='__main__':
         result={'ok':True,**main(sys.argv[1],payload)}
         output=json.dumps(result,ensure_ascii=True)
         if len(output)>131072:raise ValueError('Result exceeds limit')
-    except (OSError,ValueError,TypeError,KeyError,RecursionError,subprocess.SubprocessError,http.client.HTTPException) as e:
+    except (OSError,ValueError,TypeError,KeyError,AttributeError,IndexError,RecursionError,subprocess.SubprocessError,http.client.HTTPException) as e:
         output=json.dumps({'ok':False,'error':str(e)[:240]})
     print(output)

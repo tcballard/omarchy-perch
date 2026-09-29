@@ -23,9 +23,12 @@ def run(argv):
 def wait_discovered():
     # rescanPlugins queues work; match Omarchy's installer discovery gate.
     for attempt in range(40):
-        result = subprocess.run(['omarchy', 'plugin', 'list', '--json'],
-                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                text=True, timeout=2)
+        try:
+            result = subprocess.run(['omarchy', 'plugin', 'list', '--json'],
+                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                    text=True, timeout=2)
+        except subprocess.TimeoutExpired:
+            continue
         if result.returncode == 0 and len(result.stdout) <= 1024 * 1024:
             try:
                 entries = json.loads(result.stdout)
@@ -67,8 +70,13 @@ def main():
         if 'io.github.tcballard.perch' not in enabled:
             raise ValueError('Enable Perch before enabling its notification companion.')
         for manifest in base.glob('*/manifest.json'):
-            m = json.loads(manifest.read_text())
-            if m.get('id') != ID and m.get('id') in enabled and m.get('omarchy', {}).get('clonedFrom') == source_id:
+            try:
+                m = json.loads(manifest.read_text())
+                if not isinstance(m, dict):
+                    continue
+            except (OSError, ValueError):
+                continue  # Someone else's broken plugin is not Perch's problem.
+            if m.get('id') != ID and m.get('id') in enabled and isinstance(m.get('omarchy'), dict) and m['omarchy'].get('clonedFrom') == source_id:
                 raise ValueError('Another notification clone is enabled. Disable it explicitly first.')
     print(('Remove' if args.remove else 'Install/update') + f' {target}')
     print('Enabling replaces the corresponding Omarchy component. Disabling uses Omarchy clone restoration; an originally disabled source stays disabled.')
@@ -84,6 +92,7 @@ def main():
         print('Removed. Restart the shell if the notification owner has not changed yet.')
         return
     base.mkdir(parents=True, exist_ok=True)
+    fresh = not target.exists()
     stage = Path(tempfile.mkdtemp(prefix='.perch-notifications-', dir=base))
     try:
         hashes = {}
@@ -108,8 +117,18 @@ def main():
         if stage.exists():
             shutil.rmtree(stage)
     run(['omarchy-shell', 'shell', 'rescanPlugins'])
-    wait_discovered()
-    run(['omarchy', 'plugin', 'enable', ID])
+    try:
+        wait_discovered()
+        run(['omarchy', 'plugin', 'enable', ID])
+    except (OSError, ValueError, subprocess.SubprocessError):
+        if fresh:
+            # Never leave a discovered but unenabled clone behind on a first install.
+            shutil.rmtree(target, ignore_errors=True)
+            try:
+                run(['omarchy-shell', 'shell', 'rescanPlugins'])
+            except (OSError, ValueError, subprocess.SubprocessError):
+                pass
+        raise
     print('Companion enabled. Open Perch → Notifications → Refresh. After updates, run: omarchy restart shell')
     print('To restore built-in notifications: omarchy plugin disable ' + ID)
 

@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory() as directory:
     log=home/'commands'
     for command in ['omarchy','omarchy-shell']:
         executable=bins/command
-        executable.write_text('#!/usr/bin/env python3\nimport json,os,sys\nwith open(os.environ["TEST_LOG"],"a") as f:f.write(json.dumps(sys.argv[1:])+"\\n")\nprint(json.dumps([{"id":"io.github.tcballard.perch-notifications"},{"id":"io.github.tcballard.perch-osd"}]) if sys.argv[1:] == ["plugin","list","--json"] else "ok" if sys.argv[1:3] != ["shell","rescanPlugins"] else "")\n')
+        executable.write_text('#!/usr/bin/env python3\nimport json,os,sys\nwith open(os.environ["TEST_LOG"],"a") as f:f.write(json.dumps(sys.argv[1:])+"\\n")\nif os.environ.get("TEST_FAIL_ENABLE") and sys.argv[1:3]==["plugin","enable"]:sys.exit(1)\nprint(json.dumps([{"id":"io.github.tcballard.perch-notifications"},{"id":"io.github.tcballard.perch-osd"}]) if sys.argv[1:] == ["plugin","list","--json"] else "ok" if sys.argv[1:3] != ["shell","rescanPlugins"] else "")\n')
         executable.chmod(0o755)
     env=dict(os.environ,HOME=str(home),PATH=str(bins)+os.pathsep+os.environ['PATH'],TEST_LOG=str(log))
     env.pop('CODEX_HOME',None);env.pop('CLAUDE_CONFIG_DIR',None)
@@ -111,4 +111,14 @@ with tempfile.TemporaryDirectory() as directory:
     assert result['status']=='failed' and 'Enable Perch before' in result['message'],result
     assert 'shell.json' not in result['message']
     assert tools('health',{})['health']['job']['status']=='failed'
+    # A corrupt job file never crashes health; a failed enable on a first install leaves no clone behind.
+    (home/'state/omarchy-perch/integrations.json').write_text('[]')
+    assert tools('health',{})['health']['job']=={'started':0}
+    (config/'shell.json').write_text(json.dumps({'plugins':[{'id':'io.github.tcballard.perch'}]}))
+    (config/'plugins/broken').mkdir();(config/'plugins/broken/manifest.json').write_text('[1]')
+    assert run('perch-notifications-setup','--kind','osd','--remove','--apply').returncode==0
+    failing=dict(env,TEST_FAIL_ENABLE='1')
+    outcome=subprocess.run(['python3',str(root/'scripts/perch-notifications-setup'),'--kind','osd','--apply'],text=True,capture_output=True,env=failing,timeout=20)
+    assert outcome.returncode!=0 and not osd.exists(),outcome.stderr
+    assert run('perch-notifications-setup','--kind','osd','--apply').returncode==0 and osd.exists()
 print('rc2: reversible setup, owned edits, notifier preservation, silent hooks and status-only payloads passed.')

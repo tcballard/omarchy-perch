@@ -147,4 +147,8 @@ Live checks for rc.5 on the XPS:
 4. Drag a shelf card into a file manager and a browser; click each card button; both must work.
 5. Start a one-minute timer, run `omarchy restart shell` after it ends but within 15 minutes with sound/notification enabled: one alert; repeat after 15 minutes: none.
 
+A second adversarial pass over the helper scripts (isolated HOME, fake `omarchy` commands) found and fixed: recurrence expansion proportional to the age of a series, which put a realistic Google export past the 12 s helper deadline on add; quoted and Outlook timezone IDs dropping events; `DURATION` ignored; alarm properties merged into events; brightnessctl selecting a keyboard LED when no backlight exists; a first companion install leaving its copy behind when enable failed; previews refusing files over 64 KiB; `perch-task run` detaching from the terminal; hard-link publication failing on vfat; a corrupt job file crashing health. All have tests in `tests/test_rc3.py` and `tests/test_rc2.py`. The same pass verified store locking under concurrent writers, transfer cleanup, redirect handling and hook silence as correct.
+
+Additional rc.5 live checks: add a real Outlook or Google export with old weekly series and confirm the agenda appears within a second and the Setup brightness line reads “available” only on the XPS panel, not a keyboard LED.
+
 Live results for rc.5: **not run in the build environment**.

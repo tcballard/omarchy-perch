@@ -49,6 +49,33 @@ with tempfile.TemporaryDirectory() as temporary:
         assert events[0]['allDay'] is False
         allday=b'BEGIN:VCALENDAR\nBEGIN:VEVENT\nDTSTART;VALUE=DATE:20260929\nSUMMARY:Holiday\nEND:VEVENT\nEND:VCALENDAR'
         assert calendar.parse(allday,now)[0][0]['allDay'] is True
+        def ics(body):return ('BEGIN:VCALENDAR\n'+body+'\nEND:VCALENDAR').encode()
+        # Quoted TZIDs (Google) and VTIMEZONE-defined names (Outlook/Exchange) resolve, with DST.
+        found,skipped=calendar.parse(ics('BEGIN:VEVENT\nDTSTART;TZID="Europe/London":20260929T110000\nDTEND;TZID="Europe/London":20260929T120000\nSUMMARY:Quoted\nEND:VEVENT'),now)
+        assert skipped==0 and found[0]['start']==int(dt.datetime(2026,9,29,10,tzinfo=dt.timezone.utc).timestamp()*1000)
+        eastern='BEGIN:VTIMEZONE\nTZID:Eastern Standard Time\nBEGIN:STANDARD\nDTSTART:16011104T020000\nRRULE:FREQ=YEARLY;BYDAY=1SU;BYMONTH=11\nTZOFFSETFROM:-0400\nTZOFFSETTO:-0500\nEND:STANDARD\nBEGIN:DAYLIGHT\nDTSTART:16010311T020000\nRRULE:FREQ=YEARLY;BYDAY=2SU;BYMONTH=3\nTZOFFSETFROM:-0500\nTZOFFSETTO:-0400\nEND:DAYLIGHT\nEND:VTIMEZONE\n'
+        for stamp,probe,hour in (('20260929',dt.datetime(2026,9,20,tzinfo=dt.timezone.utc),14),('20261120',dt.datetime(2026,11,10,tzinfo=dt.timezone.utc),15)):
+            found,skipped=calendar.parse(ics(eastern+f'BEGIN:VEVENT\nDTSTART;TZID=Eastern Standard Time:{stamp}T100000\nDTEND;TZID=Eastern Standard Time:{stamp}T110000\nSUMMARY:Outlook\nEND:VEVENT'),probe)
+            assert skipped==0 and dt.datetime.fromtimestamp(found[0]['start']/1000,dt.timezone.utc).hour==hour,(stamp,found,skipped)
+        # DURATION, alarm sub-components and prose punctuation after a link.
+        found,skipped=calendar.parse(ics('BEGIN:VEVENT\nDTSTART:20260929T100000Z\nDURATION:PT15M\nDESCRIPTION:Join https://meet.google.com/abc-defg-hij\\, dial in\nBEGIN:VALARM\nSUMMARY:Alarm summary\nDESCRIPTION:https://example.net/alarm\nEND:VALARM\nEND:VEVENT'),now)
+        assert skipped==0 and found[0]['title']=='Untitled event' and (found[0]['end']-found[0]['start'])==900000 and found[0]['url']=='https://meet.google.com/abc-defg-hij'
+        found,_=calendar.parse(ics('BEGIN:VEVENT\nDTSTART;VALUE=DATE:20260929\nDURATION:P3D\nSUMMARY:Trip\nEND:VEVENT'),now)
+        assert (found[0]['end']-found[0]['start'])==3*86400000
+        # Old open-ended series expand from the window, not from their first occurrence, and match the exhaustive result.
+        for rule in ('FREQ=WEEKLY;INTERVAL=3;BYDAY=MO,WE','FREQ=DAILY;INTERVAL=7'):
+            exhaustive=calendar.parse(ics(f'BEGIN:VEVENT\nDTSTART:20160104T090000Z\nDTEND:20160104T093000Z\nRRULE:{rule};COUNT=100000\nSUMMARY:S\nEND:VEVENT'),now)[0]
+            windowed=calendar.parse(ics(f'BEGIN:VEVENT\nDTSTART:20160104T090000Z\nDTEND:20160104T093000Z\nRRULE:{rule}\nSUMMARY:S\nEND:VEVENT'),now)[0]
+            assert [e['start'] for e in exhaustive]==[e['start'] for e in windowed] and windowed
+        body=''.join(f'BEGIN:VEVENT\nUID:w{i}\nDTSTART:20160104T090000Z\nDTEND:20160104T093000Z\nRRULE:FREQ=WEEKLY;INTERVAL={1+i%3};BYDAY=MO,WE\nSUMMARY:Series {i}\nEND:VEVENT\n' for i in range(500))
+        started=time.monotonic();calendar.parse(ics(body),now);assert time.monotonic()-started<2
+        # Previews read the head of large text files; the catalog never yields an id that looks like an option.
+        big=temp/'app.log';big.write_bytes(b'line\n'*30000)
+        row=shelf.handle('shelf-add',{'urls':[big.as_uri()]})['items'][0]
+        assert shelf.handle('shelf-preview',{'id':row['id']})['kind']=='text'
+        shelf.handle('shelf-remove',{'id':row['id']})
+        import re as _re
+        assert not _re.fullmatch(r'[A-Za-z0-9._][A-Za-z0-9._-]*\.desktop','-x.desktop')
         try:calendar.parse(b'garbage',now);raise AssertionError('invalid calendar accepted')
         except ValueError:pass
         lyr=temp/'song.lrc';lyr.write_text('[00:01.50]One\n[00:03]Two\n')
