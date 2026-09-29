@@ -10,6 +10,7 @@ Controls.ScrollView {
     property color ink: Color.foreground
     property color surface: Color.background
     property bool adding: false
+    signal popupToggled(bool open)
     clip: true
     contentWidth: availableWidth
     ColumnLayout {
@@ -17,7 +18,10 @@ Controls.ScrollView {
         spacing: Style.space(10)
         RowLayout {
             Layout.fillWidth: true
-            Controls.ComboBox {
+            PerchCombo {
+                ink: root.ink
+                surface: root.surface
+                onPopupToggled: open => root.popupToggled(open)
                 Layout.fillWidth: true
                 visible: !!root.live && root.live.timers !== undefined && root.live.timers.length > 0
                 model: root.live && root.live.timers ? root.live.timers.map(function (t) {
@@ -26,10 +30,6 @@ Controls.ScrollView {
                 currentIndex: root.live && root.live.timers ? root.live.timers.findIndex(function (t) {
                     return t.id === root.live.selectedTimer;
                 }) : -1
-                palette.button: root.surface
-                palette.buttonText: root.ink
-                palette.text: root.ink
-                palette.base: root.surface
                 onActivated: index => root.live.chooseTimer(root.live.timers[index].id)
                 Accessible.name: "Selected timer"
             }

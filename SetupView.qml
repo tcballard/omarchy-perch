@@ -77,7 +77,9 @@ ColumnLayout {
                             font.pixelSize: Style.space(12)
                         }
                         PerchAction {
-                            text: "Update"
+                            readonly property bool outdated: !!root.work && Array.isArray(root.work.health.updates) && root.work.health.updates.indexOf(entry.modelData.id) >= 0
+                            text: outdated ? "Update now" : "Update"
+                            selected: outdated
                             visible: !!root.work && root.work.health[entry.modelData.id] === "enabled"
                             enabled: !!root.work && !root.work.busy && !(root.work.health.job && root.work.health.job.status === "working")
                             ink: root.ink
@@ -95,7 +97,7 @@ ColumnLayout {
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: entry.modelData.detail + " · " + (root.work && root.work.health[entry.modelData.id] || "not checked")
+                        text: entry.modelData.detail + " · " + (root.work && root.work.health[entry.modelData.id] || "not checked") + (root.work && Array.isArray(root.work.health.updates) && root.work.health.updates.indexOf(entry.modelData.id) >= 0 ? " · installed copy is older than this Perch version" : "")
                         textFormat: Text.PlainText
                         color: Qt.alpha(root.ink, 0.55)
                         font.pixelSize: Style.space(10)

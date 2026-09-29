@@ -1,4 +1,4 @@
-# Gap audit — 0.1.0-rc.3
+# Gap audit — 0.1.0-rc.4
 
 Every comparison category has an implementation or an explicit platform boundary. This is not a claim that Perch now equals every macOS notch app. Feature presence and actual desktop acceptance are separate.
 

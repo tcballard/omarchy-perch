@@ -208,8 +208,17 @@ Item {
     Timer {
         id: leaveTimer
         interval: 220
-        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive)
+        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive && !view.popupOpen)
             root.collapse()
+    }
+    // Dropdown popups sit outside the masked item; a closed popup with the
+    // pointer already outside must still start the leave grace.
+    Connections {
+        target: view
+        function onPopupOpenChanged() {
+            if (!view.popupOpen && !hover.hovered && root.expanded && !root.keyboardMode)
+                leaveTimer.restart();
+        }
     }
     Timer {
         interval: 1000
@@ -248,6 +257,9 @@ Item {
         WlrLayershell.keyboardFocus: root.shown && root.expanded ? (root.keyboardMode && !root.focusPrimed ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand) : WlrKeyboardFocus.None
         mask: Region {
             item: view
+            Region {
+                item: view.popupOpen ? view.overlayItem : null
+            }
         }
         NotchView {
             id: view

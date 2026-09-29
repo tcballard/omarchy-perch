@@ -46,6 +46,9 @@ with tempfile.TemporaryDirectory() as temporary:
         assert len(events)==2 and partial==0
         assert events[0]['start']==int(dt.datetime(2026,9,29,10,tzinfo=dt.timezone.utc).timestamp()*1000)
         assert calendar.date('20261101T100000',{'TZID':'America/New_York'}).utcoffset()==dt.timedelta(hours=-5)
+        assert events[0]['allDay'] is False
+        allday=b'BEGIN:VCALENDAR\nBEGIN:VEVENT\nDTSTART;VALUE=DATE:20260929\nSUMMARY:Holiday\nEND:VEVENT\nEND:VCALENDAR'
+        assert calendar.parse(allday,now)[0][0]['allDay'] is True
         try:calendar.parse(b'garbage',now);raise AssertionError('invalid calendar accepted')
         except ValueError:pass
         lyr=temp/'song.lrc';lyr.write_text('[00:01.50]One\n[00:03]Two\n')

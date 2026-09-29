@@ -169,12 +169,10 @@ Item {
             root.requestArtwork();
         }
     }
-    Connections {
-        target: prefsStore
-        function onValuesChanged() {
-            root.requestArtwork();
-        }
-    }
+    // Every own-entry write (timers, pins, placement) republishes values; only the
+    // opt-in flip should discard and refetch the current cover.
+    readonly property bool remoteArtworkEnabled: prefsStore.values.remoteArtwork === true
+    onRemoteArtworkEnabledChanged: requestArtwork()
     Timer {
         id: artDelay
         interval: 200

@@ -18,6 +18,8 @@ Item {
         return command("reply", [session, key, text]);
     }
     property bool connected: false
+    property bool everConnected: false
+    property string lastVerb: ""
     property bool dnd: false
     property string session: ""
     property string preview: ""
@@ -28,6 +30,7 @@ Item {
         if (!p)
             return "error: invalid inbox";
         connected = true;
+        everConnected = true;
         session = p.session;
         items = p.items;
         dnd = p.dnd;
@@ -42,6 +45,7 @@ Item {
         if (["sync", "invoke", "dismiss", "clear", "setDnd", "markRead", "blockApp", "reply"].indexOf(verb) < 0)
             return false;
         error = "";
+        lastVerb = verb;
         return request.run(["omarchy-shell", "io.github.tcballard.perch-notifications", verb].concat(args || []));
     }
     function sync() {
@@ -63,7 +67,6 @@ Item {
         id: request
         onFinished: function (ok, reply) {
             if (!ok || reply !== "ok") {
-                error = "Notification companion unavailable or action expired. Refresh to reconnect.";
                 connected = false;
                 preview = "";
                 // Keep history text but never offer stale live actions.
@@ -73,6 +76,13 @@ Item {
                         reply: false
                     });
                 });
+                if (lastVerb !== "sync") {
+                    // The sender closed or the companion reloaded; fetch its current state.
+                    error = "That notification is no longer available. Refreshing…";
+                    sync();
+                } else
+                    // Without a companion the page shows the enable hint, not a failure.
+                    error = everConnected ? "Notification companion unavailable. Refresh to reconnect." : "";
             }
         }
     }

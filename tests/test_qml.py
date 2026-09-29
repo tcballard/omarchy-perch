@@ -134,6 +134,21 @@ assert evaluate('service.preferences.update({panelWidth:9000,edgeOffset:-20,full
 assert evaluate('service.preferences.values.panelWidth')==544
 assert evaluate('service.preferences.values.edgeOffset')==0
 assert evaluate('service.preferences.values.fullscreenPolicy')=='hide'
+# Helper requests serialize instead of failing; identical pending requests collapse.
+assert evaluate('service.workspace.request("shelf-list",{})') is True
+assert evaluate('service.workspace.busy') is True
+assert evaluate('service.workspace.request("calendar-list",{})') is True
+assert evaluate('service.workspace.request("calendar-list",{})') is True
+assert evaluate('service.workspace.pending.length') == 1
+assert evaluate('service.workspace.error') == ''
+# All-day and long-running entries never take the compact pill; imminent meetings do.
+evaluate('service.workspace.events=[{title:"Holiday",start:Date.now()-3600000,end:Date.now()+3600000,allDay:true,location:"",url:""},{title:"Standup",start:Date.now()+300000,end:Date.now()+1200000,allDay:false,location:"",url:""}]; service.workspace.now=Date.now()')
+assert evaluate('service.workspace.meetingSummary').endswith('min · Standup')
+evaluate('service.workspace.events=[{title:"Long",start:Date.now()-1200000,end:Date.now()+3600000,allDay:false,location:"",url:""}]; service.workspace.now=Date.now()')
+assert evaluate('service.workspace.meetingSummary') == ''
+evaluate('service.workspace.events=[{title:"Sync",start:Date.now()-60000,end:Date.now()+600000,allDay:false,location:"",url:""}]; service.workspace.now=Date.now()')
+assert evaluate('service.workspace.meetingSummary') == 'Now · Sync'
+evaluate('service.workspace.events=[]')
 view=QQuickView(); view.engine().addImportPath(str(root/'stubs'))
 view.setSource(QUrl.fromLocalFile(str(root/'Preview.qml')))
 assert view.status()!=QQuickView.Error, view.errors()
@@ -230,5 +245,17 @@ action=action_by_text(visual,'Open event');assert action is not None
 point=action.mapToScene(QPointF(action.width()/2,action.height()/2)).toPoint()
 QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)
 assert visual_eval('demoMedia.notifications.items.length')==1
+# Dropdown popups live outside the masked item: the view reports them so the
+# panel can extend its input region and hold the hover grace.
+visual_eval('demoMedia.setState("playing"); notch.page="music"; notch.settingsOpen=true')
+QTest.qWait(60)
+combo=visual_item(visual,'monitor-choice'); assert combo is not None
+point=combo.mapToScene(QPointF(combo.width()/2,combo.height()/2)).toPoint()
+QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point); QTest.qWait(80)
+assert visual_eval('notch.popupOpen') is True
+assert visual_eval('notch.overlayItem !== null') is True
+visual_eval('notch.expanded=false'); QTest.qWait(80)
+assert visual_eval('notch.popupOpen') is False
+visual_eval('notch.expanded=true')
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

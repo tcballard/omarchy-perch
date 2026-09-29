@@ -10,6 +10,7 @@ ColumnLayout {
     property color ink: Color.foreground
     property color surface: Color.background
     property string appFilter: ""
+    signal popupToggled(bool open)
     readonly property var apps: inbox ? Array.from(new Set(inbox.items.map(function (r) {
         return r.app;
     }))).sort() : []
@@ -71,13 +72,12 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true
-        Controls.ComboBox {
+        PerchCombo {
+            ink: root.ink
+            surface: root.surface
+            onPopupToggled: open => root.popupToggled(open)
             Layout.fillWidth: true
             model: ["All applications"].concat(root.apps)
-            palette.button: root.surface
-            palette.buttonText: root.ink
-            palette.text: root.ink
-            palette.base: root.surface
             onActivated: index => root.appFilter = index === 0 ? "" : root.apps[index - 1]
             Accessible.name: "Filter notifications by app"
         }
@@ -126,7 +126,7 @@ ColumnLayout {
                             Image {
                                 Layout.preferredWidth: Style.space(16)
                                 Layout.preferredHeight: Style.space(16)
-                                source: modelData.icon ? Quickshell.iconPath(modelData.icon) : ""
+                                source: modelData.icon ? Quickshell.iconPath(modelData.icon, true) : ""
                                 sourceSize.width: 32
                                 sourceSize.height: 32
                                 visible: source.toString() !== ""

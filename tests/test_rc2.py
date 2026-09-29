@@ -92,4 +92,23 @@ with tempfile.TemporaryDirectory() as directory:
     assert not osd.exists()
     commands=[json.loads(line) for line in log.read_text().splitlines()]
     assert ['plugin','disable','io.github.tcballard.perch-notifications'] in commands
+    # Setup health reports installed companion copies that lag this checkout; worker failures name the step.
+    def tools(op,payload):
+        outcome=subprocess.run(['python3',str(root/'scripts/perch-tools'),op,json.dumps(payload)],text=True,capture_output=True,env=dict(env,XDG_STATE_HOME=str(home/'state')),timeout=30)
+        assert outcome.returncode==0,outcome.stderr
+        return json.loads(outcome.stdout)
+    assert run('perch-notifications-setup','--kind','osd','--apply').returncode==0
+    (config/'shell.json').write_text(json.dumps({'plugins':[{'id':'io.github.tcballard.perch'},{'id':'io.github.tcballard.perch-osd'}]}))
+    health=tools('health',{})['health']
+    assert health['osd']=='enabled' and health['updates']==[]
+    (osd/'Panel.qml').write_text((osd/'Panel.qml').read_text()+'// newer core\n')
+    assert tools('health',{})['health']['updates']==['osd']
+    (osd/'Panel.qml').write_text((root/'companions/osd/Panel.qml').read_text())
+    result=tools('integration-worker',{'name':'osd','enabled':True})
+    assert result['status']=='done' and 'omarchy restart shell' in result['message']
+    (config/'shell.json').write_text(json.dumps({'plugins':[]}))
+    result=tools('integration-worker',{'name':'notifications','enabled':True})
+    assert result['status']=='failed' and 'Enable Perch before' in result['message'],result
+    assert 'shell.json' not in result['message']
+    assert tools('health',{})['health']['job']['status']=='failed'
 print('rc2: reversible setup, owned edits, notifier preservation, silent hooks and status-only payloads passed.')

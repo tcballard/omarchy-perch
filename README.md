@@ -4,7 +4,7 @@
 
 Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A small pill opens into the controls you need, then gets out of the way.
 
-**v0.1.0-rc.3 — release candidate.** Adds contextual controls, files, calendars, multiple timers, richer system controls and guided setup. Portable tests and actual QML fixture rendering pass. New hardware/compositor integrations still need the XPS checks in [TESTING.md](TESTING.md); this is not a stable release or a claim of macOS feature parity. [Scope and boundaries](GAPS.md).
+**v0.1.0-rc.4 — release candidate.** rc.3 added contextual controls, files, calendars, multiple timers, richer system controls and guided setup; rc.4 fixes dropdown input/hover handling, serializes helper jobs, detects outdated companion copies and reports which setup step failed. Portable tests and actual QML fixture rendering pass. The hardware/compositor integrations still need the XPS checks in [TESTING.md](TESTING.md); this is not a stable release or a claim of macOS feature parity. [Scope and boundaries](GAPS.md).
 
 ![Perch’s actual QML views with fictional media, timer and activity fixtures](preview.png)
 
@@ -13,7 +13,7 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 - **Context at the edge:** direct play/pause or timer actions, wheel cycling between concurrent activities and header swipe navigation. Four edges, monitor pinning, per-display width/offset/edge/fullscreen preferences, reduced motion.
 - **Music:** native MPRIS controls, seeking, player selection, local artwork, optional bounded HTTPS artwork, local `.lrc` synchronized lyrics and a full lyrics reader.
 - **File shelf:** up to 32 persistent file/folder references, drag in/out, small text/image previews, open, reveal and LocalSend handoff. Removing a reference never deletes its original.
-- **Meetings:** agenda, imminent meeting countdown and explicit Join from up to eight local `.ics` files, including files maintained by a calendar sync tool.
+- **Meetings:** agenda, imminent meeting countdown and explicit Join from up to eight local `.ics` files, including files maintained by a calendar sync tool. The compact countdown covers the 15 minutes before a timed meeting and its first 10 minutes; all-day entries stay in the agenda only.
 - **Timers:** up to eight named timers, pause/resume/cancel, repeat, snooze, optional completion sounds/desktop notifications. Wall-clock deadlines survive suspension and shell restart.
 - **System:** output/input selection, volume/mute, microphone mute, battery, paired Bluetooth connect/disconnect and battery status, optional brightnessctl. Missing capabilities are shown explicitly.
 - **Notifications (opt-in):** persistent 20-item history, unread markers, app filtering/muting, DND, icons, native actions and sender-supported replies. A companion replaces the built-in notification owner while enabled.
@@ -95,7 +95,7 @@ The legacy timer IPC rejects replacement of a running/paused selected timer. Use
 
 ## State, dependencies and boundaries
 
-Perch runs inside `omarchy-shell`. Native media/device changes are event-driven. Bounded Python jobs handle file/calendar/app operations and explicit integration setup. Configured calendars refresh every five minutes; Setup polls every three seconds only while a setup job is running. No general process or browser polling runs at idle. Python 3.11+ is required; optional features use `brightnessctl`, the LocalSend GUI (`localsend` or `localsend_app`), `canberra-gtk-play`, `notify-send`, `gtk-launch` and `xdg-open`. Nothing is installed automatically.
+Perch runs inside `omarchy-shell`. Native media/device changes are event-driven. Bounded Python jobs handle file/calendar/app operations and explicit integration setup. Configured calendars refresh every five minutes; Setup polls every three seconds only while a setup job is running. Helper operations run one at a time and queue briefly behind each other. No general process or browser polling runs at idle. Python 3.11+ is required; optional features use `brightnessctl`, the LocalSend GUI (`localsend` or `localsend_app`), `canberra-gtk-play`, `notify-send`, `gtk-launch` and `xdg-open`. Nothing is installed automatically.
 
 Settings, pins, display profiles and timer transitions use Perch's own `shell.json` entry through the scoped host API. Unknown own-entry keys are retained. Bad settings block writes. FileView reads the user-owned shell settings before applying its 1 MiB parse limit. Timers save on transitions, not every tick; changing the system clock affects their deadlines.
 
@@ -111,7 +111,7 @@ Calendar support is read-only ICS, not Google/Microsoft/iCloud account login. Da
 omarchy-shell shell summon io.github.tcballard.perch '{"page":"setup"}'
 ```
 
-Enable only the integrations you want. Setup is explicit and may reload Perch while Omarchy discovers a companion. Reopen Setup to see the durable job result. After updating the core, use Update for installed companions to copy their new version; local edits are protected. **Prepare removal** removes owned agent hooks and companions before removing the core; it preserves unrelated configuration and restores source plugins according to Omarchy's clone lifecycle. If a step fails, resolve it before uninstalling Perch.
+Enable only the integrations you want. Setup is explicit and may reload Perch while Omarchy discovers a companion. Reopen Setup to see the durable job result, which names the step that failed if one did. After updating the core, Setup marks enabled companions whose installed copy differs from the checkout; use Update now to copy the new version, then run `omarchy restart shell`. Local edits are protected. **Prepare removal** removes owned agent hooks and companions before removing the core; it preserves unrelated configuration and restores source plugins according to Omarchy's clone lifecycle. If a step fails, resolve it before uninstalling Perch.
 
 The new task adapter runs only the command or transfer you supply, inherits build output, preserves command exit status, throttles progress, and cleans up partial transfers on cancellation. Downloads/copies default to a 1 GiB cap and one-hour deadline; existing destination files are never overwritten.
 

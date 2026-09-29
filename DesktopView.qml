@@ -10,6 +10,7 @@ Controls.ScrollView {
     property color ink: Color.foreground
     property color surface: Color.background
     signal launched
+    signal popupToggled(bool open)
     clip: true
     contentWidth: availableWidth
     ColumnLayout {
@@ -28,15 +29,14 @@ Controls.ScrollView {
         }
         RowLayout {
             Layout.fillWidth: true
-            Controls.ComboBox {
+            PerchCombo {
                 id: apps
+                ink: root.ink
+                surface: root.surface
+                onPopupToggled: open => root.popupToggled(open)
                 Layout.fillWidth: true
                 model: root.work ? root.work.apps : []
                 textRole: "name"
-                palette.button: root.surface
-                palette.buttonText: root.ink
-                palette.text: root.ink
-                palette.base: root.surface
                 displayText: count ? currentText : "No installed apps loaded"
                 Accessible.name: "Application to launch or pin"
             }

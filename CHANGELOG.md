@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0-rc.4 — 2026-09-29
+
+- Dropdown popups (audio devices, timers, apps, notification filter, display and fullscreen settings) now extend the compositor input region and hold the hover grace while open. Previously a pointer-opened Perch collapsed 220 ms after the pointer moved onto a dropdown, which also closed it.
+- Helper operations queue behind the running job instead of failing with “An operation is already in progress”; identical pending requests collapse.
+- Setup reports enabled companion copies that differ from the installed Perch version and names the failing step when an integration job stops. Companion updates now say to restart the shell.
+- Remote artwork is refetched only when the opt-in changes, not on every settings or timer write.
+- The compact meeting context ignores all-day entries and meetings that started more than ten minutes ago.
+- Without the notification companion the inbox shows the enable hint rather than a failure; an expired action triggers a resync.
+- Missing `xdg-open`, `gtk-launch` or LocalSend produce a plain “not installed” message. Unknown notification icon names no longer load a missing-texture image.
+- Tests cover popup tracking, helper queueing, meeting summary rules, all-day parsing, companion drift detection and setup failure messages.
+
+
 ## 0.1.0-rc.3 — 2026-09-29
 
 - Contextual compact controls, context cycling and header gestures.

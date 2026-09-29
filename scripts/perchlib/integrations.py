@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -9,6 +10,17 @@ import tomllib
 from .storage import Store,read_file
 from .process import run
 ROOT=Path(__file__).resolve().parents[2]
+COMPANION_FILES={'notifications':['manifest.json','Service.qml','CommandJob.qml','store.py','NotificationStore.qml'],'osd':['manifest.json','Panel.qml','CommandJob.qml']}
+
+def companion_state(kind):
+    """'absent', 'current' or 'outdated': the installed copy versus this checkout."""
+    target=Path.home()/'.config/omarchy/plugins'/('io.github.tcballard.perch-'+kind)
+    if not target.is_dir():return 'absent'
+    try:
+        for name in COMPANION_FILES[kind]:
+            if hashlib.sha256((target/name).read_bytes()).digest()!=hashlib.sha256((ROOT/'companions'/kind/name).read_bytes()).digest():return 'outdated'
+    except OSError:return 'outdated'
+    return 'current'
 
 def enabled_plugins():
     try:
@@ -20,6 +32,8 @@ def enabled_plugins():
 def health():
     ids=enabled_plugins();adapter=str(Path.home()/'.local/share/omarchy-perch/perch-agent-hook')
     result={'notifications':'enabled' if 'io.github.tcballard.perch-notifications' in ids else 'disabled', 'osd':'enabled' if 'io.github.tcballard.perch-osd' in ids else 'disabled'}
+    # After a core update the separate companion copies lag until Update is used.
+    result['updates']=[kind for kind in ('notifications','osd') if result[kind]=='enabled' and companion_state(kind)=='outdated']
     for agent,directory,filename in [('claude',os.environ.get('CLAUDE_CONFIG_DIR',str(Path.home()/'.claude')),'settings.json'),('codex',os.environ.get('CODEX_HOME',str(Path.home()/'.codex')),'config.toml')]:
         try:
             raw=read_file(Path(directory)/filename,1048576).decode()
@@ -38,15 +52,20 @@ def health():
 
 def worker(p):
     store=Store('integrations');names=['claude','codex','osd','notifications'] if p.get('all') else [p['name']]
-    try:
-        for name in names:
-            if name in ('claude','codex'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
-            else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
-            if not p.get('enabled',False):argv.append('--remove')
-            run(argv,timeout=90,limit=16384)
+    enabled=p.get('enabled',False);failures=[]
+    for name in names:
+        if name in ('claude','codex'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
+        else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
+        if not enabled:argv.append('--remove')
+        try:run(argv,timeout=90,limit=16384,detail=True)
+        except (OSError,ValueError,subprocess.SubprocessError) as error:failures.append(name+': '+str(error)[:200])
+    if failures:
+        # Each step is atomic and preserves existing configuration; report which one stopped.
+        status={'status':'failed','message':'Setup did not complete. '+'; '.join(failures)[:400]+'. Nothing else was changed; fix this and retry.','started':time.time()}
+    elif enabled and any(name in ('osd','notifications') for name in names):
+        status={'status':'done','message':'Companion files updated and enabled. Run "omarchy restart shell" to load the new copy; restart agent clients after hook changes.','started':time.time()}
+    else:
         status={'status':'done','message':'Integrations updated. Restart agent clients after hook changes.','started':time.time()}
-    except (OSError,ValueError,subprocess.SubprocessError):
-        status={'status':'failed','message':'Setup did not complete. Existing configuration may need review; use the documented setup command for diagnostics.','started':time.time()}
     with store.lock():store.save(status)
     return status
 

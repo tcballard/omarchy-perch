@@ -85,7 +85,7 @@ def parse(data,now):
             for eventstart in starts:
                 eventend=eventstart+(end-start)
                 if eventstart in excluded or eventend<=now or eventstart>horizon:continue
-                events.append({'title':unescape(one('SUMMARY','Untitled event'))[:160],'start':int(eventstart.timestamp()*1000),'end':int(eventend.timestamp()*1000),'location':unescape(one('LOCATION'))[:200],'url':link})
+                events.append({'title':unescape(one('SUMMARY','Untitled event'))[:160],'allDay':len(r['DTSTART'][0][0])==8,'start':int(eventstart.timestamp()*1000),'end':int(eventend.timestamp()*1000),'location':unescape(one('LOCATION'))[:200],'url':link})
         except (ValueError,KeyError,OverflowError):unsupported+=1
     return events,unsupported
 

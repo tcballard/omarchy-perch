@@ -22,6 +22,9 @@ FocusScope {
     property var displaySettings: ({})
     property real preferredWidth: Style.space(344)
     property bool interactionActive: false
+    // A dropdown popup lives in the window overlay outside this item's bounds.
+    property bool popupOpen: false
+    readonly property Item overlayItem: Controls.Overlay.overlay
     signal dropReceived(var urls)
     readonly property var inbox: media && media.notifications !== undefined ? media.notifications : null
     readonly property var desktop: media && media.desktop !== undefined ? media.desktop : null
@@ -106,8 +109,10 @@ FocusScope {
     signal collapseRequested
     signal settingsChanged(bool hideIdle, bool reducedMotion, bool edgeAttached)
     onExpandedChanged: {
-        if (!expanded)
+        if (!expanded) {
             settingsOpen = false;
+            popupOpen = false;
+        }
         else if (page === "music")
             revealPage();
     }
@@ -462,6 +467,7 @@ FocusScope {
             font.pixelSize: Style.space(10)
         }
         InboxView {
+            onPopupToggled: open => root.popupOpen = open
             visible: !root.settingsOpen && root.page === "inbox"
             x: Style.space(18)
             y: Style.space(94)
@@ -491,6 +497,7 @@ FocusScope {
             }
         }
         DesktopView {
+            onPopupToggled: open => root.popupOpen = open
             height: parent.height - Style.space(110)
             visible: !root.settingsOpen && root.page === "desktop"
             x: Style.space(18)
@@ -503,6 +510,7 @@ FocusScope {
             onLaunched: root.collapseRequested()
         }
         TimerView {
+            onPopupToggled: open => root.popupOpen = open
             visible: !root.settingsOpen && root.page === "timer"
             x: Style.space(18)
             y: Style.space(94)
@@ -513,6 +521,7 @@ FocusScope {
             surface: root.surface
         }
         SystemView {
+            onPopupToggled: open => root.popupOpen = open
             visible: !root.settingsOpen && root.page === "system"
             x: Style.space(18)
             y: Style.space(94)
@@ -758,14 +767,14 @@ FocusScope {
                     color: root.ink
                     font.pixelSize: Style.space(12)
                 }
-                Controls.ComboBox {
+                PerchCombo {
+                    objectName: "monitor-choice"
+                    ink: root.ink
+                    surface: root.surface
+                    onPopupToggled: open => root.popupOpen = open
                     Layout.fillWidth: true
                     model: ["Follow focused display"].concat(root.displayNames)
                     currentIndex: Math.max(0, root.displayNames.indexOf(root.displaySettings.monitor || "") + 1)
-                    palette.button: root.surface
-                    palette.buttonText: root.ink
-                    palette.text: root.ink
-                    palette.base: root.surface
                     onActivated: index => root.preferenceChanged("monitor", index === 0 ? "" : root.displayNames[index - 1])
                 }
                 Controls.CheckBox {
@@ -820,14 +829,13 @@ FocusScope {
                     color: root.ink
                     font.pixelSize: Style.space(11)
                 }
-                Controls.ComboBox {
+                PerchCombo {
+                    ink: root.ink
+                    surface: root.surface
+                    onPopupToggled: open => root.popupOpen = open
                     Layout.fillWidth: true
                     model: ["Hide Perch", "Show completed timers only", "Keep Perch visible"]
                     currentIndex: Math.max(0, ["hide", "alerts", "show"].indexOf(root.displaySettings.fullscreenPolicy || "hide"))
-                    palette.button: root.surface
-                    palette.buttonText: root.ink
-                    palette.text: root.ink
-                    palette.base: root.surface
                     onActivated: index => root.preferenceChanged("fullscreenPolicy", ["hide", "alerts", "show"][index])
                 }
                 Controls.CheckBox {

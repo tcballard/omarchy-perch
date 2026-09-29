@@ -116,3 +116,21 @@ Run an idle sample before/after feature use, and repeat after 100 open/close int
 Live results for rc3: **not run in the build environment**. Stable tagging remains gated on the above.
 
 Static rc3 release review: upstream host validator accepts core and both companions. Advisory scan flags QML processes/collectors, explicit setup scripts and CI package installation. ToolJob collects only the shipped helper's capped 128 KiB JSON with a 12-second deadline; history reads cap before collection and writes use bounded stdin. Setup commands are explicit, own-file hash checked and time-bounded. CI package installation is not plugin runtime behavior. Existing Preferences FileView's read-before-limit boundary is documented above. No advisory scan is described as a security certification.
+
+## 0.1.0-rc.4 evidence and live gate
+
+Reviewed rc3 against the outstanding acceptance areas without XPS access. One defect was reproduced under native Qt with the production view: with any dropdown open, the view's HoverHandler reports not hovered while the pointer is on the popup (the popup lives in the window overlay, outside the masked item). In pointer mode the 220 ms leave grace would therefore collapse Perch and close the dropdown, and popup rows outside the item rectangle were outside the compositor input region. The fix reports popup state from every dropdown, adds the overlay to the input mask only while a popup is open, holds the leave grace, and closes a dropdown when its view collapses or is disabled. Native Qt tests now assert the popup report and its reset on collapse. Real Wayland input-region behaviour still requires the XPS.
+
+Also fixed from review: helper jobs queue instead of failing on collision (calendar refresh, health poll, brightness read and drop-then-refresh could all collide); artwork refetch on every own-entry write; meeting summaries taken over by all-day or long-running entries; inbox failure text without the companion; missing-tool errors; setup failures losing their reason; no indication that companion copies lag a core update. Isolated-HOME tests exercise drift detection and a failing worker step; the rc2 fake `omarchy` commands remain fakes.
+
+Environment: Python 3.11.15, Node 22, PySide6 Essentials 6.11.2 with Qt offscreen; `./tests/run` passes in full, including the Qt tests. `qmlformat` was not available here; edits follow the existing formatting by hand.
+
+Additional live checks for rc.4 on the XPS, in addition to the rc.3 list:
+
+1. With hover opening on, open the output device dropdown on System and the timer picker; move the pointer over the rows and pick one. Perch must stay open and the choice must apply. Repeat for a dropdown whose rows extend past the notch chrome (Settings → During fullscreen near the bottom).
+2. After a keyboard summon, open a dropdown and click outside Perch: both the dropdown and Perch must close and focus must return.
+3. Update the core, open Setup: an enabled companion should read “installed copy is older than this Perch version” with “Update now”. Run it, restart the shell, reopen Setup: the mark clears and one notification owner / one OSD remain.
+4. Disable Perch in `shell.json` and press Enable for notifications: the job must fail with the “Enable Perch before…” reason shown in Setup, and nothing else must change.
+5. Add an ICS containing an all-day entry and a timed meeting: the compact pill shows only the timed countdown; the agenda lists both.
+
+Live results for rc.4: **not run in the build environment**. Stable tagging remains gated.

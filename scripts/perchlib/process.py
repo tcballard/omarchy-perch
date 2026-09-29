@@ -1,5 +1,6 @@
 import os
 import selectors
+import shutil
 import signal
 import subprocess
 import time
@@ -13,7 +14,7 @@ def cleanup(signum, frame):
         active.wait()
     raise SystemExit(1)
 
-def run(argv, timeout=5, limit=65536):
+def run(argv, timeout=5, limit=65536, detail=False):
     global active
     signal.signal(signal.SIGTERM,cleanup)
     active=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
@@ -31,7 +32,10 @@ def run(argv, timeout=5, limit=65536):
                 outputs[event.fileobj].extend(data)
                 if len(outputs[event.fileobj])>limit:raise ValueError('Command output exceeds limit')
         process.wait(timeout=max(0.01,deadline-time.monotonic()))
-        if process.returncode:raise ValueError('Command failed; check the integration or installed dependency')
+        if process.returncode:
+            # Setup scripts print only their own status lines; never configuration contents.
+            reason=bytes(outputs[process.stderr]).decode('utf-8',errors='replace').strip().splitlines()[-1:] if detail else []
+            raise ValueError(reason[0][:240] if reason else 'Command failed; check the integration or installed dependency')
         return bytes(outputs[process.stdout]).decode('utf-8',errors='replace')
     finally:
         try:os.killpg(process.pid,signal.SIGKILL)
@@ -43,6 +47,7 @@ def run(argv, timeout=5, limit=65536):
 
 def launch(argv):
     # Explicit open/share actions launch applications that must outlive the panel.
+    if not shutil.which(argv[0]):raise ValueError(argv[0]+' is not installed; nothing was opened')
     child=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
     time.sleep(0.05)
     if child.poll() not in (None,0):raise ValueError('Application could not be opened')

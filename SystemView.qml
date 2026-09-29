@@ -9,6 +9,7 @@ Controls.ScrollView {
     property var work: null
     property color ink: Color.foreground
     property color surface: Color.background
+    signal popupToggled(bool open)
     clip: true
     contentWidth: availableWidth
     ColumnLayout {
@@ -20,17 +21,16 @@ Controls.ScrollView {
             font.pixelSize: Style.space(14)
             font.bold: true
         }
-        Controls.ComboBox {
+        PerchCombo {
+            ink: root.ink
+            surface: root.surface
+            onPopupToggled: open => root.popupToggled(open)
             Layout.fillWidth: true
             model: root.system && root.system.outputs ? root.system.outputs.map(function (n) {
                 return n.description || n.name;
             }) : []
             currentIndex: root.system && root.system.outputs ? root.system.outputs.indexOf(root.system.sink) : -1
             displayText: currentIndex >= 0 ? currentText : root.system ? root.system.outputName : "No audio output"
-            palette.button: root.surface
-            palette.buttonText: root.ink
-            palette.text: root.ink
-            palette.base: root.surface
             onActivated: index => root.system.selectOutput(index)
             Accessible.name: "Output device"
         }
@@ -73,17 +73,16 @@ Controls.ScrollView {
                 onClicked: root.system.toggleMicrophone()
             }
         }
-        Controls.ComboBox {
+        PerchCombo {
+            ink: root.ink
+            surface: root.surface
+            onPopupToggled: open => root.popupToggled(open)
             Layout.fillWidth: true
             model: root.system && root.system.inputs ? root.system.inputs.map(function (n) {
                 return n.description || n.name;
             }) : []
             currentIndex: root.system && root.system.inputs ? root.system.inputs.indexOf(root.system.source) : -1
             displayText: currentIndex >= 0 ? currentText : "No microphone"
-            palette.button: root.surface
-            palette.buttonText: root.ink
-            palette.text: root.ink
-            palette.base: root.surface
             onActivated: index => root.system.selectInput(index)
             Accessible.name: "Input device"
         }

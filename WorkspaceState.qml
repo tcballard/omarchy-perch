@@ -17,18 +17,48 @@ Item {
     readonly property bool busy: work.busy
     property int brightnessValue: -1
     property real now: Date.now()
+    // All-day entries and meetings already running for a while never occupy the compact pill.
     readonly property var nextEvent: events.find(function (e) {
-        return e.end > root.now;
+        return !e.allDay && e.end > root.now && root.now - e.start <= 600000;
     }) || null
-    readonly property string meetingSummary: nextEvent && nextEvent.start - now <= 900000 ? (nextEvent.start <= now ? "Now · " : Math.ceil((nextEvent.start - now) / 60000) + " min · ") + nextEvent.title : ""
+    readonly property string meetingSummary: {
+        if (!nextEvent)
+            return "";
+        var lead = nextEvent.start - now;
+        if (lead > 900000)
+            return "";
+        return (lead > 0 ? Math.ceil(lead / 60000) + " min · " : "Now · ") + nextEvent.title;
+    }
+    // One helper at a time; later requests wait in a short queue instead of failing.
+    property var pending: []
     function request(op, p) {
         error = "";
         message = "";
-        if (!work.run(op, p)) {
-            error = "An operation is already in progress";
+        if (work.run(op, p))
+            return true;
+        var key = op + JSON.stringify(p || {});
+        var next = pending.filter(function (q) {
+            return q.key !== key;
+        });
+        if (next.length >= 8) {
+            error = "Too many operations are waiting. Try again in a moment.";
             return false;
         }
+        next.push({
+            key: key,
+            op: op,
+            payload: p
+        });
+        pending = next;
         return true;
+    }
+    function drain() {
+        if (!pending.length || work.busy)
+            return;
+        var q = pending[0];
+        pending = pending.slice(1);
+        if (!work.run(q.op, q.payload))
+            pending = [q].concat(pending);
     }
     function addFiles(urls) {
         return request("shelf-add", {
@@ -81,6 +111,7 @@ Item {
     ToolJob {
         id: work
         onCompleted: function (op, r) {
+            Qt.callLater(root.drain);
             if (!r.ok) {
                 root.error = r.error || "Operation failed";
                 return;
@@ -104,6 +135,13 @@ Item {
             }
             root.message = r.message || "";
         }
+    }
+    Timer {
+        // The helper process may still be exiting when its reply arrives.
+        interval: 150
+        repeat: true
+        running: root.pending.length > 0 && !work.busy
+        onTriggered: root.drain()
     }
     Timer {
         interval: 3000
