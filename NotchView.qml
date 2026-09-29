@@ -6,6 +6,7 @@ import qs.Commons
 import "MediaPolicy.js" as Policy
 import "EdgePolicy.js" as Edges
 import "ModulePolicy.js" as Modules
+import "NotchPolicy.js" as NotchPolicy
 
 FocusScope {
     id: root
@@ -17,8 +18,10 @@ FocusScope {
     readonly property var moduleItems: Modules.clean(displaySettings.modules)
     readonly property bool stripVertical: Edges.vertical(edge)
     readonly property real stripLength: Style.space(46 * moduleItems.length + 8)
-    readonly property real compactWidth: stripVertical ? Style.space(52) : stripLength
-    readonly property real compactHeight: stripVertical ? stripLength : Style.space(52)
+    readonly property bool perchMode: displaySettings.layoutMode === "strip"
+    readonly property var notchContext: NotchPolicy.context(media)
+    readonly property real compactWidth: perchMode ? (stripVertical ? Style.space(52) : stripLength) : Style.space(stripVertical ? 48 : notchContext.id === "idle" ? 100 : 210)
+    readonly property real compactHeight: perchMode ? (stripVertical ? stripLength : Style.space(52)) : Style.space(stripVertical ? 76 : 36)
     readonly property real bodyTop: Style.space(116)
     function activateModule(id, pointer) {
         var descriptor = Modules.get(id);
@@ -48,7 +51,7 @@ FocusScope {
         target: root.moduleState
         property: "statsVisible"
         when: !!root.moduleState
-        value: root.surfaceVisible && (!root.settingsOpen && root.moduleItems.indexOf("stats") >= 0 || root.expanded && !root.settingsOpen && root.page === "stats")
+        value: root.surfaceVisible && ((root.perchMode || root.expanded) && !root.settingsOpen && root.moduleItems.indexOf("stats") >= 0 || root.expanded && !root.settingsOpen && root.page === "stats")
     }
     Binding {
         target: root.moduleState
@@ -60,7 +63,7 @@ FocusScope {
         target: root.moduleState
         property: "weatherVisible"
         when: !!root.moduleState
-        value: root.surfaceVisible && (!root.settingsOpen && root.moduleItems.indexOf("weather") >= 0 || root.expanded && !root.settingsOpen && root.page === "weather")
+        value: root.surfaceVisible && ((root.perchMode || root.expanded) && !root.settingsOpen && root.moduleItems.indexOf("weather") >= 0 || root.expanded && !root.settingsOpen && root.page === "weather")
     }
     property string page: "music"
     property bool showClock: true
@@ -231,9 +234,25 @@ FocusScope {
             y: root.edge === "bottom" ? parent.height - height : 1
         }
     }
+    ContextNotch {
+        objectName: "context-notch"
+        anchors.fill: parent
+        visible: !root.perchMode && !root.expanded
+        context: root.notchContext
+        vertical: root.stripVertical
+        hoverOpen: root.hoverOpen
+        ink: root.ink
+        surface: root.surface
+        onOpenRequested: {
+            if (root.notchContext.timerId && root.live && root.live.chooseTimer)
+                root.live.chooseTimer(root.notchContext.timerId);
+            root.page = root.notchContext.page;
+            root.expandRequested();
+        }
+    }
     ModuleStrip {
         anchors.fill: parent
-        visible: !root.expanded
+        visible: root.perchMode && !root.expanded
         items: root.moduleItems
         registry: moduleRegistry
         pluginState: root.pluginState

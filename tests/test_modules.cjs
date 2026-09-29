@@ -12,8 +12,8 @@ assert.equal(m.get('file:///tmp/bad.qml'), null);
 console.log('Native module registry bounds, allowlist, reorder and last-item preservation passed.');
 
 const prefs = require("../PreferencesPolicy.js");
-assert.equal(prefs.clean({layoutMode:"pill"}).layoutMode,"strip");
-assert.equal(prefs.clean({}).layoutMode,"strip");
+assert.equal(prefs.clean({layoutMode:"pill"}).layoutMode,"notch");
+assert.equal(prefs.clean({}).layoutMode,"notch");
 
 assert.deepEqual(m.clean(['music','plugin:example.notes','plugin:../bad','plugin:omarchy.lock','plugin:io.github.tcballard.perch']),['music','plugin:example.notes']);
 assert.deepEqual(m.move(['music','plugin:example.notes'],'plugin:example.notes',0),['plugin:example.notes','music']);

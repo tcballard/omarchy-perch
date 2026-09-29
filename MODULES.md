@@ -1,7 +1,9 @@
 # Native Perch modules
 
-The **Module strip** puts up to eight chosen tools at the screen edge and is
-Perch’s only layout. Saved pill configurations automatically use the strip.
+Perch offers two compact presentations: **Notch**, showing one useful context,
+and **Plugin Perch**, keeping up to eight chosen tools at the edge. Both open the
+same cards and pinned plugins. Notch is the default; explicit strip preferences
+remain on Plugin Perch.
 Choose modules in Perch Settings. Drag tiles to reorder them, use Ctrl+arrow keys on a
 focused tile, or use the earlier/later buttons in Settings. At least one module
 stays selected. Unknown/duplicate saved IDs are discarded; an empty/invalid
@@ -10,7 +12,7 @@ selection restores the defaults.
 Hover a tile for 150 ms (when Open on hover is enabled), or click it to open its
 card. Expanded cards retain a horizontal strip for switching tools. The compact
 strip follows the chosen screen edge, with upright labels on left/right edges.
-The strip remains a launcher; old hide-idle and idle-clock settings are ignored.
+Plugin Perch remains a launcher; Notch stays quiet when idle. Old hide-idle and idle-clock settings are ignored.
 Fullscreen and monitor policies still apply.
 
 ## Contract

@@ -193,3 +193,11 @@ renders both widths with fictional state. On the XPS, check all sections at your
 normal scale and an increased font/scale: every control must scroll into view,
 section navigation/footer stay accessible, dropdowns remain interactive, and
 the transparent margin still passes clicks through. These live checks are pending.
+
+## Two compact presentations
+
+Check Notch and Plugin Perch under Behaviour. Notch should show one context,
+remain calm when idle/paused, route completed timers correctly, and open the
+same expanded cards and pins. Switch modes and restart; preserve pins/order.
+Verify all four edges and hover/keyboard/focus on the XPS. Portable tests cover
+priority, dimensions, keyboard opening, hidden sampling and mode changes.

@@ -1,7 +1,7 @@
 function bounded(n,lo,hi,fallback){return typeof n === "number" && isFinite(n)?Math.max(lo,Math.min(hi,n)):fallback;}
 function clean(p) {
     p = p && typeof p === "object" && !Array.isArray(p) ? p : {}
-    return {layoutMode:"strip", modules:p.modules, edge:["top","bottom","left","right"].indexOf(p.edge)>=0?p.edge:"top", hideIdle:p.hideIdle===true,
+    return {layoutMode:p.layoutMode === "strip" ? "strip" : "notch", modules:p.modules, edge:["top","bottom","left","right"].indexOf(p.edge)>=0?p.edge:"top", hideIdle:p.hideIdle===true,
         reducedMotion:p.reducedMotion===true, edgeAttached:p.edgeAttached===true,
         monitor:typeof p.monitor==="string"?p.monitor.slice(0,120):"", panelWidth:bounded(p.panelWidth,304,544,344), edgeOffset:bounded(p.edgeOffset,0,64,0), perDisplay:p.perDisplay===true, fullscreenPolicy:["hide","alerts","show"].indexOf(p.fullscreenPolicy)>=0?p.fullscreenPolicy:"hide", timerSound:p.timerSound===true, timerNotifications:p.timerNotifications===true, remoteArtwork:p.remoteArtwork===true,
         showClock:p.showClock!==false, hoverOpen:p.hoverOpen!==false, eventBanners:p.eventBanners!==false}

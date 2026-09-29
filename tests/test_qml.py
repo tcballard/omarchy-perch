@@ -211,7 +211,7 @@ assert visual_eval('notch.surface.r < notch.ink.r') is True
 visual_eval('Color.lightTheme=false')
 assert visual_eval('notch.surface.r < notch.ink.r') is True
 # Navigate each real view using pointer clicks, then verify timer/activities.
-visual_eval('notch.settingsOpen=false; notch.displaySettings={modules:["timer","system","activity","music"]}; demoMedia.setState("playing")')
+visual_eval('notch.settingsOpen=false; notch.displaySettings={layoutMode:"strip",modules:["timer","system","activity","music"]}; demoMedia.setState("playing")')
 def visual_item(item,name):
     if item.objectName() == name and item.isVisible(): return item
     for child in item.childItems():
@@ -351,7 +351,7 @@ assert evaluate('service.modules.saveWeather("Test", "", "0", true)') is False
 assert evaluate('service.modules.saveWeather("Test", "51", "-1", true)') is True
 assert evaluate('fakeShell.saved.moduleWeather.latitude') == 51
 # Pinned plugins share the strip but launch only on click, never hover.
-visual_eval('notch.surfaceVisible=true; notch.edge="top"; notch.expanded=true; notch.settingsOpen=false; notch.hoverOpen=true; notch.displaySettings={modules:["music","plugin:example.notes"]}')
+visual_eval('notch.surfaceVisible=true; notch.edge="top"; notch.expanded=true; notch.settingsOpen=false; notch.hoverOpen=true; notch.displaySettings={layoutMode:"strip",modules:["music","plugin:example.notes"]}')
 QTest.qWait(60)
 tile=visible_named(visual,'module-tile-plugin:example.notes'); assert tile is not None
 point=tile.mapToScene(QPointF(tile.width()/2,tile.height()/2)).toPoint()
@@ -391,5 +391,35 @@ for section in ['display','behavior','alerts','modules','plugins']:
 visual_eval('notch.forceActiveFocus()'); QTest.keyClick(view,Qt.Key_Escape)
 assert visual_eval('notch.settingsOpen') is False
 assert visual_eval('notch.maximumWidth') == 600
+# The notch is a quiet compact presentation of the same expanded cards/pins.
+visual_eval('notch.width=Qt.binding(function(){return notch.implicitWidth;}); previewState="compact"; notch.expanded=Qt.binding(function(){return previewState !== "compact";}); notch.settingsOpen=false; notch.displaySettings={layoutMode:"notch",modules:["music","plugin:example.notes","stats","weather"]}; demoMedia.live.items=[]; demoMedia.live.timers=[]; demoMedia.live.cancel(); demoMedia.setState("empty")')
+QTest.qWait(50)
+assert visual_eval('notch.perchMode') is False
+assert visual_eval('notch.implicitWidth') == 100
+assert visual_eval('demoMedia.modules.statsVisible') is False
+assert visual_eval('demoMedia.modules.weatherVisible') is False
+assert visible_named(visual,'module-tile-music') is None
+for edge in ['top','bottom','left','right']:
+    visual_eval('notch.edge='+repr(edge))
+    assert visual_eval('notch.implicitWidth') == (48 if edge in ['left','right'] else 100)
+    assert visual_eval('notch.implicitHeight') == (76 if edge in ['left','right'] else 36)
+visual_eval('notch.edge="top"; demoMedia.setState("playing"); notch.hoverOpen=false')
+assert visual_eval('notch.notchContext.id') == 'music'
+assert visual_eval('notch.implicitWidth') == 210
+notch_button=visible_named(visual,'context-notch'); assert notch_button is not None
+notch_button.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(40)
+assert visual_eval('notch.expanded') is True
+assert visual_eval('notch.page') == 'music'
+assert visible_named(visual,'module-tile-plugin:example.notes') is not None
+# Choosing either presentation preserves pins and shared state.
+visual_eval('notch.settingsOpen=true')
+settings=visible_named(visual,'perch-settings'); settings.setProperty('section','behavior'); QTest.qWait(30)
+button=visible_named(visual,'presentation-perch'); assert button is not None
+button.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+assert visual_eval('notch.perchMode') is True
+assert visual_eval('notch.moduleItems.indexOf("plugin:example.notes")') == 1
+button=visible_named(visual,'presentation-notch');button.forceActiveFocus();QTest.keyClick(view,Qt.Key_Space);QTest.qWait(30)
+assert visual_eval('notch.perchMode') is False
+assert visual_eval('notch.moduleItems.length') == 4
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

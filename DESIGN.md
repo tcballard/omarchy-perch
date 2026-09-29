@@ -153,3 +153,15 @@ duplicated headings in Files, Inbox, Apps and Activity. No new processes/polling
 Portable Qt checks cover every section at normal/constrained widths, Space-key
 activation and toggle updates, Escape, and existing interactions. Live Wayland
 masking, theme scaling and popup focus still require the XPS.
+
+## Notch and Plugin Perch — 29 September 2026
+
+Tom requested a quiet compact view alongside the useful plugin launcher. The
+Notch is now the default presentation; explicit saved strip preferences retain
+Plugin Perch. Both use the same expanded cards, settings and pins. Priority is
+completed timer, activity needing input/error, selected timer, playing media,
+meeting, notification, then other activity. Idle opens All tools. Exact completed
+timer IDs route into the existing timer card. Collapsed context changes do not
+launch plugins or animate each tick. No new polling; hidden stats/weather tiles
+are suspended in collapsed Notch. Four-edge, keyboard activation and mode/pin
+preservation are exercised in Qt fixtures; live XPS acceptance remains required.

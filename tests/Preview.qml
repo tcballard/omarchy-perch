@@ -13,6 +13,7 @@ Rectangle {
         anchors.centerIn: parent
         width: implicitWidth; height: implicitHeight
         media: demoMedia
+        displaySettings: ({layoutMode:"strip"})
         expanded: root.previewState !== "compact"
         demo: true
         onPluginLaunchRequested: id => demoMedia.pluginPins.openPlugin(id)

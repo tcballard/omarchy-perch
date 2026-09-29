@@ -2,9 +2,9 @@
 
 [![Built for Omarchy: Plugin](https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-plugin.svg)](https://github.com/tcballard/omarchy-badges)
 
-Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A compact strip of your chosen tools opens into native cards.
+Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A quiet notch opens into native cards, with an optional strip for your favourite tools and plugins.
 
-**Unreleased: native modules.** The configurable module strip replaces the context pill, with drag/keyboard ordering. Every tool uses the shared native card host, including Clipboard, Stats and Weather. Weather is opt-in; clipboard reuses Omarchy's existing history. [Module contract and exact boundaries](MODULES.md).
+**Unreleased: native modules.** Choose a quiet Notch or the visible Plugin Perch strip, with drag/keyboard ordering. Every tool uses the shared native card host, including Clipboard, Stats and Weather. Weather is opt-in; clipboard reuses Omarchy's existing history. [Module contract and exact boundaries](MODULES.md). [Notch and Plugin Perch preview](notch-preview.png).
 
 ![Native Perch module cards, rendered with fictional data](modules-preview.png)
 
@@ -73,7 +73,7 @@ Settings is organised into Placement, Behaviour, Media & alerts, Your strip and 
 
 Choose and reorder up to eight modules in Settings, drag tiles, or press Ctrl+arrow on a focused tile. Use the strip to switch cards; the bell opens Notifications and the monitor opens All tools, including tools omitted from your strip. Escape returns from Settings or another card to Music, then closes; × always closes. Keyboard summons support Tab navigation and outside-click dismissal. Swipe across the left side of the header to cycle your chosen tools.
 
-The strip stays visible as a launcher, subject to fullscreen and monitor policies. Saved pill layouts migrate automatically; old hide-idle and idle-clock preferences no longer affect the view. Other preferences and service-owned data remain intact.
+Choose **Notch** or **Plugin Perch** under Settings → Behaviour. Notch is the default and shows one context: completed timer, activity needing attention, selected timer, playing media, meeting, notification or activity. Click/hover opens its card; idle opens All tools. Plugin Perch keeps your chosen tiles visible. Both retain the same expanded cards and pins. Explicitly saved strip preferences stay on Plugin Perch; old pill preferences use Notch. Fullscreen and monitor policies apply to both.
 
 ## Send progress from a script or agent
 

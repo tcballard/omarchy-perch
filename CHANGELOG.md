@@ -2,6 +2,8 @@
 
 ## Unreleased — native modules
 
+- Add Notch as the default compact presentation, showing one context and opening its card. Plugin Perch remains an explicit strip option; both share cards and pins. Hidden stats/weather tiles stop sampling while Notch is collapsed.
+
 - Sectioned settings with responsive navigation, labelled toggles, keyboard controls and persistent save/error feedback. Remove duplicate card headings and bound content to available panel space.
 
 - Pin installed visual plugins in the strip and open their panels on explicit click, with bounded public IPC, launch-time validation, disabled/missing states and fixture coverage.

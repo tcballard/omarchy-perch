@@ -119,6 +119,43 @@ ColumnLayout {
                     font.pixelSize: Style.space(11)
                 }
                 ColumnLayout {
+                    visible: root.section === "behavior"
+                    Layout.fillWidth: true
+                    Text {
+                        text: "Compact presentation"
+                        color: root.host.ink
+                        font.pixelSize: Style.space(12)
+                    }
+                    Flow {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: childrenRect.height
+                        spacing: Style.space(6)
+                        PerchAction {
+                            objectName: "presentation-notch"
+                            text: "Notch"
+                            selected: !root.host.perchMode
+                            ink: root.host.ink
+                            surface: root.host.surface
+                            onClicked: root.host.preferenceChanged("layoutMode", "notch")
+                        }
+                        PerchAction {
+                            objectName: "presentation-perch"
+                            text: "Plugin Perch"
+                            selected: root.host.perchMode
+                            ink: root.host.ink
+                            surface: root.host.surface
+                            onClicked: root.host.preferenceChanged("layoutMode", "strip")
+                        }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        text: root.host.perchMode ? "Keep your chosen tools and plugin pins visible at the edge." : "Show one useful context. Your tools and pins appear when you open Perch."
+                        color: Qt.alpha(root.host.ink, 0.6)
+                        font.pixelSize: Style.space(11)
+                    }
+                }
+                ColumnLayout {
                     visible: root.section === "display"
                     Layout.fillWidth: true
                     spacing: Style.space(12)
