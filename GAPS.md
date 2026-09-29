@@ -1,4 +1,4 @@
-# Gap audit — 0.1.0-rc.5
+# Gap audit — rc.5 plus unreleased native modules
 
 Every comparison category has an implementation or an explicit platform boundary. This is not a claim that Perch now equals every macOS notch app. Feature presence and actual desktop acceptance are separate.
 
@@ -20,3 +20,12 @@ Every comparison category has an implementation or an explicit platform boundary
 ## Candidate acceptance
 
 Portable suite and fixture render pass. `TESTING.md` records the live checks still required. A successful helper or Qt fixture is not proof of actual Bluetooth, portal drag/drop, notification ownership, or compositor smoothness. Keep the release candidate label until these pass on the intended desktop.
+
+## Unreleased Sidekick/Sidedoor comparison work
+
+Implemented: single reorderable module strip, native card/settings/actions
+contract, clipboard history browser/copy, compact CPU/RAM/root-disk stats, and
+opt-in weather. All existing tools and secondary pages use the shared card host. No external widget loader or new
+runtime. Remaining: image clipboard thumbnails, in-Perch history deletion,
+first-class URL pins, per-item shortcut recorder, AI usage/quota integrations,
+and hardware/compositor acceptance. See MODULES.md for exact supported limits.

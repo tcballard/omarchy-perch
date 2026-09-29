@@ -7,6 +7,7 @@ import qs.Ui
 import "MediaPolicy.js" as Policy
 import "EdgePolicy.js" as Edges
 import "PreferencesPolicy.js" as Prefs
+import "ModulePolicy.js" as Modules
 
 Item {
     id: root
@@ -96,7 +97,7 @@ Item {
     readonly property bool fullscreen: !!(monitor && monitor.activeWorkspace && monitor.activeWorkspace.hasFullscreen)
     readonly property bool shown: effectiveScreen !== null && (!fullscreen || fullscreenPolicy === "show" || fullscreenPolicy === "alerts" && media && media.live.timers && media.live.timers.some(function (t) {
             return t.status === "done";
-        })) && (expanded || !hideIdle || (media && (media.state !== "empty" || media.live.hasActivity || (media.notifications && media.notifications.preview !== "") || (media.workspace && media.workspace.meetingSummary !== "") || eventBanners && media.system.banner !== "")))
+        }))
     // Compact surface is present on startup; expanded state is host-managed.
     function open(encoded) {
         var p = Policy.payload(encoded || "{}");
@@ -116,7 +117,7 @@ Item {
         keyboardMode = p.pointer !== true;
         opened = true;
         expanded = true;
-        if (["music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup"].indexOf(p.page) >= 0)
+        if (["music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup", "clipboard", "stats", "weather"].indexOf(p.page) >= 0)
             view.page = p.page;
         focusPrimed = false;
         if (keyboardMode)
@@ -134,7 +135,6 @@ Item {
         }
         if (next === edge)
             return;
-        hoverTimer.stop();
         leaveTimer.stop();
         focusPrimeTimer.stop();
         edgeRemapping = true;
@@ -148,7 +148,6 @@ Item {
         keyboardMode = false;
         demo = false;
         leaveTimer.stop();
-        hoverTimer.stop();
         focusPrimeTimer.stop();
         focusPrimed = false;
     }
@@ -213,12 +212,6 @@ Item {
         id: fixture
     }
     Timer {
-        id: hoverTimer
-        interval: 90
-        onTriggered: if (root.hoverOpen && !root.expanded && hover.hovered)
-            root.reveal(true)
-    }
-    Timer {
         id: leaveTimer
         interval: 220
         onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive && !view.popupOpen)
@@ -262,7 +255,7 @@ Item {
         }
         // Fixed compositor surface: animate only the masked item inside it.
         implicitWidth: Math.min(view.expandedWidth, root.effectiveScreen ? root.effectiveScreen.width - Style.space(24) : view.expandedWidth)
-        implicitHeight: view.maximumHeight
+        implicitHeight: Math.min(Math.max(view.maximumHeight, view.compactHeight), root.effectiveScreen ? root.effectiveScreen.height - Style.space(24) : view.maximumHeight)
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "io-github-tcballard-perch"
@@ -277,7 +270,8 @@ Item {
         NotchView {
             id: view
             width: Math.min(implicitWidth, notchWindow.width)
-            height: implicitHeight
+            height: Math.min(implicitHeight, notchWindow.height)
+            surfaceVisible: root.shown
             x: root.edge === "left" ? 0 : root.edge === "right" ? notchWindow.width - width : (notchWindow.width - width) / 2
             y: root.edge === "bottom" ? notchWindow.height - height : Edges.vertical(root.edge) ? (notchWindow.height - height) / 2 : 0
             Behavior on width {
@@ -297,10 +291,7 @@ Item {
                 onHoveredChanged: {
                     if (hovered) {
                         leaveTimer.stop();
-                        if (root.hoverOpen && !root.expanded)
-                            hoverTimer.restart();
                     } else {
-                        hoverTimer.stop();
                         if (!root.keyboardMode && !root.edgeRemapping)
                             leaveTimer.restart();
                     }

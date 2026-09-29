@@ -8,6 +8,11 @@ Item {
     property string omarchyPath: ""
     property var shell: null
     property var manifest: null
+    property alias modules: moduleState
+    ModuleState {
+        id: moduleState
+        preferences: prefsStore
+    }
     property alias preferences: prefsStore
     property alias live: activityState
     property alias workspace: workspaceState

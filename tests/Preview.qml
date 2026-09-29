@@ -3,7 +3,7 @@ import qs.Commons
 import ".."
 Rectangle {
     id: root
-    width: 720; height: 440
+    width: 720; height: 620
     color: "#202831"
     property string previewState: "playing"
     DemoMedia { id: demoMedia; objectName: "demoMedia" }
@@ -15,6 +15,7 @@ Rectangle {
         media: demoMedia
         expanded: root.previewState !== "compact"
         demo: true
+        onPreferenceChanged: (key, value) => { var p = Object.assign({}, notch.displaySettings); p[key] = value; notch.displaySettings = p; }
         onEdgeRequested: function(value) { notch.edge = value }
         onCollapseRequested: root.previewState = "compact"
         onExpandRequested: root.previewState = "playing"
