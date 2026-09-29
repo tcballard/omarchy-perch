@@ -1,5 +1,6 @@
 // Built-in cards and validated plugin launch IDs; never executable paths.
 var catalog = [
+    {id:"usage",title:"AI usage",glyph:"◴",page:"usage"},
     {id:"music", title:"Music", glyph:"♫", page:"music"},
     {id:"timer", title:"Timers", glyph:"◷", page:"timer"},
     {id:"clipboard", title:"Clipboard", glyph:"▤", page:"clipboard"},

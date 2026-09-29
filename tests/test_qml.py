@@ -324,7 +324,7 @@ assert visual_item(visual,'event-dismiss') is not None
 visual_eval('notch.page="activity"; demoMedia.live.dismiss("event.test")')
 
 # Load every migrated card, including secondary pages, through the shared host.
-for page in ['music','timer','system','activity','players','lyrics','hub','shelf','calendar','desktop','inbox','setup']:
+for page in ['usage','music','timer','system','activity','players','lyrics','hub','shelf','calendar','desktop','inbox','setup']:
     visual_eval('notch.page='+repr(page)); QTest.qWait(30)
     card = visual_item(visual, 'module-card')
     assert card is not None and card.property('definition') is not None, page

@@ -42,6 +42,11 @@ def health():
             else:result[agent]='hooks disabled' if data.get('disableAllHooks') else 'enabled' if adapter in json.dumps(data.get('hooks',{})) and '--perch-hook-v1' in json.dumps(data.get('hooks',{})) else 'disabled'
         except FileNotFoundError:result[agent]='not configured'
         except (ValueError,OSError):result[agent]='configuration unreadable'
+    try:
+        config=json.loads(read_file(Path(os.environ.get('CLAUDE_CONFIG_DIR',str(Path.home()/'.claude')))/'settings.json',1048576,follow=True))
+        line=config.get('statusLine',{})
+        result['usage']='enabled' if isinstance(line,dict) and 'perch-usage-statusline' in str(line.get('command','')) else 'custom status line' if line else 'disabled'
+    except (OSError,ValueError,AttributeError):result['usage']='disabled'
     result['brightness']=backlight_state()
     result['sharing']='available' if (shutil.which('localsend') or shutil.which('localsend_app')) else 'LocalSend missing'
     result['alarm']='available' if shutil.which('canberra-gtk-play') else 'sound helper missing'
@@ -63,10 +68,11 @@ def backlight_state():
     except (OSError,ValueError,subprocess.SubprocessError):return 'no backlight device'
 
 def worker(p):
-    store=Store('integrations');names=['claude','codex','osd','notifications'] if p.get('all') else [p['name']]
+    store=Store('integrations');names=['claude','codex','usage','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
-        if name in ('claude','codex'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
+        if name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
+        elif name in ('claude','codex'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
         else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
         if not enabled:argv.append('--remove')
         try:run(argv,timeout=90,limit=16384,detail=True)
@@ -82,7 +88,7 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','usage'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():

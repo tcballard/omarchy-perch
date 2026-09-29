@@ -113,6 +113,12 @@ FocusScope {
         }
     }
     Binding {
+        target: root.media && root.media.usage !== undefined ? root.media.usage : null
+        property: "active"
+        when: !!root.media && root.media.usage !== undefined
+        value: root.expanded && root.surfaceVisible && !root.settingsOpen && root.page === "usage"
+    }
+    Binding {
         target: root.moduleState
         property: "statsVisible"
         when: !!root.moduleState

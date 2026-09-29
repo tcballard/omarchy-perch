@@ -30,7 +30,7 @@ def read_head(path, limit):
 
 class Store:
     def __init__(self, name):
-        if name not in ('shelf','calendar','notifications','integrations'):
+        if name not in ('shelf','calendar','notifications','integrations','usage-claude'):
             raise ValueError('Unknown state store')
         self.root = Path(os.environ.get('XDG_STATE_HOME', str(Path.home()/'.local/state'))) / 'omarchy-perch'
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)

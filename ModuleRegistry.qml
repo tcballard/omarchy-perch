@@ -9,7 +9,18 @@ Item {
         id: builtins
         host: root.host
     }
-    readonly property var modules: [clipboard, stats, weather, module_hub, module_shelf, module_calendar, module_setup, module_inbox, module_lyrics, module_desktop, module_timer, module_system, module_activity, module_players, module_music]
+    readonly property var modules: [usage, clipboard, stats, weather, module_hub, module_shelf, module_calendar, module_setup, module_inbox, module_lyrics, module_desktop, module_timer, module_system, module_activity, module_players, module_music]
+    PerchModule {
+        id: usage
+        moduleId: "usage"
+        title: "AI usage"
+        compactText: "Usage"
+        card: Component {
+            UsageCard {
+                state: root.host.media && root.host.media.usage !== undefined ? root.host.media.usage : null
+            }
+        }
+    }
     function get(id) {
         return modules.find(function (m) {
             return m.moduleId === id;

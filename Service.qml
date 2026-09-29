@@ -16,6 +16,11 @@ Item {
     PluginState {
         id: pluginState
     }
+    property alias usage: usageState
+    UsageState {
+        id: usageState
+        preferences: prefsStore
+    }
     property alias modules: moduleState
     ModuleState {
         id: moduleState

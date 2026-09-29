@@ -44,6 +44,11 @@ ColumnLayout {
             Repeater {
                 model: [
                     {
+                        id: "usage",
+                        name: "Claude usage status line",
+                        detail: "Opt-in local rate-limit counters; preserves custom status lines"
+                    },
+                    {
                         id: "notifications",
                         name: "Notifications",
                         detail: "Inbox, replies and persistent history"

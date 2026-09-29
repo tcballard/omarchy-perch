@@ -166,7 +166,7 @@ Item {
         keyboardMode = p.pointer !== true;
         opened = true;
         expanded = true;
-        if (["music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup", "clipboard", "stats", "weather"].indexOf(p.page) >= 0)
+        if (["usage", "music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup", "clipboard", "stats", "weather"].indexOf(p.page) >= 0)
             view.page = p.page;
         if (event && !demo) {
             view.settingsOpen = false;

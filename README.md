@@ -173,6 +173,12 @@ Actions and inline replies target only the live sender and are invalidated on ex
 
 The system-feedback companion uses the same installer with `--kind osd --apply`, replacing `omarchy.osd` instead of displaying a second overlay. This restores the source through Omarchy; if it was disabled before installation, it stays disabled. To disable only, preserving the installed files: `omarchy plugin disable io.github.tcballard.perch-notifications`. If setup is interrupted, that command is also the recovery path. Companion files with local edits are never overwritten by setup.
 
+## Local AI usage
+
+Open **AI usage** from All tools and choose Enable local usage. Perch reads bounded tails of recent local Codex rollout files only while this card is visible, at most once a minute. The dashboard shows account rate-limit windows, reset times and snapshot age; absent or stale data is labelled explicitly. It does not read credential files or fetch billing APIs.
+
+For Claude, enable **Claude usage status line** in Setup. The installer backs up settings, owns only its exact status-line command and refuses to overwrite a custom status line. The bridge caches only rate-limit counters. It requires a client/account that supplies `rate_limits`; Desktop-only sessions may not supply it. Disable local usage to stop reads. Disable the bridge in Setup to remove its managed status line.
+
 ## Optional agent hooks
 
 ```bash
