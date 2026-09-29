@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""Preview or apply reversible, opt-in Perch agent hook configuration (Python 3.11+)."""
+import argparse
+import copy
+import json
+import os
+from pathlib import Path
+import shlex
+import tempfile
+import time
+import tomllib
+
+START = '# BEGIN PERCH NOTIFY v1\n'
+END = '# END PERCH NOTIFY v1\n'
+EVENTS = ['UserPromptSubmit', 'PostToolUse', 'Notification', 'Stop', 'SessionEnd']
+
+
+def read(path):
+    if path.is_symlink():
+        raise ValueError(f'Refusing symlink: {path}')
+    if not path.exists():
+        return ''
+    if path.stat().st_size > 1024 * 1024:
+        raise ValueError(f'Configuration exceeds 1 MiB: {path}')
+    return path.read_text()
+
+
+def atomic(path, text, mode=0o600):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix='.perch-', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as out:
+            out.write(text)
+            out.flush()
+            os.fsync(out.fileno())
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+def transform(agent, old, adapter, remove):
+    argv = ['python3', str(adapter), '--perch-hook-v1', agent]
+    if agent == 'codex':
+        parsed = tomllib.loads(old)
+        block = START + 'notify = ' + json.dumps(argv) + '\n' + END
+        if START in old or END in old:
+            if old.count(block) != 1 or old.count(START) != 1 or old.count(END) != 1 or parsed.get('notify') != argv:
+                raise ValueError('Perch notify block was edited. Remove it manually; no changes made.')
+            result = old.replace(block, '', 1) if remove else old
+        elif remove:
+            return old
+        elif 'notify' in parsed:
+            raise ValueError('Codex already has a notify command. It has been preserved. Integrate Perch manually; setup will not replace or execute an existing notifier.')
+        else:
+            result = block + old
+        tomllib.loads(result)
+        return result
+    data = json.loads(old) if old.strip() else {}
+    if not isinstance(data, dict):
+        raise ValueError('Claude settings must be a JSON object')
+    if data.get('disableAllHooks') and not remove:
+        raise ValueError('Claude hooks are disabled; Perch will not override that preference.')
+    result = copy.deepcopy(data)
+    hooks = result.setdefault('hooks', {})
+    if not isinstance(hooks, dict):
+        raise ValueError('Claude hooks must be an object')
+    command = shlex.join(argv)
+    for event in EVENTS:
+        groups = hooks.get(event, [])
+        if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get('hooks'), list) for g in groups):
+            raise ValueError(f'Unrecognized {event} hook configuration; no changes made.')
+        # Remove only the exact hook this installer owns, preserving other hooks in its group.
+        remaining = []
+        for group in groups:
+            kept = [h for h in group['hooks'] if not (isinstance(h, dict) and h.get('type') == 'command' and h.get('command') == command)]
+            if kept:
+                remaining.append(dict(group, hooks=kept))
+            elif not group['hooks']:
+                remaining.append(group)
+        if not remove:
+            remaining.append({'hooks': [{'type': 'command', 'command': command, 'timeout': 2}]})
+        if remaining:
+            hooks[event] = remaining
+        else:
+            hooks.pop(event, None)
+    if not hooks:
+        result.pop('hooks', None)
+    return old if result == data else json.dumps(result, indent=2, ensure_ascii=False) + '\n'
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('agent', choices=['claude', 'codex'])
+    parser.add_argument('--remove', action='store_true')
+    parser.add_argument('--apply', action='store_true', help='Write the previewed changes and a dated backup')
+    args = parser.parse_args()
+    home = Path.home()
+    adapter = home / '.local/share/omarchy-perch/perch-agent-hook'
+    config_dir = Path(os.environ.get('CODEX_HOME', home / '.codex')) if args.agent == 'codex' else Path(os.environ.get('CLAUDE_CONFIG_DIR', home / '.claude'))
+    path = config_dir / ('config.toml' if args.agent == 'codex' else 'settings.json')
+    old = read(path)
+    new = transform(args.agent, old, adapter, args.remove)
+    print(('Remove' if args.remove else 'Install') + f' Perch {args.agent} hooks in {path}')
+    print('Reports only generic status and a hashed session identifier. Existing unrelated settings/hooks are preserved.')
+    if not args.apply:
+        print('Preview only. Add --apply to write changes. No configuration contents are printed.')
+        return
+    if not args.remove:
+        if adapter.is_symlink():
+            raise ValueError('Refusing an existing adapter symlink')
+        source = Path(__file__).with_name('perch-agent-hook').read_text()
+        if adapter.exists() and '"""Best-effort, status-only Claude Code / Codex hook.' not in read(adapter):
+            raise ValueError('Adapter path is occupied by an unrelated file')
+        atomic(adapter, source, 0o700)
+    if old != new:
+        # Detect edits between preview and commit; never dump potentially sensitive config.
+        if read(path) != old:
+            raise ValueError('Configuration changed during setup. Run setup again.')
+        if path.exists():
+            backup = path.with_name(path.name + '.perch-backup-' + str(time.time_ns()))
+            atomic(backup, old)
+            print(f'Backup: {backup}')
+        atomic(path, new)
+    print('Done. Restart the agent to load its hooks. Managed restrictions are never overridden.')
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError) as error:
+        raise SystemExit(str(error))

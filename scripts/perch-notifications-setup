@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Install/remove Perch's optional notification companion. Preview unless --apply."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+ID = 'io.github.tcballard.perch-notifications'
+MARKER = '.perch-companion.json'
+
+
+def run(argv):
+    result = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+    if result.returncode or (argv[0] == 'omarchy-shell' and result.stdout.strip() not in ('', 'ok')):
+        raise ValueError('Command failed: ' + ' '.join(argv) + '. Check omarchy-shell; setup did not complete.')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--remove', action='store_true')
+    parser.add_argument('--apply', action='store_true')
+    args = parser.parse_args()
+    source = Path(__file__).resolve().parent.parent / 'companions/notifications'
+    base = Path.home() / '.config/omarchy/plugins'
+    target = base / ID
+    if target.is_symlink():
+        raise ValueError('Companion path is a symlink; no changes made.')
+    if target.exists():
+        marker = target / MARKER
+        if not marker.is_file() or marker.is_symlink():
+            raise ValueError('Companion directory is not owned by this installer.')
+        owned = json.loads(marker.read_text())
+        actual = {str(p.relative_to(target)): hashlib.sha256(p.read_bytes()).hexdigest() for p in target.rglob('*') if p.is_file() and p != marker}
+        if any(p.is_symlink() for p in target.rglob('*')) or actual != owned:
+            raise ValueError('Companion files were modified. Preserve your edits before replacing/removing it.')
+    if not args.remove:
+        config = Path.home() / '.config/omarchy/shell.json'
+        data = json.loads(config.read_text())
+        entries = data.get('plugins', []) + sum((data.get('bar', {}).get('layout', {}).get(s, []) for s in ['left','center','right']), [])
+        enabled = {e if isinstance(e,str) else e.get('id') for e in entries}
+        if 'io.github.tcballard.perch' not in enabled:
+            raise ValueError('Enable Perch before enabling its notification companion.')
+        for manifest in base.glob('*/manifest.json'):
+            m = json.loads(manifest.read_text())
+            if m.get('id') != ID and m.get('id') in enabled and m.get('omarchy', {}).get('clonedFrom') == 'omarchy.notifications':
+                raise ValueError('Another notification clone is enabled. Disable it explicitly first.')
+    print(('Remove' if args.remove else 'Install/update') + f' {target}')
+    print('Enabling replaces Omarchy notifications. Disabling uses Omarchy clone restoration; an originally disabled source stays disabled.')
+    if not args.apply:
+        print('Preview only. Add --apply to make these changes.')
+        return
+    if args.remove:
+        if target.exists():
+            # Must restore the source before removing the clone manifest.
+            run(['omarchy', 'plugin', 'disable', ID])
+            shutil.rmtree(target)
+            run(['omarchy-shell', 'shell', 'rescanPlugins'])
+        print('Removed. Restart the shell if the notification owner has not changed yet.')
+        return
+    base.mkdir(parents=True, exist_ok=True)
+    stage = Path(tempfile.mkdtemp(prefix='.perch-notifications-', dir=base))
+    try:
+        hashes = {}
+        for name in ['manifest.json', 'Service.qml', 'CommandJob.qml']:
+            shutil.copy2(source / name, stage / name)
+            hashes[name] = hashlib.sha256((stage / name).read_bytes()).hexdigest()
+        (stage / MARKER).write_text(json.dumps(hashes, indent=2) + '\n')
+        run(['omarchy', 'plugin', 'validate', str(stage)])
+        if target.exists():
+            # Preserve an intact old directory until the replacement is in place.
+            previous = base / ('.perch-notifications-old-' + str(os.getpid()))
+            target.rename(previous)
+            try:
+                stage.rename(target)
+            except Exception:
+                previous.rename(target)
+                raise
+            shutil.rmtree(previous)
+        else:
+            stage.rename(target)
+    finally:
+        if stage.exists():
+            shutil.rmtree(stage)
+    run(['omarchy-shell', 'shell', 'rescanPlugins'])
+    run(['omarchy', 'plugin', 'enable', ID])
+    print('Companion enabled. Open Perch → Notifications → Refresh. After updates, run: omarchy restart shell')
+    print('To restore built-in notifications: omarchy plugin disable ' + ID)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        raise SystemExit(str(error))

@@ -86,6 +86,22 @@ Canvas {
             c.beginPath();
             c.arc(13, 12, 7, -0.8, 0.8);
             c.stroke();
+        } else if (name === "bell") {
+            c.beginPath();
+            c.moveTo(5, 17);
+            c.lineTo(7, 14);
+            c.lineTo(7, 9);
+            c.arc(12, 9, 5, Math.PI, 0);
+            c.lineTo(17, 14);
+            c.lineTo(19, 17);
+            c.closePath();
+            c.stroke();
+            line(10, 21, 14, 21);
+            line(12, 2, 12, 4);
+        } else if (name === "desktop") {
+            c.strokeRect(3, 4, 18, 13);
+            line(12, 17, 12, 21);
+            line(8, 21, 16, 21);
         } else if (name === "activity") {
             line(3, 13, 7, 13);
             line(7, 13, 10, 6);

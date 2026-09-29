@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-rc.2 — 29 September 2026
+
+- Add an optional notification companion, six-second compact previews, a bounded session inbox, DND, native actions, expiry and stale-action protection. Omarchy clone lifecycle restores the original notification service on companion disable/removal.
+- Add Applications, Omarchy menu, Clipboard, Emoji, Appearance and Settings shortcuts.
+- Add reversible opt-in Claude Code event hooks and Codex turn-completion notifications, with status-only payloads, silent failure and preserved existing configuration.
+- Add inbox/desktop demos, native Qt notification lifecycle and pointer tests, and isolated setup/removal/ownership tests. Keep the stable surface and item-only animation path.
+
+Live DBus ownership handover, real sender actions, agent-client events and desktop focus handoff still require XPS acceptance. No stable tag is made.
+
 ## 0.1.0-rc.1 — 29 September 2026
 
 Perch grows from a music preview into an edge companion for playback, focus timers and live progress. It keeps the smoother item animation confirmed on the XPS and adds four focused views.

@@ -55,3 +55,16 @@ Expanded views: music 344×270 (empty 344×212), secondary views 344×370, setti
 Candidate is 0.1.0-rc.1. Stable tagging awaits live checks for this feature boundary; the XPS confirmation applies to the preceding smoother interaction, not these new integrations. Deferred beyond v0.1.0: remote artwork, audible/desktop timer alarms, notification replacement/inbox, browser-download scraping, automatic agent hooks, desktop menus and AI command execution.
 
 Host lifecycle detail: the inspected PluginRegistry.setEnabled(false) removes third-party plugin entries from shell.json, so disable/remove clears durable Perch settings/timer state. Closing the panel and restarting the shell preserve it. Documentation reflects this boundary.
+
+
+## rc2 — 29 September 2026
+
+User expanded first-release scope to notifications, desktop menu access and supported automatic agent hooks. This supersedes rc1's deferral of those three features. Candidate is 0.1.0-rc.2.
+
+Notification ownership is an explicit opt-in companion with `omarchy.clonedFrom: omarchy.notifications`; no runtime parent traversal or privileged service lookup. The companion owns native references separately from a bounded 20-row snapshot model. Sender changes refresh snapshots, closure invalidates actions, generation keys prevent old actions hitting a reused ID. Transient notices disappear after expiry. A 100 ms event coalescer sends bounded snapshots via fixed argv to the core inbox IPC; one process per direction at a time, three-second deadline, no idle subprocess polling. No retry loop during host outages. Open/Refresh synchronizes again. History/DND are session-only. No executable hints, remote image loading or inline reply.
+
+The six-second preview fits the existing compact pill; no auto expansion. Bell and monitor icons open inbox/desktop pages, leaving the original four tabs. The desktop page hands off to fixed public Omarchy commands after releasing Perch focus. The compositor surface, 140 ms item animation, four-edge geometry and hover delays are unchanged.
+
+Agent setup is an explicit user-invoked Python tool, separate from plugin enable/update. Claude receives appended command hooks; Codex gets a marked top-level notify block only when no notifier exists. Exact-owned removal, idempotence, dated backups, mode-600 atomic config writes and existing-value preservation are tested. Status adapter accepts at most 64 KiB; emits only generic text and a hashed session identifier; stdout/stderr discarded, no permission decisions, no prompt/transcript forwarding, one-second IPC timeout. Codex support is honestly completion-only per documented notify contract. Managed restrictions are not bypassed.
+
+Remove/disable the notification companion before Perch to restore a visible owner, and remove opted-in agent hooks before uninstall. The companion is copied so deleting a core checkout cannot leave a dangling symlink; setup checks its owned file hashes before update/removal. Automatic dependent-uninstall is not a host capability used here.

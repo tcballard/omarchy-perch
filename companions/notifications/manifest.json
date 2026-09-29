@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.tcballard.perch-notifications",
+  "name": "Perch Notifications",
+  "version": "0.1.0-rc.2",
+  "author": "Tom Ballard",
+  "license": "MIT",
+  "description": "Optional notification inbox for Perch; replaces Omarchy notifications while enabled.",
+  "kinds": ["service"],
+  "entryPoints": {"service": "Service.qml"},
+  "keepLoaded": true,
+  "omarchy": {"clonedFrom": "omarchy.notifications"}
+}

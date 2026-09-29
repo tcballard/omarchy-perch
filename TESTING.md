@@ -69,3 +69,20 @@ No live claim is made for these new features until those results are reported. C
 Candidate preparation also passes the inspected upstream `omarchy-plugin-validate` command (manifest validation only) and the static release preflight using the unchanged scripts in the resolved sibling layout. Its advisory capability categories are the reviewed FileView read and CI dependency installation noted above. Full host validation is still pending.
 
 The first candidate CI run exposed missing libEGL.so.1 on the Ubuntu runner before Qt tests could import. CI now installs libegl1/libopengl0 explicitly; the Qt tests remain required. This CI-only dependency setup does not run during plugin installation.
+
+
+## 0.1.0-rc.2 evidence and live gate
+
+Portable checks additionally cover notification IPC bounds and unique keys; production notification QML compiles against host stubs and exercises replacement signals, native action invocation, stale generation rejection, expiry, transient cleanup and DND. Pointer tests open the actual inbox/desktop buttons and invoke a fixture notification action through the production delegate. Isolated HOME tests exercise preview/no-write, idempotent install, owned removal, original notifier preservation, Claude unrelated settings/hooks, edited-file refusal, config backups, silence and status-only payloads. Both core and companion manifests are validated. These do not simulate DBus name ownership or prove actual agent-client event delivery.
+
+Before stable v0.1.0 on the XPS:
+1. Update core, restart and verify existing media/timer/audio and smooth four-edge reveal. Open bell/desktop with pointer and keyboard; Tab/Escape/outside click remain usable.
+2. Preview/install notification companion; restart. Send `notify-send 'Perch rc2' 'Hello from the desktop'`, a critical notification, an explicit expiry, a transient notification and an action-enabled sender. Confirm one daemon owns notifications, one preview, correct text, DND, expiry and action cleanup. Verify sender replacement updates one row and a closed sender cannot be invoked.
+3. Disable/remove companion while core remains enabled; verify built-in notification service returns. Repeat with the source previously disabled: it must remain disabled. Test interrupted setup recovery and competing notification clone refusal. Reinstall/update the separate companion and verify history/DND reset is clear.
+4. Open Applications, clipboard, emoji, appearance and setup; confirm Perch releases focus and the destination gets it. No commands run just by showing the desktop page.
+5. Preview/apply each installed agent's hooks. Preserve a preexisting Claude hook and verify both still run. Confirm actual Claude working → attention → working → complete and actual Codex turn completion. Use a preexisting Codex notifier to verify refusal, not replacement. Stop Perch and ensure hook failures do not break agent operations.
+6. Remove agent hooks; compare configuration semantics with the backup, then remove companion before core. Check original notifications, bar, keys and agent behavior. Backups and adapter are deliberately retained; no automatic deletion of user-edited state.
+
+The new integrations require these live checks; stable release remains gated.
+
+rc2 static preflight flags the reviewed CLI Process helpers and opt-in setup scripts, alongside the existing FileView read and CI-only package installation. CLI runtime call sites use fixed command/verb allowlists and bounded payloads; one running job per helper, three-second deadline, 512-character retained reply. SplitParser reads output from trusted Omarchy CLI commands, not arbitrary producer subprocesses; no general producer-side stream cap is claimed. Setup scripts are explicit user actions, not plugin startup behavior.

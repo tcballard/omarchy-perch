@@ -10,6 +10,14 @@ Item {
     property var manifest: null
     property alias preferences: prefsStore
     property alias live: activityState
+    property alias notifications: inboxState
+    property alias desktop: desktopState
+    NotificationState {
+        id: inboxState
+    }
+    DesktopState {
+        id: desktopState
+    }
     property alias system: systemState
     Preferences {
         id: prefsStore
@@ -108,6 +116,9 @@ Item {
     // Diagnostics contain no media metadata.
     IpcHandler {
         target: "io.github.tcballard.perch"
+        function inbox(payload: string): string {
+            return inboxState.accept(payload);
+        }
         function activity(payload: string): string {
             return activityState.activity(payload);
         }

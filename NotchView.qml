@@ -15,16 +15,23 @@ FocusScope {
     property string settingsError: ""
     readonly property var live: media ? media.live : null
     readonly property var system: media ? media.system : null
+    readonly property var inbox: media && media.notifications !== undefined ? media.notifications : null
+    readonly property var desktop: media && media.desktop !== undefined ? media.desktop : null
+    readonly property string notificationPreview: inbox ? inbox.preview : ""
+    onPageChanged: if (page === "inbox" && inbox)
+        inbox.sync()
     readonly property bool liveAttention: !!(live && (live.timerStatus === "done" || (live.focused && (live.focused.state === "waiting" || live.focused.state === "error"))))
     readonly property string compactBanner: eventBanners && system ? system.banner : ""
-    readonly property bool busy: hasPlayer || !!(live && live.hasActivity) || compactBanner !== ""
-    readonly property string compactText: liveAttention ? live.summary : compactBanner || (live && live.hasActivity ? live.summary : hasPlayer ? caption : showClock && live ? live.clock : "Perch")
-    readonly property string compactIcon: liveAttention ? "activity" : compactBanner ? "system" : live && live.timerActive ? "timer" : live && live.focused ? "activity" : playing ? "wave" : hasPlayer ? "music" : showClock ? "timer" : "music"
+    readonly property bool busy: hasPlayer || !!(live && live.hasActivity) || compactBanner !== "" || notificationPreview !== ""
+    readonly property string compactText: liveAttention ? live.summary : notificationPreview || compactBanner || (live && live.hasActivity ? live.summary : hasPlayer ? caption : showClock && live ? live.clock : "Perch")
+    readonly property string compactIcon: liveAttention ? "activity" : notificationPreview ? "bell" : compactBanner ? "system" : live && live.timerActive ? "timer" : live && live.focused ? "activity" : playing ? "wave" : hasPlayer ? "music" : showClock ? "timer" : "music"
     function revealPage() {
         if (live && live.timerStatus === "done")
             page = "timer";
         else if (liveAttention || live && live.focused && !hasPlayer)
             page = "activity";
+        else if (notificationPreview)
+            page = "inbox";
         else if (compactBanner)
             page = "system";
         else if (live && live.timerActive && !hasPlayer)
@@ -188,6 +195,28 @@ FocusScope {
                 font.pixelSize: Style.space(10)
             }
             NotchButton {
+                objectName: "open-inbox"
+                glyph: "bell"
+                label: "Notifications"
+                ink: root.ink
+                surface: root.surface
+                onClicked: {
+                    root.settingsOpen = false;
+                    root.page = "inbox";
+                }
+            }
+            NotchButton {
+                objectName: "open-desktop"
+                glyph: "desktop"
+                label: "Desktop shortcuts"
+                ink: root.ink
+                surface: root.surface
+                onClicked: {
+                    root.settingsOpen = false;
+                    root.page = "desktop";
+                }
+            }
+            NotchButton {
                 glyph: "settings"
                 label: root.settingsOpen ? "Back to player" : "Settings"
                 ink: root.ink
@@ -226,6 +255,26 @@ FocusScope {
                     onClicked: root.page = modelData
                 }
             }
+        }
+        InboxView {
+            visible: !root.settingsOpen && root.page === "inbox"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            height: parent.height - Style.space(110)
+            inbox: root.inbox
+            ink: root.ink
+            surface: root.surface
+        }
+        DesktopView {
+            visible: !root.settingsOpen && root.page === "desktop"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            desktop: root.desktop
+            ink: root.ink
+            surface: root.surface
+            onLaunched: root.collapseRequested()
         }
         TimerView {
             visible: !root.settingsOpen && root.page === "timer"

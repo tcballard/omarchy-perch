@@ -63,7 +63,7 @@ Item {
     readonly property var effectiveScreen: targetScreen && screens.indexOf(targetScreen) !== -1 ? targetScreen : screens.length ? screens[0] : null
     readonly property var monitor: effectiveScreen ? Hyprland.monitorFor(effectiveScreen) : null
     readonly property bool fullscreen: !!(monitor && monitor.activeWorkspace && monitor.activeWorkspace.hasFullscreen)
-    readonly property bool shown: effectiveScreen !== null && !fullscreen && (expanded || !hideIdle || (media && (media.state !== "empty" || media.live.hasActivity || eventBanners && media.system.banner !== "")))
+    readonly property bool shown: effectiveScreen !== null && !fullscreen && (expanded || !hideIdle || (media && (media.state !== "empty" || media.live.hasActivity || (media.notifications && media.notifications.preview !== "") || eventBanners && media.system.banner !== "")))
     // Compact surface is present on startup; expanded state is host-managed.
     function open(encoded) {
         var p = Policy.payload(encoded || "{}");
@@ -83,7 +83,7 @@ Item {
         keyboardMode = p.pointer !== true;
         opened = true;
         expanded = true;
-        if (["music", "timer", "system", "activity", "players"].indexOf(p.page) >= 0)
+        if (["music", "timer", "system", "activity", "players", "inbox", "desktop"].indexOf(p.page) >= 0)
             view.page = p.page;
         focusPrimed = false;
         if (keyboardMode)

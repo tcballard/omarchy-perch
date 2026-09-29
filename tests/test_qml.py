@@ -191,5 +191,24 @@ QTest.qWait(60)
 assert visual_eval('notch.liveAttention') is True
 assert visual_eval('notch.compactText') == 'Build needs input'
 visual_eval('demoMedia.live.dismiss("test"); demoMedia.live.cancel()')
+# Header controls expose the two rc2 pages; notification actions use the owning row.
+visual_eval('demoMedia.setState("inbox")')
+for button,page in [('open-inbox','inbox'),('open-desktop','desktop')]:
+    tab=visual_item(visual,button)
+    point=tab.mapToScene(QPointF(tab.width()/2,tab.height()/2)).toPoint()
+    QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)
+    assert visual_eval('notch.page')==page
+visual_eval('notch.page="inbox"')
+QTest.qWait(60)
+def action_by_text(item,text):
+    if item.property('text')==text and item.isVisible():return item
+    for child in item.childItems():
+        match=action_by_text(child,text)
+        if match is not None:return match
+    return None
+action=action_by_text(visual,'Open event');assert action is not None
+point=action.mapToScene(QPointF(action.width()/2,action.height()/2)).toPoint()
+QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)
+assert visual_eval('demoMedia.notifications.items.length')==1
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')
