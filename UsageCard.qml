@@ -19,15 +19,15 @@ ColumnLayout {
     RowLayout {
         PerchAction {
             objectName: "usage-enable"
-            text: root.state && root.state.enabled ? "Disable usage" : "Enable local usage"
+            text: root.state && root.state.usageEnabled ? "Disable usage" : "Enable local usage"
             enabled: !!root.state
             ink: root.ink
             surface: root.surface
-            onClicked: root.state.setEnabled(!root.state.enabled)
+            onClicked: root.state.setEnabled(!root.state.usageEnabled)
         }
         PerchAction {
             text: "Refresh"
-            enabled: !!root.state && root.state.enabled && !root.state.busy
+            enabled: !!root.state && root.state.usageEnabled && !root.state.busy
             ink: root.ink
             surface: root.surface
             onClicked: root.state.refresh()
