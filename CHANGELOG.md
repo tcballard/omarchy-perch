@@ -2,6 +2,9 @@
 
 ## Unreleased — native modules
 
+- Native Plugin Perch drawer: bounded provider snapshots render inside Perch with explicit actions, late-response protection and a full-panel fallback. RSS Feed is the first paired provider; it requires its Perch-card integration change.
+- Track the full Open Island product scope, provider/terminal coverage and platform equivalents in OPEN-ISLAND-SCOPE.md. The agent-session slice is not a parity claim.
+
 - Turn agent activity into project-labelled session rows with attention-first ordering, count-sized panels and explicit return to the originating Hyprland window.
 
 - Add Notch as the default compact presentation, showing one context and opening its card. Plugin Perch remains an explicit strip option; both share cards and pins. Hidden stats/weather tiles stop sampling while Notch is collapsed.

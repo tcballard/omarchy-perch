@@ -12,6 +12,7 @@ FocusScope {
     id: root
     property var media: null
     readonly property var pluginState: media && media.pluginPins !== undefined ? media.pluginPins : null
+    readonly property var cardState: media && media.pluginCards !== undefined ? media.pluginCards : null
     signal pluginLaunchRequested(string id)
     property bool surfaceVisible: true
     readonly property var moduleState: media && media.modules !== undefined ? media.modules : null
@@ -30,6 +31,14 @@ FocusScope {
         if (descriptor.pluginId) {
             if (pointer)
                 return;
+            if (cardState) {
+                settingsOpen = false;
+                page = id;
+                cardState.select(descriptor.pluginId);
+                if (!expanded)
+                    expandRequested();
+                return;
+            }
             settingsView.section = "plugins";
             settingsOpen = true;
             if (!expanded)
@@ -46,6 +55,13 @@ FocusScope {
         id: moduleRegistry
         state: root.moduleState
         host: root
+    }
+    PerchModule {
+        id: pluginCardDefinition
+        moduleId: root.page
+        title: root.cardState && root.cardState.card ? root.cardState.card.title : root.pluginState && root.pluginState.get(Modules.pluginId(root.page)) ? root.pluginState.get(Modules.pluginId(root.page)).name : "Plugin drawer"
+        actions: [{id: "refresh", title: "Refresh", enabled: !!root.cardState && !root.cardState.busy}, {id: "open", title: "Open", enabled: !root.cardState || !root.cardState.busy}]
+        card: Component { PluginDrawerCard { state: root.cardState } }
     }
     Binding {
         target: root.moduleState
@@ -98,6 +114,8 @@ FocusScope {
         pageEnter.restart();
     }
     onPageChanged: {
+        if (!Modules.pluginId(page) && cardState)
+            cardState.clear();
         var order = pageSequence.indexOf(page);
         enterPage(order >= pageOrder);
         pageOrder = Math.max(0, order);
@@ -149,11 +167,17 @@ FocusScope {
         enterPage(settingsOpen);
     }
     onExpandedChanged: {
+        if (expanded && cardState && Modules.pluginId(page) && cardState.selectedId !== Modules.pluginId(page))
+            cardState.select(Modules.pluginId(page));
         if (!expanded) {
+            if (cardState)
+                cardState.clear();
             settingsOpen = false;
             popupOpen = false;
         }
     }
+    onSurfaceVisibleChanged: if (!surfaceVisible && cardState)
+        cardState.clear()
     Connections {
         target: root.live
         function onSessionOpened() { root.collapseRequested(); }
@@ -390,10 +414,15 @@ FocusScope {
                 y: root.bodyTop
                 width: parent.width - Style.space(36)
                 height: parent.height - root.bodyTop - Style.space(16)
-                definition: visible ? moduleRegistry.get(root.page) : null
+                definition: visible ? (Modules.pluginId(root.page) ? pluginCardDefinition : moduleRegistry.get(root.page)) : null
                 ink: root.ink
                 surface: root.surface
-                onActionRequested: id => moduleRegistry.action(root.page, id)
+                onActionRequested: function(id) {
+                    if (Modules.pluginId(root.page)) {
+                        if (id === "open") root.pluginLaunchRequested(Modules.pluginId(root.page));
+                        else if (root.cardState) root.cardState.refresh();
+                    } else moduleRegistry.action(root.page, id);
+                }
             }
             SettingsView {
                 id: settingsView

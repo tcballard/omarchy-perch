@@ -32,7 +32,7 @@ ColumnLayout {
         {
             id: "plugins",
             title: "Plugin pins",
-            detail: "Open installed plugins from your strip."
+            detail: "Pin plugins for native cards and quick access to their full panels."
         }
     ]
     readonly property var current: sections.find(function (s) {

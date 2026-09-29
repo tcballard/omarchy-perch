@@ -9,6 +9,8 @@ Item {
     property var shell: null
     property var manifest: null
     property alias pluginPins: pluginState
+    property alias pluginCards: pluginCards
+    PluginCardState { id: pluginCards }
     PluginState {
         id: pluginState
     }

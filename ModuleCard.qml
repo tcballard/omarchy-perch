@@ -28,6 +28,7 @@ ColumnLayout {
             delegate: PerchAction {
                 required property var modelData
                 text: modelData.title
+                enabled: modelData.enabled !== false
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.actionRequested(modelData.id)

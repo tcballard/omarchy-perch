@@ -24,6 +24,31 @@ def evaluate(code):
     assert not e.hasError(), e.error().toString()
     return result[0] if isinstance(result,tuple) else result
 assert evaluate('service.playerKey')=='player.b'
+# Native card state ignores responses from an older selection and closed views.
+def card_job_eval(code):
+    from PySide6.QtCore import QObject
+    job=host.findChild(QObject,'plugin-card-job')
+    assert job is not None
+    worker=next(child for child in job.children() if child.metaObject().indexOfProperty('command') >= 0)
+    worker.setProperty('running',False)
+    e=QQmlExpression(QQmlEngine.contextForObject(job),job,code)
+    value=e.evaluate()
+    assert not e.hasError(),e.error().toString()
+    return value
+evaluate('service.pluginCards.select("example.first"); service.pluginCards.select("example.second")')
+card_job_eval('finish({ok:true,card:{title:"Old"}})')
+QTest.qWait(20)
+assert evaluate('service.pluginCards.card === null') is True
+assert evaluate('service.pluginCards.selectedId') == 'example.second'
+assert evaluate('service.pluginCards.busy') is True
+card_job_eval('finish({ok:true,card:{title:"Current",revision:"r1"}})')
+assert evaluate('service.pluginCards.card.title') == 'Current'
+evaluate('service.pluginCards.refresh(); service.pluginCards.clear()')
+card_job_eval('finish({ok:true,card:{title:"Late"}})')
+QTest.qWait(20)
+assert evaluate('service.pluginCards.card === null') is True
+assert evaluate('service.pluginCards.selectedId') == ''
+assert evaluate('service.pluginCards.busy') is False
 assert evaluate('service.art')==''
 assert evaluate('service.choose("player.a")')
 assert evaluate('service.playerKey')=='player.a'
@@ -366,13 +391,24 @@ point=tile.mapToScene(QPointF(tile.width()/2,tile.height()/2)).toPoint()
 QTest.mouseMove(view,point); QTest.qWait(220)
 assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
 QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point); QTest.qWait(60)
+assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
+assert visual_eval('notch.settingsOpen') is False
+assert visual_eval('notch.page') == 'plugin:example.notes'
+assert visual_eval('demoMedia.pluginCards.selectedId') == 'example.notes'
+card_action=visible_named(visual,'plugin-card-action-first'); assert card_action is not None
+card_action.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+assert visual_eval('demoMedia.pluginCards.lastAction') == 'open:0'
+# Opening the existing panel remains an explicit separate action.
+full_open=action_by_text(visual,'Open'); assert full_open is not None
+full_open.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
 assert visual_eval('demoMedia.pluginPins.lastOpened') == 'example.notes'
-assert visual_eval('notch.settingsOpen') is True
 # Missing/disabled pins survive cleanup and can be removed; no silent launch.
 visual_eval('demoMedia.pluginPins.plugins=[]; notch.settingsOpen=false; demoMedia.pluginPins.lastOpened=""; notch.activateModule("plugin:example.notes",false)')
 assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
-assert visual_eval('demoMedia.pluginPins.error') == 'Demo plugin unavailable'
+assert visual_eval('demoMedia.pluginCards.selectedId') == 'example.notes'
 assert visual_eval('notch.moduleItems.length') == 2
+visual_eval('notch.page="music"')
+assert visual_eval('demoMedia.pluginCards.selectedId') == ''
 # Sectioned settings use the same controls in wide and constrained panels.
 visual_eval('notch.settingsOpen=true; notch.expanded=true; notch.reducedMotion=true')
 QTest.qWait(50)

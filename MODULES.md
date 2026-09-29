@@ -12,7 +12,7 @@ selection restores the defaults.
 Hover a tile for 150 ms (when Open on hover is enabled), or click it to open its
 card. Expanded cards retain a horizontal strip for switching tools. The compact
 strip follows the chosen screen edge, with upright labels on left/right edges.
-Plugin Perch remains a launcher; Notch stays quiet when idle. Old hide-idle and idle-clock settings are ignored.
+Plugin Perch offers native cards from participating plugins and a full-panel launcher fallback; Notch stays quiet when idle. Old hide-idle and idle-clock settings are ignored. See [PLUGIN-CARDS.md](PLUGIN-CARDS.md) for the versioned data-only contract.
 Fullscreen and monitor policies still apply.
 
 ## Contract
@@ -112,7 +112,7 @@ performance claim follows from portable tests alone.
 
 In Settings, choose **Pin installed plugins**, then Pin beside an enabled plugin.
 Pins share the eight strip slots and the same drag, keyboard and Settings ordering.
-Click to open the plugin's own panel; hover never opens external plugins. Refresh
+Click to open its native card; use Open for the full panel. Hover never invokes external plugins. Refresh
 the list after installing, enabling or removing plugins. Disabled/missing pins
 remain removable. Perch never installs, enables or loads another plugin's QML.
 
@@ -122,4 +122,6 @@ bars are excluded. Bar widgets without a summonable panel may be rejected by Oma
 Perch reports that error. Each explicit launch rechecks installation and enablement
 before calling `omarchy-shell shell summon ID '{}'` using separate argv arguments.
 Discovery and summon each have a three-second deadline and bounded output.
-No new polling or dependencies are added. Embedded plugin cards are not implemented.
+No new polling or dependencies are added. Participating plugins expose native
+cards through [PLUGIN-CARDS.md](PLUGIN-CARDS.md); unsupported plugins retain the
+full-panel fallback. This does not relocate existing bar widgets.

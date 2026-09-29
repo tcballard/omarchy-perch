@@ -15,7 +15,7 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 ## What you get
 
 - **Tools at the edge:** configurable tiles open their native cards; live labels show music, timer countdowns and module status. Header swipes cycle selected tools. Four edges, monitor pinning, per-display width/offset/edge/fullscreen preferences, reduced motion.
-- **Plugin pins:** pin installed visual plugins alongside built-in tools; click to open their own panels. Reorder in the strip or Settings. Installation and enablement stay with Omarchy.
+- **Plugin drawer:** pin installed visual plugins alongside built-in tools; click to read a participating plugin's native card inside Perch, or choose Open for its full panel. Reorder in the strip or Settings. Installation and enablement stay with Omarchy. [Card contract](PLUGIN-CARDS.md) · [fixture preview](plugin-drawer-preview.png).
 - **Music:** native MPRIS controls, seeking, player selection, local artwork, optional bounded HTTPS artwork, local `.lrc` synchronized lyrics and a full lyrics reader.
 - **File shelf:** up to 32 persistent file/folder references, drag in/out, small text/image previews, open, reveal and LocalSend handoff. Removing a reference never deletes its original.
 - **Meetings:** agenda, imminent meeting countdown and explicit Join from up to eight local `.ics` files, including files maintained by a calendar sync tool. The compact countdown covers the 15 minutes before a timed meeting and its first 10 minutes; all-day entries stay in the agenda only.

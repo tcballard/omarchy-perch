@@ -201,7 +201,15 @@ remain calm when idle/paused, route completed timers correctly, and open the
 same expanded cards and pins. Switch modes and restart; preserve pins/order.
 Verify all four edges and hover/keyboard/focus on the XPS. Portable tests cover
 priority, dimensions, keyboard opening, hidden sampling and mode changes.
-## Agent session checks
+## Native plugin drawer checks
+
+- Install the paired RSS Perch-card candidate, enable RSS Feed, and pin it in Perch. Click the pin: its unread count/headlines should appear inside Perch. Hover must not query or launch it.
+- Use Refresh to read current service state, Refresh feeds to request the provider's existing fetcher, and Read article to open the provider-owned article URL. Open must still launch the full reader with correct focus handoff.
+- Switch pins during a delayed response, close/reopen and move to a built-in tool: no late response may replace another selection. Disable/remove RSS after opening a card; actions must fail without execution. If an article changes, stale actions must request a refresh.
+- Unsupported plugins keep the Open fallback. Verify loading/empty/error/offline states, plain-text rendering, long headlines, keyboard activation, scrolling, scaling and all four edges on XPS.
+- Portable coverage: Python contract/action validation, production QML drawer navigation and keyboard actions, late-response generation checks, RSS provider revision/URL checks. Fictional production render: plugin-drawer-preview.png. Real shell IPC remains a desktop acceptance gate.
+
+## Agent session desktop checks
 
 - Enable the Claude or Codex integration from Setup, start an agent inside a terminal, and confirm Activity shows the project folder. Move to another window, choose **Go to session**, and verify Hyprland returns to the originating terminal and Perch collapses. Repeat from a tmux pane and the terminal used most often; an unmatched client should omit the action rather than guessing.
 - Trigger two attention activities and confirm the compact notch reads “2 need you”, Activity sorts both above running/completed work, and the panel grows without exceeding its normal maximum height.

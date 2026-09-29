@@ -4,6 +4,8 @@ import QtQuick
 Item {
     id: root
     property alias pluginPins: demoPlugins
+    property alias pluginCards: demoCards
+    DemoPluginCardState { id: demoCards }
     QtObject {
         id: demoPlugins
         property var plugins: [
