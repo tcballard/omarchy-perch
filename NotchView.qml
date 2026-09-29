@@ -7,6 +7,7 @@ import "MediaPolicy.js" as Policy
 import "EdgePolicy.js" as Edges
 import "ModulePolicy.js" as Modules
 import "NotchPolicy.js" as NotchPolicy
+import "ShortcutPolicy.js" as Shortcuts
 
 FocusScope {
     id: root
@@ -17,6 +18,7 @@ FocusScope {
     property bool surfaceVisible: true
     readonly property var moduleState: media && media.modules !== undefined ? media.modules : null
     readonly property var moduleItems: Modules.clean(displaySettings.modules)
+    readonly property var moduleShortcuts: Shortcuts.clean(displaySettings.moduleShortcuts, moduleItems)
     readonly property bool stripVertical: Edges.vertical(edge)
     readonly property real stripLength: Style.space(46 * moduleItems.length + 8)
     readonly property bool perchMode: displaySettings.layoutMode === "strip"
@@ -265,6 +267,17 @@ FocusScope {
             });
     }
     Keys.onPressed: event => {
+        if (expanded && !settingsOpen && event.modifiers === (Qt.ControlModifier | Qt.AltModifier) && !event.isAutoRepeat) {
+            var chord = "Ctrl+Alt+" + String.fromCharCode(event.key);
+            var id = moduleItems.find(function (id) {
+                return root.moduleShortcuts[id] === chord;
+            });
+            if (id) {
+                activateModule(id, false);
+                event.accepted = true;
+                return;
+            }
+        }
         if (expanded && event.key === Qt.Key_K && (event.modifiers & Qt.ControlModifier)) {
             showTools(true);
             event.accepted = true;

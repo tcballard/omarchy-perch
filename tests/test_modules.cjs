@@ -25,3 +25,10 @@ assert.equal(search([{id:'example.disabled',name:'Disabled',enabled:false}], 'di
 assert.equal(search([{id:'../../bad',name:'Bad',enabled:true}], 'bad').length,0);
 assert.equal(search([], 'clipboard')[0].id,'clipboard');
 assert.equal(search([], 'no matches').length,0);
+const S=require('../ShortcutPolicy.js');
+assert.deepEqual(S.clean({music:'Ctrl+Alt+M',timer:'Ctrl+Alt+M',stats:'Ctrl+Q'},['music','timer','stats']),{music:'Ctrl+Alt+M'});
+assert.equal(S.assign({music:'Ctrl+Alt+M'},['music','timer'],'timer','Ctrl+Alt+M'),null);
+assert.deepEqual(S.assign({music:'Ctrl+Alt+M'},['music'],'music',''),{});
+assert.equal(S.assign({},['music'],'bad','Ctrl+Alt+B'),null);
+assert.equal(S.assign({},['music'],'music','Meta+M'),null);
+console.log('Module shortcut schema, duplicates, removal and reserved keys passed.');

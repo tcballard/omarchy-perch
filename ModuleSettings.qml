@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.Commons
 import "ModulePolicy.js" as Modules
+import "ShortcutPolicy.js" as Shortcuts
 
 ColumnLayout {
     id: root
@@ -11,6 +12,9 @@ ColumnLayout {
     property var items: Modules.defaults
     property color ink: Color.foreground
     property color surface: Color.background
+    property var shortcuts: ({})
+    property string shortcutError: ""
+    signal shortcutChanged(var bindings)
     signal changed(var order)
     Text {
         visible: root.showModules
@@ -61,6 +65,58 @@ ColumnLayout {
                 onClicked: root.changed(Modules.toggle(root.items, modelData))
             }
         }
+    }
+    Text {
+        visible: root.showModules
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        text: "Shortcuts work while Perch has keyboard focus. Use Ctrl+Alt and a letter or digit. Escape cancels recording."
+        color: Qt.alpha(root.ink, 0.6)
+        font.pixelSize: Style.space(10)
+    }
+    Repeater {
+        model: root.showModules ? root.items : []
+        delegate: RowLayout {
+            required property string modelData
+            Layout.fillWidth: true
+            Text {
+                Layout.fillWidth: true
+                text: Modules.get(modelData).title
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+                color: root.ink
+                font.pixelSize: Style.space(11)
+            }
+            ShortcutRecorder {
+                sequence: root.shortcuts[modelData] || ""
+                ink: root.ink
+                surface: root.surface
+                onRecorded: chord => {
+                    var next = Shortcuts.assign(root.shortcuts, root.items, modelData, chord);
+                    root.shortcutError = next ? "" : "That shortcut is already assigned.";
+                    if (next)
+                        root.shortcutChanged(next);
+                }
+            }
+            PerchAction {
+                text: "Clear"
+                enabled: !!root.shortcuts[modelData]
+                ink: root.ink
+                surface: root.surface
+                onClicked: {
+                    root.shortcutError = "";
+                    root.shortcutChanged(Shortcuts.assign(root.shortcuts, root.items, modelData, ""));
+                }
+            }
+        }
+    }
+    Text {
+        visible: root.showModules && root.shortcutError !== ""
+        Layout.fillWidth: true
+        text: root.shortcutError
+        wrapMode: Text.WordWrap
+        color: "#e47b76"
+        font.pixelSize: Style.space(10)
     }
     Flow {
         visible: root.showModules

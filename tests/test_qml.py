@@ -564,5 +564,25 @@ visual_eval('Color.lightTheme=false; notch.reducedMotion=false; notch.page="musi
 assert visual_eval('notch.pageOpacity') == 1
 assert visual_eval('notch.pageOffset') == 0
 
+# Real keyboard dispatch switches cards only outside Settings.
+visual_eval('notch.expanded=true; notch.settingsOpen=false; notch.displaySettings={modules:["music","timer"],moduleShortcuts:{timer:"Ctrl+Alt+T"}}; notch.page="music"; notch.forceActiveFocus()')
+QTest.keyClick(view,Qt.Key_T,Qt.ControlModifier | Qt.AltModifier);QTest.qWait(30)
+assert visual_eval('notch.page') == 'timer'
+visual_eval('notch.settingsOpen=true; notch.page="music"; notch.forceActiveFocus()')
+QTest.keyClick(view,Qt.Key_T,Qt.ControlModifier | Qt.AltModifier);QTest.qWait(30)
+assert visual_eval('notch.page') == 'music'
+visual_eval('notch.settingsOpen=false')
+recorder_component=QQmlComponent(engine,QUrl.fromLocalFile(str(root.parent/'ShortcutRecorder.qml')))
+recorder=recorder_component.create();assert recorder is not None,recorder_component.errors()
+recorder.setParentItem(visual);recorder.setProperty('visible',True)
+chords=[];recorder.recorded.connect(chords.append)
+recorder.setProperty('recording',True);recorder.forceActiveFocus()
+QTest.keyClick(view,Qt.Key_M,Qt.ControlModifier | Qt.AltModifier)
+assert chords == ['Ctrl+Alt+M'] and not recorder.property('recording')
+recorder.setProperty('recording',True)
+QTest.keyClick(view,Qt.Key_Escape)
+assert not recorder.property('recording') and len(chords)==1
+recorder.deleteLater()
+
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

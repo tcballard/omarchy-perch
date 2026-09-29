@@ -247,3 +247,11 @@ agent is still working. Turning the setting off clears saved entries.
 Newly installed status hooks capture the terminal process and boot identity;
 returning to a recovered session rejects a changed target. Reinstall hooks
 from Setup to update an older adapter.
+
+### Module shortcuts
+
+In **Settings → Your strip**, record a Ctrl+Alt+letter/digit shortcut for each
+pinned module or plugin. Perch rejects duplicate assignments; Clear removes a
+binding. These shortcuts work while the open panel has keyboard focus and are
+suspended in Settings so recording cannot launch another card. They do not
+install desktop-wide keybindings or replace your Hyprland bindings.

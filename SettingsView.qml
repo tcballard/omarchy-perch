@@ -436,6 +436,8 @@ ColumnLayout {
                     showPlugins: root.section === "plugins"
                     pluginState: root.host.pluginState
                     items: root.host.moduleItems
+                    shortcuts: root.host.moduleShortcuts
+                    onShortcutChanged: bindings => root.host.preferenceChanged("moduleShortcuts", bindings)
                     ink: root.host.ink
                     surface: root.host.surface
                     onChanged: order => root.host.preferenceChanged("modules", order)
