@@ -6,10 +6,51 @@ import qs.Commons
 import "MediaPolicy.js" as Policy
 import "EdgePolicy.js" as Edges
 import "ContextPolicy.js" as Contexts
+import "ModulePolicy.js" as Modules
 
 FocusScope {
     id: root
     property var media: null
+    property bool surfaceVisible: true
+    readonly property var moduleState: media && media.modules !== undefined ? media.modules : null
+    readonly property bool stripMode: displaySettings.layoutMode === "strip"
+    readonly property var moduleItems: Modules.clean(displaySettings.modules)
+    readonly property bool stripVertical: Edges.vertical(edge)
+    readonly property real stripLength: Style.space(46 * moduleItems.length + 8)
+    readonly property real compactWidth: stripMode ? (stripVertical ? Style.space(52) : stripLength) : Style.space(sideTab ? 28 : busy ? (context.id === "system" ? 184 : 232) : 96)
+    readonly property real compactHeight: stripMode ? (stripVertical ? stripLength : Style.space(52)) : Style.space(sideTab ? 80 : 30)
+    readonly property real bodyTop: stripMode ? Style.space(132) : Style.space(94)
+    function activateModule(id, pointer) {
+        var descriptor = Modules.get(id);
+        if (!descriptor)
+            return;
+        settingsOpen = false;
+        page = descriptor.page;
+        if (!expanded)
+            expandRequested();
+    }
+    ModuleRegistry {
+        id: moduleRegistry
+        state: root.moduleState
+    }
+    Binding {
+        target: root.moduleState
+        property: "statsVisible"
+        when: !!root.moduleState
+        value: root.surfaceVisible && (root.stripMode && !root.settingsOpen && root.moduleItems.indexOf("stats") >= 0 || root.expanded && !root.settingsOpen && root.page === "stats")
+    }
+    Binding {
+        target: root.moduleState
+        property: "clipboardVisible"
+        when: !!root.moduleState
+        value: root.surfaceVisible && root.expanded && !root.settingsOpen && root.page === "clipboard"
+    }
+    Binding {
+        target: root.moduleState
+        property: "weatherVisible"
+        when: !!root.moduleState
+        value: root.surfaceVisible && (root.stripMode && !root.settingsOpen && root.moduleItems.indexOf("weather") >= 0 || root.expanded && !root.settingsOpen && root.page === "weather")
+    }
     property string page: "music"
     property bool showClock: true
     property bool hoverOpen: true
@@ -32,7 +73,7 @@ FocusScope {
     property int pageOrder: 0
     readonly property real pageOffset: pageSlide.x
     readonly property real pageOpacity: pages.opacity
-    readonly property var pageSequence: ["music", "timer", "system", "activity", "players", "lyrics", "hub", "shelf", "calendar", "desktop", "inbox", "setup"]
+    readonly property var pageSequence: ["music", "timer", "system", "activity", "players", "lyrics", "hub", "shelf", "calendar", "desktop", "inbox", "setup", "clipboard", "stats", "weather"]
     // Transitions run only for changes after construction, while expanded.
     property bool ready: false
     Component.onCompleted: ready = true
@@ -119,11 +160,11 @@ FocusScope {
     readonly property bool lightTheme: (Color.background.r + Color.background.g + Color.background.b) > (Color.foreground.r + Color.foreground.g + Color.foreground.b)
     readonly property color surface: lightTheme ? Color.foreground : Color.background
     readonly property color ink: lightTheme ? Color.background : Color.foreground
-    readonly property real expandedWidth: preferredWidth
-    readonly property real expandedHeight: Style.space(settingsOpen ? 468 : page === "music" ? (hasPlayer ? 310 : 212) : 430)
+    readonly property real expandedWidth: Math.max(preferredWidth, stripMode ? stripLength : 0)
+    readonly property real expandedHeight: Style.space(settingsOpen ? 468 : page === "music" ? (hasPlayer ? 310 : 212) : 430) + (stripMode && !settingsOpen ? Style.space(38) : 0)
     readonly property real maximumHeight: Style.space(468)
-    implicitWidth: expanded ? expandedWidth : Style.space(sideTab ? 28 : busy ? (context.id === "system" ? 184 : 232) : 96)
-    implicitHeight: expanded ? expandedHeight : Style.space(sideTab ? 80 : 30)
+    implicitWidth: expanded ? expandedWidth : compactWidth
+    implicitHeight: expanded ? expandedHeight : compactHeight
     signal preferenceChanged(string key, var value)
     signal edgeRequested(string value)
     signal expandRequested
@@ -134,8 +175,7 @@ FocusScope {
         if (!expanded) {
             settingsOpen = false;
             popupOpen = false;
-        }
-        else if (page === "music")
+        } else if (page === "music" && !stripMode)
             revealPage();
     }
     Keys.onEscapePressed: {
@@ -189,7 +229,7 @@ FocusScope {
         onReleased: mouse => {
             root.interactionActive = false;
             if (Math.abs(mouse.x - startX) > 35) {
-                var pages = ["music", "timer", "system", "activity", "shelf", "calendar", "inbox", "desktop"];
+                var pages = root.stripMode ? root.moduleItems : ["music", "timer", "system", "activity", "shelf", "calendar", "inbox", "desktop", "clipboard", "stats", "weather"];
                 var i = pages.indexOf(root.page);
                 root.page = pages[(i + (mouse.x < startX ? 1 : pages.length - 1) + pages.length) % pages.length];
             }
@@ -214,7 +254,7 @@ FocusScope {
     }
     Item {
         anchors.fill: parent
-        visible: !root.expanded
+        visible: !root.expanded && !root.stripMode
         ParallelAnimation {
             id: compactEnter
             NumberAnimation {
@@ -336,8 +376,21 @@ FocusScope {
             Accessible.onPressAction: root.expandRequested()
         }
     }
+    ModuleStrip {
+        anchors.fill: parent
+        visible: root.stripMode && !root.expanded
+        items: root.moduleItems
+        registry: moduleRegistry
+        vertical: root.stripVertical
+        hoverOpen: root.hoverOpen
+        ink: root.ink
+        surface: root.surface
+        onActivated: (id, pointer) => root.activateModule(id, pointer)
+        onReordered: order => root.preferenceChanged("modules", order)
+        onInteractionChanged: active => root.interactionActive = active
+    }
     Rectangle {
-        visible: !root.expanded && !!root.live && root.live.timerActive
+        visible: !root.expanded && !root.stripMode && !!root.live && root.live.timerActive
         x: root.sideTab ? root.width - 2 : 8
         y: root.sideTab ? 8 : root.height - 2
         width: root.sideTab ? 2 : (root.width - 16) * root.live.timerProgress
@@ -417,7 +470,7 @@ FocusScope {
             }
         }
         RowLayout {
-            visible: !root.settingsOpen
+            visible: !root.settingsOpen && !root.stripMode
             anchors {
                 left: parent.left
                 right: parent.right
@@ -440,6 +493,23 @@ FocusScope {
                     onClicked: root.page = modelData
                 }
             }
+        }
+        ModuleStrip {
+            visible: root.stripMode && !root.settingsOpen
+            x: Style.space(4)
+            y: Style.space(45)
+            width: parent.width - Style.space(8)
+            height: Style.space(60)
+            slot: (width - Style.space(8)) / root.moduleItems.length
+            items: root.moduleItems
+            registry: moduleRegistry
+            selectedId: root.page
+            ink: root.ink
+            surface: root.surface
+            hoverOpen: root.hoverOpen
+            onActivated: (id, pointer) => root.activateModule(id, pointer)
+            onReordered: order => root.preferenceChanged("modules", order)
+            onInteractionChanged: active => root.interactionActive = active
         }
         Item {
             id: pages
@@ -465,16 +535,40 @@ FocusScope {
                     easing.type: Easing.OutCubic
                 }
             }
+            ModuleCard {
+                objectName: "module-card"
+                visible: !root.settingsOpen && ["clipboard", "stats", "weather"].indexOf(root.page) >= 0
+                x: Style.space(18)
+                y: root.bodyTop
+                width: parent.width - Style.space(36)
+                height: parent.height - root.bodyTop - Style.space(16)
+                definition: visible ? moduleRegistry.get(root.page) : null
+                ink: root.ink
+                surface: root.surface
+                onActionRequested: id => moduleRegistry.action(root.page, id)
+            }
             GridLayout {
                 visible: !root.settingsOpen && root.page === "hub"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
                 columns: 2
                 rowSpacing: Style.space(10)
                 columnSpacing: Style.space(10)
                 Repeater {
                     model: [
+                        {
+                            id: "clipboard",
+                            label: "Clipboard"
+                        },
+                        {
+                            id: "stats",
+                            label: "System stats"
+                        },
+                        {
+                            id: "weather",
+                            label: "Weather"
+                        },
                         {
                             id: "shelf",
                             label: "File shelf"
@@ -515,9 +609,9 @@ FocusScope {
                 onInteractionChanged: active => root.interactionActive = active
                 visible: !root.settingsOpen && root.page === "shelf"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(142)
+                height: parent.height - root.bodyTop - Style.space(48)
                 work: root.work
                 ink: root.ink
                 surface: root.surface
@@ -526,9 +620,9 @@ FocusScope {
                 onInteractionChanged: active => root.interactionActive = active
                 visible: !root.settingsOpen && root.page === "calendar"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(142)
+                height: parent.height - root.bodyTop - Style.space(48)
                 work: root.work
                 ink: root.ink
                 surface: root.surface
@@ -536,9 +630,9 @@ FocusScope {
             SetupView {
                 visible: !root.settingsOpen && root.page === "setup"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(142)
+                height: parent.height - root.bodyTop - Style.space(48)
                 work: root.work
                 ink: root.ink
                 surface: root.surface
@@ -560,9 +654,9 @@ FocusScope {
                 onPopupToggled: open => root.popupOpen = open
                 visible: !root.settingsOpen && root.page === "inbox"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(110)
+                height: parent.height - root.bodyTop - Style.space(16)
                 inbox: root.inbox
                 ink: root.ink
                 surface: root.surface
@@ -570,9 +664,9 @@ FocusScope {
             Controls.ScrollView {
                 visible: !root.settingsOpen && root.page === "lyrics"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(110)
+                height: parent.height - root.bodyTop - Style.space(16)
                 clip: true
                 contentWidth: availableWidth
                 Text {
@@ -588,10 +682,10 @@ FocusScope {
             }
             DesktopView {
                 onPopupToggled: open => root.popupOpen = open
-                height: parent.height - Style.space(110)
+                height: parent.height - root.bodyTop - Style.space(16)
                 visible: !root.settingsOpen && root.page === "desktop"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
                 work: root.work
                 desktop: root.desktop
@@ -603,9 +697,9 @@ FocusScope {
                 onPopupToggled: open => root.popupOpen = open
                 visible: !root.settingsOpen && root.page === "timer"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(110)
+                height: parent.height - root.bodyTop - Style.space(16)
                 live: root.live
                 ink: root.ink
                 surface: root.surface
@@ -614,9 +708,9 @@ FocusScope {
                 onPopupToggled: open => root.popupOpen = open
                 visible: !root.settingsOpen && root.page === "system"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(110)
+                height: parent.height - root.bodyTop - Style.space(16)
                 work: root.work
                 system: root.system
                 ink: root.ink
@@ -625,7 +719,7 @@ FocusScope {
             ActivityView {
                 visible: !root.settingsOpen && root.page === "activity"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
                 live: root.live
                 ink: root.ink
@@ -634,7 +728,7 @@ FocusScope {
             PlayersView {
                 visible: !root.settingsOpen && root.page === "players"
                 x: Style.space(18)
-                y: Style.space(94)
+                y: root.bodyTop
                 width: parent.width - Style.space(36)
                 media: root.media
                 ink: root.ink
@@ -648,7 +742,7 @@ FocusScope {
                     right: parent.right
                     top: parent.top
                     margins: Style.space(18)
-                    topMargin: Style.space(94)
+                    topMargin: root.bodyTop
                 }
                 spacing: Style.space(14)
                 RowLayout {
@@ -1023,13 +1117,41 @@ FocusScope {
                         }
                     }
                     Text {
+                        text: "Compact layout"
+                        color: root.ink
+                        font.pixelSize: Style.space(13)
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        PerchAction {
+                            text: "Context pill"
+                            selected: !root.stripMode
+                            ink: root.ink
+                            surface: root.surface
+                            onClicked: root.preferenceChanged("layoutMode", "pill")
+                        }
+                        PerchAction {
+                            text: "Module strip"
+                            selected: root.stripMode
+                            ink: root.ink
+                            surface: root.surface
+                            onClicked: root.preferenceChanged("layoutMode", "strip")
+                        }
+                    }
+                    ModuleSettings {
+                        Layout.fillWidth: true
+                        items: root.moduleItems
+                        ink: root.ink
+                        surface: root.surface
+                        onChanged: order => root.preferenceChanged("modules", order)
+                    }
+                    Text {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
                         text: root.settingsError || (root.demo ? "Preferences apply to Perch, including demo." : "Saved automatically in Omarchy settings.")
                         color: Qt.alpha(root.ink, 0.4)
                         font.pixelSize: Style.space(10)
                     }
-
                 }
             }
         }

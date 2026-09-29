@@ -15,6 +15,7 @@ Rectangle {
         media: demoMedia
         expanded: root.previewState !== "compact"
         demo: true
+        onPreferenceChanged: (key, value) => { var p = Object.assign({}, notch.displaySettings); p[key] = value; notch.displaySettings = p; }
         onEdgeRequested: function(value) { notch.edge = value }
         onCollapseRequested: root.previewState = "compact"
         onExpandRequested: root.previewState = "playing"

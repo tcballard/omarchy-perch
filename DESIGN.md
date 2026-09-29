@@ -91,3 +91,14 @@ Continuation without XPS access. Fixes preserve the stable surface and the 140/9
 ### rc5 polish record — 29 September 2026
 
 Tom asked for robust and awesome. Robustness work continues as review-driven fixes; the polish adds only what touches confirmed-smooth paths: a Hyprland global shortcut (appid `perch`, name `toggle`) because a summon command in a bind is not a product; enter-only transitions for pages, Settings and compact contexts using the existing 140 ms curve, keyed on context kind so countdown ticks stay static; the current cover in the compact pill; the whole shelf card as the drag source; and deferred alerts for timers that finished while the shell was down, cut off at 15 minutes so a stale timer never rings hours later. Version 0.1.0-rc.5. A second adversarial pass over the notification path found no state-machine fault but did find the deadline path completing a job before its process was reaped, which made the new inbox resync a no-op after a hung command; completion now follows the real exit. The notification companion moves to rc.5 for the history-read retry and the bridge retry.
+
+
+## Native modules — 29 September 2026
+
+Accepted direction: an optional user-configurable compact strip, a shared native
+QML card/settings/actions contract, and Clipboard/Stats/Weather through that
+contract. Keep the context pill and current Omarchy plugin identity/kinds. No
+Bun/TSX runtime or nested plugin marketplace. Shared data stays in Service;
+placement/selection/hover stays in NotchView. Bounded IO reuses the existing
+isolated helper path. MODULES.md records dependencies, persisted state, network
+opt-in, module extension steps and remaining live acceptance.

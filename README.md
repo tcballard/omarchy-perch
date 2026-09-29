@@ -4,6 +4,10 @@
 
 Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A small pill opens into the controls you need, then gets out of the way.
 
+**Unreleased: native modules.** Settings now offers a configurable module strip alongside the context pill, with drag/keyboard ordering and native Clipboard, Stats and Weather cards. Existing tools are selectable too. Weather is opt-in; clipboard reuses Omarchy's existing history. [Module contract and exact boundaries](MODULES.md).
+
+![Native Perch module cards, rendered with fictional data](modules-preview.png)
+
 **v0.1.0-rc.5 — release candidate.** rc.3 added contextual controls, files, calendars, multiple timers, richer system controls and guided setup; rc.4 fixed dropdown input/hover handling, serialized helper jobs, detected outdated companion copies and reported failing setup steps; rc.5 adds a Hyprland global shortcut, page and context transitions, compact artwork, whole-card drag and deferred timer alerts. Portable tests and actual QML fixture rendering pass. The hardware/compositor integrations still need the XPS checks in [TESTING.md](TESTING.md); this is not a stable release or a claim of macOS feature parity. [Scope and boundaries](GAPS.md).
 
 ![Perch’s actual QML views with fictional media, timer and activity fixtures](preview.png)
@@ -58,7 +62,7 @@ Open a particular view:
 omarchy-shell shell summon io.github.tcballard.perch '{"page":"timer"}'
 ```
 
-`page` accepts `music`, `timer`, `system`, `activity`, `players`, `inbox`, `desktop`, `hub`, `shelf`, `calendar` or `setup`. Hover opening stays on the hovered display. Keyboard summons select the focused display unless a monitor is pinned in Settings. Startup uses the first display; unplugging it falls back to an available display.
+`page` accepts `music`, `timer`, `system`, `activity`, `players`, `inbox`, `desktop`, `hub`, `shelf`, `calendar`, `setup`, `clipboard`, `stats` or `weather`. Hover opening stays on the hovered display. Keyboard summons select the focused display unless a monitor is pinned in Settings. Startup uses the first display; unplugging it falls back to an available display.
 
 ## Controls
 

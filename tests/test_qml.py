@@ -273,5 +273,73 @@ assert visual_eval('notch.overlayItem !== null') is True
 visual_eval('notch.expanded=false'); QTest.qWait(80)
 assert visual_eval('notch.popupOpen') is False
 visual_eval('notch.expanded=true')
+# Native module contract and strip, using production cards with isolated demo state.
+visual_eval('notch.settingsOpen=false; notch.displaySettings={layoutMode:"strip",modules:["music","clipboard","stats","weather"]}; notch.page="stats"; notch.expanded=true; notch.reducedMotion=true; notch.hoverOpen=false')
+QTest.qWait(50)
+assert visual_eval('demoMedia.modules.statsVisible') is True
+assert visual_eval('demoMedia.modules.weatherVisible') is True
+assert visual_eval('demoMedia.modules.clipboardVisible') is False
+assert visual_eval('notch.bodyTop') == 132
+for module_id in ['clipboard','weather','stats']:
+    # Locate the visible strip's actual button and click through to its native card.
+    def visible_named(item, name):
+        if item.objectName() == name and item.isVisible(): return item
+        for child in item.childItems():
+            result = visible_named(child, name)
+            if result is not None: return result
+        return None
+    tile = visible_named(visual, 'module-tile-' + module_id)
+    assert tile is not None
+    point = tile.mapToScene(QPointF(tile.width()/2, tile.height()/2)).toPoint()
+    QTest.mouseClick(view, Qt.LeftButton, Qt.NoModifier, point); QTest.qWait(60)
+    assert visual_eval('notch.page') == module_id
+    assert visual_eval('notch.expanded') is True
+visual_eval('notch.page="clipboard"')
+QTest.qWait(60)
+assert visual_eval('demoMedia.modules.clipboardVisible') is True
+search = visible_named(visual, 'clipboard-search')
+assert search is not None
+search.forceActiveFocus()
+for key in 'omarchy': QTest.keyClick(view, key)
+QTest.qWait(30)
+assert visual_eval('demoMedia.modules.clips.length') == 1
+QTest.keyClick(view, Qt.Key_Return)
+assert 'real clipboard is unchanged' in visual_eval('demoMedia.modules.copyMessage')
+visual_eval('notch.page="weather"')
+QTest.qWait(30)
+# The same host switches between a card and its module-specific settings.
+card = visible_named(visual, 'module-card')
+assert card is not None
+card.setProperty('configuring', True); QTest.qWait(30)
+card.setProperty('configuring', False)
+visual_eval('notch.page="stats"'); QTest.qWait(30)
+card.setProperty('configuring', True); QTest.qWait(30)
+card.setProperty('configuring', False)
+# Persisted order is updated by keyboard reordering, no arbitrary components accepted.
+tile = visible_named(visual, 'module-tile-stats')
+tile.forceActiveFocus()
+QTest.keyClick(view, Qt.Key_Left, Qt.ControlModifier); QTest.qWait(30)
+assert visual_eval('notch.moduleItems.join(",")') == 'music,stats,clipboard,weather'
+tile = visible_named(visual, 'module-tile-stats')
+start = tile.mapToScene(QPointF(tile.width()/2, tile.height()/2)).toPoint()
+end = start + QPointF(tile.width() * 2, 0).toPoint()
+QTest.mousePress(view, Qt.LeftButton, Qt.NoModifier, start)
+QTest.mouseMove(view, start + QPointF(20, 0).toPoint(), 50)
+QTest.mouseMove(view, end, 50)
+QTest.mouseRelease(view, Qt.LeftButton, Qt.NoModifier, end); QTest.qWait(80)
+assert visual_eval('notch.moduleItems.join(",")') == 'music,clipboard,weather,stats'
+for edge in ['top','bottom','left','right']:
+    visual_eval('notch.edge="'+edge+'"; notch.expanded=false')
+    assert visual_eval('notch.implicitWidth') == (52 if edge in ['left','right'] else 192)
+    assert visual_eval('notch.implicitHeight') == (192 if edge in ['left','right'] else 52)
+visual_eval('notch.surfaceVisible=false')
+assert visual_eval('demoMedia.modules.statsVisible') is False
+assert visual_eval('demoMedia.modules.weatherVisible') is False
+# Real service CPU deltas, initial sample and state validation.
+evaluate('service.modules.acceptStats({total:100,idle:50,memory:30,disk:40}); service.modules.acceptStats({total:200,idle:125,memory:31,disk:40})')
+assert evaluate('service.modules.cpu') == 25
+assert evaluate('service.modules.saveWeather("Test", "", "0", true)') is False
+assert evaluate('service.modules.saveWeather("Test", "51", "-1", true)') is True
+assert evaluate('fakeShell.saved.moduleWeather.latitude') == 51
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

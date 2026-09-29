@@ -152,3 +152,22 @@ A second adversarial pass over the helper scripts (isolated HOME, fake `omarchy`
 Additional rc.5 live checks: add a real Outlook or Google export with old weekly series and confirm the agenda appears within a second and the Setup brightness line reads “available” only on the XPS panel, not a keyboard LED.
 
 Live results for rc.5: **not run in the build environment**.
+
+
+## Unreleased native modules
+
+Portable evidence: registry allowlist/limits, content-identity clipboard copying
+across history insertions, deleted/malformed/oversized/symlink history rejection,
+weather coordinate/response validation and fixed bounded endpoint, actual Linux
+stats sampling. Production Qt tests click through all three module cards, type a
+clipboard search, perform a fictional copy, open module settings, reorder with
+Ctrl+arrow and an actual pointer drag, check all four compact orientations, and
+verify data visibility flags turn off with the surface. Existing suites still
+exercise the pill and companion paths. modules-preview.png renders production
+QML with fictional data/theme stubs.
+
+Live acceptance still required: copy text/link/file/image, close Perch, then paste
+into another app; missing wl-copy/history; real weather request and failure;
+compact-to-card hover travel and drag on all edges; font/DPI changes; monitor
+switch/unplug; fullscreen sampling suspension and focus return. The development
+branch has not been tagged or validated as a stable release.

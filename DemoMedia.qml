@@ -3,6 +3,10 @@ import QtQuick
 // Fictional data, available only after an explicit demo summon.
 Item {
     id: root
+    property alias modules: moduleFixture
+    DemoModuleState {
+        id: moduleFixture
+    }
     property alias workspace: demoWork
     QtObject {
         id: demoWork
