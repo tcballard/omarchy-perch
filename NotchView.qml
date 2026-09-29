@@ -20,7 +20,7 @@ FocusScope {
     readonly property bool stripVertical: Edges.vertical(edge)
     readonly property real stripLength: Style.space(46 * moduleItems.length + 8)
     readonly property bool perchMode: displaySettings.layoutMode === "strip"
-    readonly property var notchContext: NotchPolicy.context(media)
+    readonly property var notchContext: NotchPolicy.context(media, displaySettings)
     readonly property real compactWidth: perchMode ? (stripVertical ? Style.space(52) : stripLength) : Style.space(stripVertical ? 48 : notchContext.id === "idle" ? 100 : 210)
     readonly property real compactHeight: perchMode ? (stripVertical ? stripLength : Style.space(52)) : Style.space(stripVertical ? 76 : 36)
     readonly property real bodyTop: Style.space(page === "event" ? 58 : 116)
@@ -148,7 +148,7 @@ FocusScope {
     signal dropReceived(var urls)
     readonly property var inbox: media && media.notifications !== undefined ? media.notifications : null
     readonly property var desktop: media && media.desktop !== undefined ? media.desktop : null
-    readonly property string notificationPreview: inbox ? inbox.preview : ""
+    readonly property string notificationPreview: inbox && !inbox.dnd && !displaySettings.quietMode && displaySettings.notificationPreviews !== false ? inbox.preview : ""
     property int pageOrder: 0
     readonly property real pageOffset: pageSlide.x
     readonly property real pageOpacity: pages.opacity
@@ -186,6 +186,11 @@ FocusScope {
     readonly property bool liveAttention: !!(live && (live.timerStatus === "done" || (live.focused && (live.focused.state === "waiting" || live.focused.state === "error"))))
     property bool expanded: false
     property bool reducedMotion: false
+    onReducedMotionChanged: if (reducedMotion) {
+        pageEnter.stop();
+        pages.opacity = 1;
+        pageSlide.x = 0;
+    }
     property bool demo: false
     property bool settingsOpen: false
     property bool hideIdle: false
@@ -198,8 +203,8 @@ FocusScope {
     readonly property string caption: hasPlayer ? media.title : "Ready when you are"
     // Use the darker of the theme's foreground/background for notch chrome.
     readonly property bool lightTheme: (Color.background.r + Color.background.g + Color.background.b) > (Color.foreground.r + Color.foreground.g + Color.foreground.b)
-    readonly property color surface: lightTheme ? Color.foreground : Color.background
-    readonly property color ink: lightTheme ? Color.background : Color.foreground
+    readonly property color surface: displaySettings.chromeMode === "theme" ? Color.background : lightTheme ? Color.foreground : Color.background
+    readonly property color ink: displaySettings.chromeMode === "theme" ? Color.foreground : lightTheme ? Color.background : Color.foreground
     readonly property real maximumWidth: Math.max(preferredWidth, stripLength, Style.space(600))
     readonly property real expandedWidth: settingsOpen ? maximumWidth : Math.max(preferredWidth, stripLength)
     readonly property real expandedHeight: settingsOpen ? maximumHeight : Math.min(maximumHeight, Math.max(Style.space(220), bodyTop + Style.space(16) + displayedCard.contentHeight))
@@ -237,10 +242,26 @@ FocusScope {
             settingsOpen = false;
         else if (page === "event")
             collapseRequested();
+        else if (Modules.pluginId(page))
+            page = "hub";
         else if (page !== "music")
             page = "music";
         else
             collapseRequested();
+    }
+    function showTools(focusSearch) {
+        settingsOpen = false;
+        page = "hub";
+        if (focusSearch)
+            Qt.callLater(function () {
+                displayedCard.focusSearch();
+            });
+    }
+    Keys.onPressed: event => {
+        if (expanded && event.key === Qt.Key_K && (event.modifiers & Qt.ControlModifier)) {
+            showTools(true);
+            event.accepted = true;
+        }
     }
     function openLyrics() {
         lyricsPicker.open();
@@ -394,12 +415,11 @@ FocusScope {
             NotchButton {
                 objectName: "open-desktop"
                 glyph: "desktop"
-                label: "Files, calendar, desktop and setup"
+                label: "All tools and plugins"
                 ink: root.ink
                 surface: root.surface
                 onClicked: {
-                    root.settingsOpen = false;
-                    root.page = "hub";
+                    root.showTools(false);
                 }
             }
             NotchButton {

@@ -23,6 +23,7 @@ Item {
     property bool dnd: false
     property string session: ""
     property string preview: ""
+    property string previewIdentity: ""
     property string error: ""
     readonly property bool busy: request.busy
     function accept(payload) {
@@ -35,9 +36,15 @@ Item {
         items = p.items;
         dnd = p.dnd;
         blocked = p.blocked;
-        preview = p.preview;
-        if (preview)
-            previewExpiry.restart();
+        var identity = p.dnd || !p.preview ? "" : p.session + ":" + (p.previewKey || p.preview) + ":" + p.preview;
+        if (identity !== previewIdentity) {
+            previewIdentity = identity;
+            preview = identity ? p.preview : "";
+            if (preview)
+                previewExpiry.restart();
+            else
+                previewExpiry.stop();
+        }
         error = p.error;
         return "ok";
     }
@@ -88,6 +95,7 @@ Item {
     }
     Timer {
         id: previewExpiry
+        objectName: "notification-preview-expiry"
         interval: 6000
         onTriggered: root.preview = ""
     }

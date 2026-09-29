@@ -21,3 +21,14 @@ assert.equal(prefs.clean({}).layoutMode,'notch');
 assert.equal(prefs.clean({layoutMode:'strip'}).layoutMode,'strip');
 assert.equal(prefs.clean({layoutMode:'pill'}).layoutMode,'notch');
 console.log('Notch priority, exact timer routing, quiet paused state and presentation preference passed.');
+
+media.state='playing';media.workspace.meetingSummary='Meeting now';
+assert.equal(context(media).id,'inbox');
+assert.equal(context(media,{notificationPreviews:false}).id,'calendar');
+media.notifications.dnd=true;assert.equal(context(media).id,'calendar');
+media.notifications.dnd=false;assert.equal(context(media,{quietMode:true}).id,'calendar');
+media.system={banner:'Volume 40%'};assert.equal(context(media,{quietMode:true}).id,'system');
+assert.equal(context(media,{quietMode:true,systemFeedback:false}).id,'calendar');
+assert.equal(prefs.clean({soundPreset:'../../bad',chromeMode:'unknown'}).soundPreset,'complete');
+assert.equal(prefs.clean({eventBanners:false}).systemFeedback,false);
+assert.equal(prefs.clean({eventBanners:false,systemFeedback:true}).systemFeedback,true);

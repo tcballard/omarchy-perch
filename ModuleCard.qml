@@ -9,6 +9,10 @@ ColumnLayout {
     property color ink: Color.foreground
     property color surface: Color.background
     signal actionRequested(string id)
+    function focusSearch() {
+        if (body.item && typeof body.item.focusSearch === "function")
+            body.item.focusSearch();
+    }
     readonly property real contentHeight: heading.implicitHeight + spacing + (body.item ? body.item.implicitHeight : 0)
     onDefinitionChanged: configuring = false
     spacing: Style.space(8)

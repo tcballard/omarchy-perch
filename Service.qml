@@ -10,7 +10,9 @@ Item {
     property var manifest: null
     property alias pluginPins: pluginState
     property alias pluginCards: pluginCards
-    PluginCardState { id: pluginCards }
+    PluginCardState {
+        id: pluginCards
+    }
     PluginState {
         id: pluginState
     }
@@ -44,18 +46,42 @@ Item {
     LiveState {
         id: activityState
         preferences: prefsStore
-        onTimerFinished: label => {
-            if (prefsStore.record.timerSound || prefsStore.record.timerNotifications) {
-                root.alarmQueue = root.alarmQueue.concat([
-                    {
-                        label: label,
-                        sound: prefsStore.record.timerSound === true,
-                        notify: prefsStore.record.timerNotifications === true
-                    }
-                ]).slice(-8);
-                alarmDispatch.restart();
+        onTimerFinished: label => root.queueAlert(label, true)
+        onActivityEvent: item => root.queueAlert(item.title, false)
+    }
+    function queueAlert(label, timer) {
+        var p = prefsStore.values;
+        if (p.quietMode || inboxState.dnd)
+            return;
+        var sound = timer ? p.timerSound : p.activitySound;
+        var notify = timer && p.timerNotifications;
+        if (!sound && !notify)
+            return;
+        // Coalesce bursts; completion storms should not produce a backlog of sounds.
+        if (!timer && Date.now() - lastActivitySound < 2000)
+            return;
+        if (!timer)
+            lastActivitySound = Date.now();
+        alarmQueue = alarmQueue.concat([
+            {
+                label: label,
+                sound: sound,
+                notify: notify,
+                preset: p.soundPreset
             }
-        }
+        ]).slice(-8);
+        alarmDispatch.restart();
+    }
+    property string alertMessage: ""
+    property double lastActivitySound: 0
+    function previewSound() {
+        if (prefsStore.values.quietMode || inboxState.dnd || alarmJob.busy)
+            return false;
+        alertMessage = "";
+        return alarmJob.run("alarm", {
+            sound: true,
+            preset: prefsStore.values.soundPreset
+        });
     }
     property var alarmQueue: []
     Timer {
@@ -64,6 +90,10 @@ Item {
         onTriggered: {
             if (alarmJob.busy || !root.alarmQueue.length)
                 return;
+            if (prefsStore.values.quietMode || inboxState.dnd) {
+                root.alarmQueue = [];
+                return;
+            }
             var next = root.alarmQueue.slice();
             var payload = next.shift();
             if (alarmJob.run("alarm", payload))
@@ -73,6 +103,7 @@ Item {
     ToolJob {
         id: alarmJob
         onCompleted: function (op, r) {
+            root.alertMessage = !r.ok ? r.error : r.message || "Alert completed.";
             if (!r.ok)
                 workspaceState.error = r.error;
             else if (r.message)

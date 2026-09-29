@@ -43,4 +43,13 @@ function toggle(value, id) {
     else if (result.length < 8) result.push(id);
     return result;
 }
-if (typeof module !== "undefined") module.exports = {catalog,defaults,get,clean,move,toggle,pluginId};
+function search(plugins, query) {
+    var rows = catalog.map(function(m) { return {id:m.id,title:m.title,enabled:true,plugin:false}; });
+    rows.push({id:"setup",title:"Setup & health",enabled:true,plugin:false});
+    (Array.isArray(plugins) ? plugins : []).slice(0,64).forEach(function(p) {
+        if (p && pluginId("plugin:" + p.id)) rows.push({id:"plugin:"+p.id,title:p.name || p.id,enabled:p.enabled === true,plugin:true});
+    });
+    var needle = String(query || "").trim().toLowerCase().slice(0,160);
+    return rows.filter(function(r) { return !needle || (r.title + " " + r.id).toLowerCase().indexOf(needle) >= 0; });
+}
+if (typeof module !== "undefined") module.exports = {search,catalog,defaults,get,clean,move,toggle,pluginId};

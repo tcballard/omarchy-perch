@@ -24,6 +24,31 @@ def evaluate(code):
     assert not e.hasError(), e.error().toString()
     return result[0] if isinstance(result,tuple) else result
 assert evaluate('service.playerKey')=='player.b'
+# Quiet/DND suppress sound dispatch; bursts are coalesced and settings remain distinct.
+evaluate('service.preferences.update({activitySound:true,timerSound:true,soundPreset:"bell",quietMode:true}); service.queueAlert("Tea",true)')
+assert evaluate('service.alarmQueue.length') == 0
+assert evaluate('service.previewSound()') is False
+evaluate('service.preferences.update({quietMode:false}); service.notifications.dnd=true; service.queueAlert("Tea",true)')
+assert evaluate('service.alarmQueue.length') == 0
+evaluate('service.notifications.dnd=false; service.queueAlert("Build",false); service.queueAlert("Build again",false)')
+assert evaluate('service.alarmQueue.length') == 1
+assert evaluate('service.alarmQueue[0].preset') == 'bell'
+evaluate('service.alarmQueue=[]; service.preferences.update({activitySound:false,timerSound:false})')
+# An identical inbox sync must not resurrect an expired preview.
+evaluate('service.notifications.accept(JSON.stringify({version:1,session:"test",items:[],preview:"New mail",previewKey:"a"}))')
+assert evaluate('service.notifications.preview') == 'New mail'
+from PySide6.QtCore import QObject, QMetaObject
+expiry=host.findChild(QObject,'notification-preview-expiry');assert expiry is not None
+QMetaObject.invokeMethod(expiry,'triggered')
+assert evaluate('service.notifications.preview') == ''
+evaluate('service.notifications.accept(JSON.stringify({version:1,session:"test",items:[],preview:"New mail",previewKey:"a"}))')
+assert evaluate('service.notifications.preview') == ''
+evaluate('service.notifications.accept(JSON.stringify({version:1,session:"test",items:[],preview:"New mail",previewKey:"b"}))')
+assert evaluate('service.notifications.preview') == 'New mail'
+evaluate('service.notifications.accept(JSON.stringify({version:1,session:"test",items:[],preview:"Hidden",dnd:true}))')
+assert evaluate('service.notifications.preview') == ''
+evaluate('service.notifications.dnd=false')
+
 # Repeated status pulses do not reopen a dismissed event; a new turn does.
 for state, key, count in [('running','',0),('done','one',1),('done','one',1),('done','two',2),('waiting','three',3)]:
     import json
@@ -492,5 +517,33 @@ assert visual_eval('notch.moduleItems.indexOf("plugin:example.notes")') == 1
 button=visible_named(visual,'presentation-notch');button.forceActiveFocus();QTest.keyClick(view,Qt.Key_Space);QTest.qWait(30)
 assert visual_eval('notch.perchMode') is False
 assert visual_eval('notch.moduleItems.length') == 4
+
+# Search is shared by built-ins and installed plugins, with real native navigation.
+visual_eval('demoMedia.pluginPins.plugins=[{id:"example.notes",name:"Demo Notes",enabled:true},{id:"example.disabled",name:"Disabled",enabled:false}]; notch.settingsOpen=false; notch.expanded=true; notch.showTools(true)');QTest.qWait(50)
+search=visible_named(visual,'tools-search');assert search is not None and search.hasActiveFocus()
+search.setProperty('text','clipboard');QTest.qWait(30)
+assert visible_named(visual,'tool-open-clipboard') is not None
+QTest.keyClick(view,Qt.Key_Return);QTest.qWait(30)
+assert visual_eval('notch.page') == 'clipboard'
+visual_eval('notch.forceActiveFocus()');QTest.keyClick(view,Qt.Key_K,Qt.ControlModifier);QTest.qWait(30)
+assert visual_eval('notch.page') == 'hub'
+search=visible_named(visual,'tools-search');assert search is not None
+search.setProperty('text','Demo Notes');QTest.qWait(30)
+assert visible_named(visual,'tool-open-plugin:example.notes') is not None
+pin=visible_named(visual,'tool-pin-plugin:example.notes');assert pin is not None
+before=visual_eval('notch.moduleItems.indexOf("plugin:example.notes") >= 0')
+pin.forceActiveFocus();QTest.keyClick(view,Qt.Key_Space);QTest.qWait(30)
+assert visual_eval('notch.moduleItems.indexOf("plugin:example.notes") >= 0') is not before
+search.setProperty('text','nothing matches');QTest.qWait(30)
+assert visible_named(visual,'tool-open-plugin:example.notes') is None
+# Following the light theme retains its actual background, dark-island remains selectable.
+visual_eval('Color.lightTheme=true; notch.displaySettings=Object.assign({},notch.displaySettings,{chromeMode:"theme"})')
+assert visual_eval('notch.surface.r > notch.ink.r') is True
+visual_eval('notch.displaySettings=Object.assign({},notch.displaySettings,{chromeMode:"dark"})')
+assert visual_eval('notch.surface.r < notch.ink.r') is True
+visual_eval('Color.lightTheme=false; notch.reducedMotion=false; notch.page="music"; notch.reducedMotion=true')
+assert visual_eval('notch.pageOpacity') == 1
+assert visual_eval('notch.pageOffset') == 0
+
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

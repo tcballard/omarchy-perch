@@ -26,7 +26,7 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 - **Live activities:** bounded IPC, real build/download/copy adapters, Claude Code status hooks and Codex completion hooks. Agent sessions show their project, group attention first and can return to the originating Hyprland window when it can be identified.
 - **Setup:** integration status, explicit enable/disable, optional system-feedback companion to replace stock OSD, dependency reporting and coordinated integration removal.
 
-The compact view prioritizes completion/attention, notification previews, system feedback, timers, imminent meetings, other activities, music and the clock. When event banners are enabled, new activity completion or attention events open a dedicated card only while Perch is collapsed, without taking keyboard focus. Open tools and settings stay in place. Completion cards close after eight seconds (extended while hovered); attention cards remain until dismissed, resolved or expired. Fullscreen defaults to hidden; Settings also offers timer/activity alerts or always show.
+The compact view prioritizes finished timers and activities needing attention, then new notification previews, device feedback, imminent meetings, running timers and music. When activity cards are enabled, new completion or attention events open a dedicated card only while Perch is collapsed, without taking keyboard focus. Open tools and settings stay in place. Completion cards close after eight seconds (extended while hovered); attention cards remain until dismissed, resolved or expired. Fullscreen defaults to hidden; Settings also offers timer/activity alerts or always show.
 
 ## Install or update
 
@@ -66,6 +66,10 @@ omarchy-shell shell summon io.github.tcballard.perch '{"page":"timer"}'
 `page` accepts `music`, `timer`, `system`, `activity`, `players`, `inbox`, `desktop`, `hub`, `shelf`, `calendar`, `setup`, `clipboard`, `stats` or `weather`. Hover opening stays on the hovered display. Keyboard summons select the focused display unless a monitor is pinned in Settings. Startup uses the first display; unplugging it falls back to an available display.
 
 ## Controls
+
+**All tools** opens a searchable list of built-in tools and installed plugins, including unpinned ones. Open a card or pin it from the same row. Disabled plugins stay labelled and cannot open. **Ctrl+K**, while Perch is open, moves to tool search; Enter opens a sole enabled result. Escape from a plugin card returns to All tools.
+
+Under **Placement**, choose Dark island or Follow Omarchy theme; the latter uses the active theme’s foreground/background, including light themes. Appearance can be saved per display. **Alerts & sound** separates activity cards, notification previews, device feedback and sound preferences. Quiet mode pauses automatic activity cards, notification previews, timer notifications and Perch sounds while timers and inbox history continue. Inbox DND also silences Perch sounds. Choose Complete, Message or Bell and preview it explicitly; missing sound support is reported in Settings. Activity sound bursts are coalesced.
 
 Hover a tile for 150 ms or click it to open its card. Expansion and page transitions animate for 140 ms inside a stable compositor surface; reduced motion disables them. A 220 ms leave grace lets you move between controls, and dropdown menus keep Perch open while showing.
 
@@ -156,7 +160,7 @@ Open the bell → Refresh. Notifications replace the built-in daemon using Omarc
 
 The inbox retains the last **20 non-transient notifications** in private local state; DND and muted app names also survive companion reloads. Text is plain and truncated (app 64, title 120, body 400 characters; four actions maximum). Previews last six seconds, respect DND and fullscreen suppression, and never steal focus. Default notifications expire after eight seconds; explicit timeouts are bounded to 1–30 seconds, while no-expiry/critical notifications remain live until dismissed or evicted. Expired history keeps text but no actions. Transient notifications leave no history after expiry. Sender replacements update the existing row.
 
-Actions and inline replies target only the live sender and are invalidated on expiry/closure. Replies appear only when the sender advertises that capability. Theme icons are supported; arbitrary images, body links, executable hints and restored actions are not. Notification text passes through same-user IPC and is persisted locally unless transient. Turning on DND suppresses all previews, including critical ones. Perch's timer completion and activity attention remain separate from notification DND.
+Actions and inline replies target only the live sender and are invalidated on expiry/closure. Replies appear only when the sender advertises that capability. Theme icons are supported; arbitrary images, body links, executable hints and restored actions are not. Notification text passes through same-user IPC and is persisted locally unless transient. Turning on DND suppresses all previews, including critical ones. Perch's visual timer completion and activity attention remain separate from notification DND; sound and timer desktop-notification dispatch respect it.
 
 **Disable/remove both companions before disabling/removing Perch** so notifications have a visible owner:
 

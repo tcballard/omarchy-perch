@@ -67,6 +67,8 @@ Item {
     property bool showClock: true
     property bool hoverOpen: true
     property bool eventBanners: true
+    onEventBannersChanged: if (!eventBanners && automaticEvent)
+        collapse()
     function applyPreferences() {
         if (!service || !service.preferences.ready)
             return;
@@ -96,13 +98,15 @@ Item {
         edgeAttached = p.edgeAttached;
         showClock = p.showClock;
         hoverOpen = p.hoverOpen;
-        eventBanners = p.eventBanners;
+        eventBanners = p.eventBanners && !p.quietMode;
     }
     function savePreference(key, value) {
         if (!service)
             return false;
         var patch = {};
-        if (perDisplay && effectiveScreen && ["edge", "panelWidth", "edgeOffset", "fullscreenPolicy"].indexOf(key) >= 0) {
+        if (key === "eventBanners" && service.preferences.record.systemFeedback === undefined)
+            patch.systemFeedback = service.preferences.values.systemFeedback;
+        if (perDisplay && effectiveScreen && ["edge", "panelWidth", "edgeOffset", "fullscreenPolicy", "chromeMode"].indexOf(key) >= 0) {
             var profiles = Object.assign({}, service.preferences.record.displayProfiles || {});
             var profile = Object.assign({}, profiles[effectiveScreen.name] || {});
             profile[key] = value;

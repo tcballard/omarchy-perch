@@ -21,8 +21,8 @@ ColumnLayout {
         },
         {
             id: "alerts",
-            title: "Media & alerts",
-            detail: "Choose artwork and timer notifications."
+            title: "Alerts & sound",
+            detail: "Choose interruptions, previews and sounds."
         },
         {
             id: "modules",
@@ -158,6 +158,21 @@ ColumnLayout {
                 ColumnLayout {
                     visible: root.section === "display"
                     Layout.fillWidth: true
+                    Text {
+                        text: "Appearance"
+                        color: root.host.ink
+                        font.pixelSize: Style.space(12)
+                    }
+                    PerchCombo {
+                        objectName: "settings-appearance"
+                        Layout.fillWidth: true
+                        ink: root.host.ink
+                        surface: root.host.surface
+                        model: ["Dark island", "Follow Omarchy theme"]
+                        currentIndex: root.host.displaySettings.chromeMode === "theme" ? 1 : 0
+                        onActivated: index => root.host.preferenceChanged("chromeMode", index === 1 ? "theme" : "dark")
+                        onPopupToggled: open => root.host.popupOpen = open
+                    }
                     spacing: Style.space(12)
                     Text {
                         text: "Display"
@@ -309,6 +324,26 @@ ColumnLayout {
                     Repeater {
                         model: [
                             {
+                                key: "quietMode",
+                                title: "Quiet mode",
+                                detail: "Pause automatic cards, previews, sounds and timer notifications. Timers and the inbox keep working."
+                            },
+                            {
+                                key: "notificationPreviews",
+                                title: "Notification previews",
+                                detail: "Briefly show new notifications ahead of music and running timers."
+                            },
+                            {
+                                key: "activitySound",
+                                title: "Activity sounds",
+                                detail: "Play a sound for new completion or attention events."
+                            },
+                            {
+                                key: "systemFeedback",
+                                title: "Device feedback",
+                                detail: "Show volume, power and Bluetooth changes."
+                            },
+                            {
                                 key: "timerSound",
                                 title: "Timer sound",
                                 detail: "Play a sound when a timer finishes."
@@ -325,8 +360,8 @@ ColumnLayout {
                             },
                             {
                                 key: "eventBanners",
-                                title: "Event cards and system status",
-                                detail: "Open new activity alerts while collapsed and show volume/power feedback."
+                                title: "Activity cards",
+                                detail: "Open new completion and attention cards while Perch is collapsed."
                             }
                         ]
                         delegate: PerchToggle {
@@ -334,11 +369,50 @@ ColumnLayout {
                             Layout.fillWidth: true
                             text: modelData.title
                             description: modelData.detail
-                            checked: modelData.key === "eventBanners" ? root.host.eventBanners : root.host.displaySettings[modelData.key] === true
+                            checked: ["eventBanners", "notificationPreviews", "systemFeedback"].indexOf(modelData.key) >= 0 ? root.host.displaySettings[modelData.key] !== false : root.host.displaySettings[modelData.key] === true
                             ink: root.host.ink
                             surface: root.host.surface
                             onToggled: root.host.preferenceChanged(modelData.key, checked)
                         }
+                    }
+                    Text {
+                        text: "Alert sound"
+                        color: root.host.ink
+                        font.pixelSize: Style.space(12)
+                    }
+                    PerchCombo {
+                        objectName: "settings-sound"
+                        Layout.fillWidth: true
+                        ink: root.host.ink
+                        surface: root.host.surface
+                        model: ["Complete", "Message", "Bell"]
+                        currentIndex: Math.max(0, ["complete", "message-new-instant", "bell"].indexOf(root.host.displaySettings.soundPreset || "complete"))
+                        onActivated: index => root.host.preferenceChanged("soundPreset", ["complete", "message-new-instant", "bell"][index])
+                        onPopupToggled: open => root.host.popupOpen = open
+                    }
+                    PerchAction {
+                        objectName: "settings-preview-sound"
+                        text: "Preview sound"
+                        enabled: !root.host.demo && !!root.host.media && typeof root.host.media.previewSound === "function" && !root.host.displaySettings.quietMode && !(root.host.inbox && root.host.inbox.dnd)
+                        ink: root.host.ink
+                        surface: root.host.surface
+                        onClicked: root.host.media.previewSound()
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        visible: !!root.host.media && root.host.media.alertMessage !== undefined && root.host.media.alertMessage !== ""
+                        text: visible ? root.host.media.alertMessage : ""
+                        textFormat: Text.PlainText
+                        color: Qt.alpha(root.host.ink, 0.7)
+                        font.pixelSize: Style.space(11)
+                        wrapMode: Text.Wrap
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Inbox Do Not Disturb also silences Perch sounds. Sound playback needs canberra-gtk-play."
+                        color: Qt.alpha(root.host.ink, 0.55)
+                        font.pixelSize: Style.space(11)
+                        wrapMode: Text.Wrap
                     }
                     PerchAction {
                         text: "Integration setup…"

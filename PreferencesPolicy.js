@@ -4,6 +4,7 @@ function clean(p) {
     return {layoutMode:p.layoutMode === "strip" ? "strip" : "notch", modules:p.modules, edge:["top","bottom","left","right"].indexOf(p.edge)>=0?p.edge:"top", hideIdle:p.hideIdle===true,
         reducedMotion:p.reducedMotion===true, edgeAttached:p.edgeAttached===true,
         monitor:typeof p.monitor==="string"?p.monitor.slice(0,120):"", panelWidth:bounded(p.panelWidth,304,544,344), edgeOffset:bounded(p.edgeOffset,0,64,0), perDisplay:p.perDisplay===true, fullscreenPolicy:["hide","alerts","show"].indexOf(p.fullscreenPolicy)>=0?p.fullscreenPolicy:"hide", timerSound:p.timerSound===true, timerNotifications:p.timerNotifications===true, remoteArtwork:p.remoteArtwork===true,
+        chromeMode:p.chromeMode === "theme" ? "theme" : "dark", quietMode:p.quietMode===true, activitySound:p.activitySound===true, notificationPreviews:p.notificationPreviews!==false, systemFeedback:p.systemFeedback===undefined?p.eventBanners!==false:p.systemFeedback!==false, soundPreset:["complete","message-new-instant","bell"].indexOf(p.soundPreset)>=0?p.soundPreset:"complete",
         showClock:p.showClock!==false, hoverOpen:p.hoverOpen!==false, eventBanners:p.eventBanners!==false}
 }
 function entry(encoded) {

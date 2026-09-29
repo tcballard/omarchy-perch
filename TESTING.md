@@ -220,3 +220,9 @@ priority, dimensions, keyboard opening, hidden sampling and mode changes.
 Portable tests cover event deduplication and new-turn keys, approval/question mapping, occupied-panel preservation, fullscreen alert policy, event timer cleanup, native card actions and content-dependent height. `tests/EventReview.qml` renders production completion and approval cards with fictional data. Music, timer, activity and provider cards use their content height within the fixed compositor envelope; virtualized utility pages retain a roomy viewport.
 
 Live acceptance: receive an agent event while typing elsewhere, while a plugin drawer is open, with event banners off, and under each fullscreen policy. Verify no automatic keyboard grab, completion timeout/hover extension, attention persistence, resolution/expiry close, and return to the real agent window. Direct approval and text replies remain in the originating agent; the hooks are status-only.
+
+## Everyday surfaces
+
+Portable checks exercise notification priority over playing media, preview expiry across repeated inbox syncs, DND/quiet suppression, sound burst coalescing and allowlisted sound argv. Production-QML interactions cover tool search/Enter/Ctrl+K, plugin pin changes, light-theme contrast and mid-transition reduced motion. `tests/EverydayReview.qml` renders the actual tools and music cards with fictional data.
+
+On Omarchy, verify sound themes contain each selected event, sound preview failures are visible, Quiet mode stops new interruptions while timers continue, and plugin discovery reflects enable/disable after Refresh. Re-run notification companion setup after updating to copy its preview-identity addition; older companions remain compatible but cannot distinguish two identical notification summaries as precisely. Verify Follow Omarchy theme on each display and during a live theme switch.

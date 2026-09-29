@@ -150,7 +150,7 @@ Item {
         id: module_system
         moduleId: "system"
         title: "Devices"
-        compactText: root.host.eventBanners && root.host.system && root.host.system.banner ? root.host.system.banner : "Devices"
+        compactText: root.host.displaySettings.systemFeedback !== false && root.host.system && root.host.system.banner ? root.host.system.banner : "Devices"
         state: root.host.media
         card: builtins.systemCard
     }

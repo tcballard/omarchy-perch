@@ -109,9 +109,11 @@ def brightness(p=None):
 
 def alarm(p):
     missing=[]
+    preset=p.get('preset','complete')
+    if preset not in ('complete','message-new-instant','bell'):raise ValueError('Unknown sound preset')
     if p.get('sound'):
-        if shutil.which('canberra-gtk-play'):run(['canberra-gtk-play','-i','complete'],timeout=4,limit=1024)
-        else:missing.append('Timer sound unavailable: install canberra-gtk-play')
+        if shutil.which('canberra-gtk-play'):run(['canberra-gtk-play','-i',preset],timeout=4,limit=1024)
+        else:missing.append('Sound unavailable: install canberra-gtk-play')
     if p.get('notify'):
         if shutil.which('notify-send'):run(['notify-send','--app-name=Perch','--',str(p.get('label','Timer'))[:80]+' finished','Your timer has completed.'],timeout=3,limit=1024)
         else:missing.append('Desktop notification helper unavailable')

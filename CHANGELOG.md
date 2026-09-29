@@ -2,6 +2,10 @@
 
 ## Unreleased — native modules
 
+- Search and open all tools and installed plugins, pin/unpin from results, and use Ctrl+K for search. Disabled plugins remain visibly unavailable.
+- Prioritize fresh notifications, device feedback and meetings ahead of music; inbox refreshes no longer revive expired previews. Split activity cards from device feedback settings.
+- Add Quiet mode, independent activity sounds, three system sound presets with preview/error feedback, and DND-aware dispatch. Follow the Omarchy theme or retain a dark island, including per-display appearance. Reducing motion during a transition now settles the page immediately.
+
 - Content-sized music, timer, activity and plugin cards; dedicated completion, permission, input and error surfaces. New events open only from collapsed Perch, without keyboard focus; duplicate status updates stay quiet. Completion dismisses after eight seconds, with hover protection. Approval/input actions return to the agent session.
 
 - Native Plugin Perch drawer: bounded provider snapshots render inside Perch with explicit actions, late-response protection and a full-panel fallback. RSS Feed is the first paired provider; it requires its Perch-card integration change.
