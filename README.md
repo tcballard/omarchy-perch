@@ -22,7 +22,7 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 - **Timers:** up to eight named timers, pause/resume/cancel, repeat, snooze, optional completion sounds/desktop notifications. Wall-clock deadlines survive suspension and shell restart.
 - **System:** output/input selection, volume/mute, microphone mute, battery, paired Bluetooth connect/disconnect and battery status, optional brightnessctl. Missing capabilities are shown explicitly.
 - **Notifications (opt-in):** persistent 20-item history, unread markers, app filtering/muting, DND, icons, native actions and sender-supported replies. A companion replaces the built-in notification owner while enabled.
-- **Applications:** six Omarchy shortcuts, installed-app picker and up to eight pins.
+- **Applications:** six Omarchy shortcuts, installed-app picker, up to eight application pins and eight named HTTP(S) links.
 - **Live activities:** bounded IPC, real build/download/copy adapters, Claude Code status hooks and Codex completion hooks. Agent sessions show their project, group attention first and can return to the originating Hyprland window when it can be identified.
 - **Setup:** integration status, explicit enable/disable, optional system-feedback companion to replace stock OSD, dependency reporting and coordinated integration removal.
 
@@ -80,6 +80,8 @@ Choose and reorder up to eight modules in Settings, drag tiles, or press Ctrl+ar
 Choose **Notch** or **Plugin Perch** under Settings → Behaviour. Notch is the default and shows one context: completed timer, activity needing attention, selected timer, playing media, meeting, notification or activity. Click/hover opens its card; idle opens All tools. Plugin Perch keeps your chosen tiles visible. Both retain the same expanded cards and pins. Explicitly saved strip preferences stay on Plugin Perch; old pill preferences use Notch. Fullscreen and monitor policies apply to both.
 
 ## Send progress from a script or agent
+
+Clipboard PNG entries include bounded image previews; other image types retain their type label. Clipboard deletion stays with Omarchy’s owning panel.
 
 No browser-download scraping is installed. Agent hooks are optional (below); any producer can also explicitly report its state:
 

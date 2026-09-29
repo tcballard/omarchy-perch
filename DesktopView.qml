@@ -86,6 +86,62 @@ Controls.ScrollView {
             }
         }
         Text {
+            text: "Pinned links"
+            color: root.ink
+            font.pixelSize: Style.space(12)
+        }
+        Controls.TextField {
+            id: linkName
+            objectName: "link-name"
+            Layout.fillWidth: true
+            placeholderText: "Name"
+            maximumLength: 100
+            color: root.ink
+            palette.base: root.surface
+        }
+        Controls.TextField {
+            id: linkUrl
+            objectName: "link-url"
+            Layout.fillWidth: true
+            placeholderText: "https://…"
+            maximumLength: 2048
+            color: root.ink
+            palette.base: root.surface
+        }
+        PerchAction {
+            objectName: "link-add"
+            text: "Pin link"
+            enabled: !!root.desktop && typeof root.desktop.addLink === "function"
+            ink: root.ink
+            surface: root.surface
+            onClicked: if (root.desktop.addLink(linkName.text, linkUrl.text)) {
+                linkName.clear();
+                linkUrl.clear();
+            }
+        }
+        Repeater {
+            model: root.desktop && root.desktop.links !== undefined ? root.desktop.links : []
+            delegate: RowLayout {
+                required property var modelData
+                Layout.fillWidth: true
+                PerchAction {
+                    Layout.fillWidth: true
+                    text: modelData.name
+                    ink: root.ink
+                    surface: root.surface
+                    onClicked: if (root.desktop.openLink(modelData.url))
+                        root.launched()
+                }
+                PerchAction {
+                    text: "Unpin"
+                    Accessible.name: "Unpin " + modelData.name
+                    ink: root.ink
+                    surface: root.surface
+                    onClicked: root.desktop.removeLink(modelData.url)
+                }
+            }
+        }
+        Text {
             Layout.fillWidth: true
             text: root.desktop ? root.desktop.error : "Desktop shortcuts are unavailable in demo mode."
             wrapMode: Text.WordWrap

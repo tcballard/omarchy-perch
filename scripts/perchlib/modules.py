@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import stat
+import struct
 import signal
 import subprocess
 import tempfile
@@ -56,6 +57,21 @@ def clipboard_list(payload):
     entries = history()
     rows = [{'id': key, 'kind': typ, 'preview': preview} for key, typ, preview, _ in entries
             if (kind == 'all' or kind == typ) and query in str(_.get('text', preview))[:8192].casefold()][:50]
+    by_id = {row[0]:row[3] for row in entries}
+    for row in rows:
+        if row['kind'] != 'image': continue
+        try:
+            path = Path(by_id[row['id']]['path'])
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(fd, 'rb') as stream:
+                info = os.fstat(stream.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_size > 8 * 1024 * 1024: continue
+                data = stream.read(24)
+            if data[:8] == b'\x89PNG\r\n\x1a\n' and len(data) >= 24:
+                width, height = struct.unpack('>II', data[16:24])
+                if 0 < width <= 4096 and 0 < height <= 4096:
+                    row['image'] = path.absolute().as_uri()
+        except (OSError, ValueError, KeyError): pass
     return {'rows': rows, 'count': len(entries)}
 
 def copy_bytes(mime, data):

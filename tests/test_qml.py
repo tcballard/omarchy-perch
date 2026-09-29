@@ -24,6 +24,12 @@ def evaluate(code):
     assert not e.hasError(), e.error().toString()
     return result[0] if isinstance(result,tuple) else result
 assert evaluate('service.playerKey')=='player.b'
+assert evaluate('service.desktop.addLink("Docs","https://example.org/docs")') is True
+assert evaluate('service.desktop.links.length') == 1
+assert evaluate('service.desktop.addLink("Bad","file:///etc/passwd")') is False
+assert evaluate('service.desktop.removeLink("https://example.org/docs")') is True
+assert evaluate('service.desktop.links.length') == 0
+
 # Quiet/DND suppress sound dispatch; bursts are coalesced and settings remain distinct.
 evaluate('service.preferences.update({activitySound:true,timerSound:true,soundPreset:"bell",quietMode:true}); service.queueAlert("Tea",true)')
 assert evaluate('service.alarmQueue.length') == 0

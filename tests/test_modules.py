@@ -64,3 +64,11 @@ with patch.object(modules.subprocess, 'Popen', return_value=child), patch.object
     try: modules.copy_bytes('text/plain', b'hello'); assert False
     except ValueError: pass
     kill.assert_called_once()
+
+from perchlib import apps
+with patch.object(apps,'launch') as launch:
+    apps.handle('app-link',{'url':'https://example.org/?a=1&b=2'})
+    assert launch.call_args.args[0] == ['xdg-open','https://example.org/?a=1&b=2']
+    for url in ['file:///etc/passwd','javascript:alert(1)','https://user:pass@example.org','https://example.org/ bad']:
+        try: apps.handle('app-link',{'url':url}); assert False
+        except ValueError: pass

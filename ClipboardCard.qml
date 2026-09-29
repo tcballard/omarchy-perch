@@ -62,15 +62,29 @@ ColumnLayout {
                 radius: Style.space(6)
                 color: Qt.alpha(root.ink, parent.hovered || results.activeFocus && results.currentIndex === parent.index ? 0.15 : 0.06)
             }
-            contentItem: Text {
-                text: modelData.preview
-                textFormat: Text.PlainText
-                color: root.ink
-                font.pixelSize: Style.space(11)
-                wrapMode: Text.WrapAnywhere
-                maximumLineCount: 2
-                elide: Text.ElideRight
-                verticalAlignment: Text.AlignVCenter
+            contentItem: RowLayout {
+                Image {
+                    visible: !!modelData.image
+                    source: modelData.image || ""
+                    Layout.preferredWidth: visible ? Style.space(48) : 0
+                    Layout.preferredHeight: Style.space(44)
+                    sourceSize.width: 96
+                    sourceSize.height: 96
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    cache: false
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: modelData.preview
+                    textFormat: Text.PlainText
+                    color: root.ink
+                    font.pixelSize: Style.space(11)
+                    wrapMode: Text.WrapAnywhere
+                    maximumLineCount: 2
+                    elide: Text.ElideRight
+                    verticalAlignment: Text.AlignVCenter
+                }
             }
             onClicked: root.state.copyClip(modelData.id)
         }
