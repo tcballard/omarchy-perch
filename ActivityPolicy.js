@@ -12,7 +12,7 @@ function normalize(encoded, now) {
         var kind = p.kind === "agent" ? "agent" : "task"
         var target = typeof p.target === "string" && /^0x[0-9a-fA-F]{1,16}$/.test(p.target) ? p.target : ""
         var attention = ["approval", "question"].indexOf(p.attention) >= 0 ? p.attention : "attention"
-        return {id:p.id, title:text(p.title, "Activity", 120), detail:text(p.detail, "", 240), state:p.state, progress:progress, kind:kind, project:text(p.project, "", 100), agent:text(p.agent, "", 40), target:target, attention:attention, eventKey:text(p.eventKey,"",80), expiresAt:now + ttl * 1000, updatedAt:now}
+        return {requestId:typeof p.requestId === "string" && /^[0-9a-f]{32}$/.test(p.requestId) ? p.requestId : "",id:p.id, title:text(p.title, "Activity", 120), detail:text(p.detail, "", 240), state:p.state, progress:progress, kind:kind, project:text(p.project, "", 100), agent:text(p.agent, "", 40), target:target, attention:attention, eventKey:text(p.eventKey,"",80), expiresAt:now + ttl * 1000, updatedAt:now}
     } catch (_) { return null }
 }
 function upsert(items, item, now) {

@@ -6,6 +6,7 @@ import qs.Commons
 ColumnLayout {
     id: root
     property var live: null
+    signal reviewRequested(string id)
     property color ink: Color.foreground
     property color surface: Color.background
     spacing: Style.space(12)
@@ -81,6 +82,13 @@ ColumnLayout {
                             margins: Style.space(11)
                         }
                         spacing: Style.space(7)
+                        PerchAction {
+                            visible: !!modelData.requestId
+                            text: "Review request"
+                            ink: root.ink
+                            surface: root.surface
+                            onClicked: root.reviewRequested(modelData.id)
+                        }
                         RowLayout {
                             Layout.fillWidth: true
                             Text {

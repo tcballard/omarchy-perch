@@ -95,7 +95,7 @@ Updating the same `id` replaces that card. Up to eight cards are kept. IDs are 1
 
 Optional `attention` is `approval` or `question` for a more specific waiting-card heading. Optional `eventKey` (up to 80 characters) identifies a distinct event when the state stays the same; repeating it updates the activity without opening another banner. Agent hooks generate this key from a hash of the bounded event.
 
-`state` is `running`, `waiting`, `done` or `error`; `waiting` displays “Needs attention”. `progress` is 0–1, or omitted/−1 when unknown. `ttl` is 5–86400 seconds; the default is 300 seconds, or 30 for a completed card. Producers should refresh long-running cards before expiry. Activities are transient and clear on shell restart. They cannot execute commands, open links or grant agent permissions.
+`state` is `running`, `waiting`, `done` or `error`; `waiting` displays “Needs attention”. `progress` is 0–1, or omitted/−1 when unknown. `ttl` is 5–86400 seconds; the default is 300 seconds, or 30 for a completed card. Producers should refresh long-running cards before expiry. Activities are transient and clear on shell restart. Ordinary activity payloads cannot execute commands or grant permissions. Interactive requests use the separate, opt-in bridge below.
 
 An optional Python 3 helper quotes JSON safely and applies a five-second IPC timeout:
 
@@ -178,6 +178,12 @@ The system-feedback companion uses the same installer with `--kind osd --apply`,
 Open **AI usage** from All tools and choose Enable local usage. Perch reads bounded tails of recent local Codex rollout files only while this card is visible, at most once a minute. The dashboard shows account rate-limit windows, reset times and snapshot age; absent or stale data is labelled explicitly. It does not read credential files or fetch billing APIs.
 
 For Claude, enable **Claude usage status line** in Setup. The installer backs up settings, owns only its exact status-line command and refuses to overwrite a custom status line. The bridge caches only rate-limit counters. It requires a client/account that supplies `rate_limits`; Desktop-only sessions may not supply it. Disable local usage to stop reads. Disable the bridge in Setup to remove its managed status line.
+
+## Optional interactive Claude requests
+
+Enable **Claude approvals & questions** in Setup to review pending tool inputs, allow once or deny, and answer AskUserQuestion choices/free text inside Perch. This is separate from status hooks. It installs PermissionRequest and a narrowly matched AskUserQuestion PreToolUse hook; existing hooks and managed policies remain in force. It does not install persistent permission rules.
+
+Each request has a random identity and a private, same-user Unix socket. Complete tool input is visible during review and temporarily held in the private runtime directory, then removed. Inputs above 16 KiB fall back to the agent session instead of presenting a truncated approval. A reply is accepted once for that request, within 120 seconds. **Answer in session**, timeout, unavailable Perch or malformed input returns control to the agent’s normal permission flow without approving. Closing Perch does not approve a request. Question support depends on the Claude client exposing the documented tool hooks; Codex remains status-only.
 
 ## Optional agent hooks
 

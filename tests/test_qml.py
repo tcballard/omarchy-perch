@@ -30,6 +30,19 @@ assert evaluate('service.desktop.addLink("Bad","file:///etc/passwd")') is False
 assert evaluate('service.desktop.removeLink("https://example.org/docs")') is True
 assert evaluate('service.desktop.links.length') == 0
 
+# Request controls remain disabled until a live record is loaded, and expire locally.
+request_component=QQmlComponent(engine,QUrl.fromLocalFile(str(root.parent/'RequestCard.qml')))
+request_card=request_component.create(); assert request_card is not None,request_component.errors()
+from PySide6.QtCore import QObject
+request_state=request_card.findChild(QObject,'request-state');assert request_state is not None
+allow=request_card.findChild(QQuickItem,'request-allow');assert allow is not None
+assert not allow.isEnabled()
+import time
+request_state.setProperty('request',{'id':'a'*32,'kind':'approval','tool':'Bash','input':{'command':'printf example'},'cwd':'/work','expiresAt':time.time()+60})
+assert allow.isEnabled()
+request_state.setProperty('now',time.time()+120)
+assert not allow.isEnabled()
+request_card.deleteLater()
 # Quiet/DND suppress sound dispatch; bursts are coalesced and settings remain distinct.
 evaluate('service.preferences.update({activitySound:true,timerSound:true,soundPreset:"bell",quietMode:true}); service.queueAlert("Tea",true)')
 assert evaluate('service.alarmQueue.length') == 0

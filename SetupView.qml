@@ -44,6 +44,11 @@ ColumnLayout {
             Repeater {
                 model: [
                     {
+                        id: "requests",
+                        name: "Claude approvals & questions",
+                        detail: "Explicit responses in Perch; tool inputs visible only while a request is pending"
+                    },
+                    {
                         id: "usage",
                         name: "Claude usage status line",
                         detail: "Opt-in local rate-limit counters; preserves custom status lines"

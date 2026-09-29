@@ -9,7 +9,9 @@ Item {
     id: cards
     required property var host
     property Component hubCard: Component {
-        ToolsView { host: cards.host }
+        ToolsView {
+            host: cards.host
+        }
     }
     property Component shelfCard: Component {
         Item {
@@ -206,6 +208,10 @@ Item {
                 contentWidth: availableWidth
                 clip: true
                 ActivityView {
+                    onReviewRequested: id => {
+                        cards.host.eventId = id;
+                        cards.host.page = "event";
+                    }
                     width: parent.width
                     live: cards.host.live
                     ink: cards.host.ink

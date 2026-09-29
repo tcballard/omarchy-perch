@@ -11,6 +11,7 @@ ColumnLayout {
     property color surface: Color.background
     signal browseRequested
     signal dismissRequested
+    signal responded
     spacing: Style.space(12)
     Text {
         Layout.fillWidth: true
@@ -49,11 +50,19 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        visible: !!root.item && root.item.state === "waiting"
+        visible: !!root.item && root.item.state === "waiting" && !root.item.requestId
         text: root.item && root.item.attention === "approval" ? "Review this request in your agent session." : "Continue in your session when you’re ready."
         color: Qt.alpha(root.ink, 0.55)
         font.pixelSize: Style.space(11)
         wrapMode: Text.Wrap
+    }
+    RequestCard {
+        Layout.fillWidth: true
+        visible: !!root.item && !!root.item.requestId
+        requestId: visible ? root.item.requestId : ""
+        ink: root.ink
+        surface: root.surface
+        onResponded: root.responded()
     }
     Flow {
         Layout.fillWidth: true

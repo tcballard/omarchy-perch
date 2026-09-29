@@ -47,6 +47,12 @@ def health():
         line=config.get('statusLine',{})
         result['usage']='enabled' if isinstance(line,dict) and 'perch-usage-statusline' in str(line.get('command','')) else 'custom status line' if line else 'disabled'
     except (OSError,ValueError,AttributeError):result['usage']='disabled'
+    try:
+        data=json.loads(read_file(Path(os.environ.get('CLAUDE_CONFIG_DIR',str(Path.home()/'.claude')))/'settings.json',1048576,follow=True))
+        import shlex
+        owned=shlex.join(['python3',str(Path.home()/'.local/share/omarchy-perch/perch-request-hook')])
+        result['requests']='enabled' if any(h.get('command')==owned for g in data.get('hooks',{}).get('PermissionRequest',[]) for h in g.get('hooks',[]) if isinstance(h,dict)) else 'disabled'
+    except (OSError,ValueError,AttributeError,TypeError):result['requests']='disabled'
     result['brightness']=backlight_state()
     result['sharing']='available' if (shutil.which('localsend') or shutil.which('localsend_app')) else 'LocalSend missing'
     result['alarm']='available' if shutil.which('canberra-gtk-play') else 'sound helper missing'
@@ -68,10 +74,11 @@ def backlight_state():
     except (OSError,ValueError,subprocess.SubprocessError):return 'no backlight device'
 
 def worker(p):
-    store=Store('integrations');names=['claude','codex','usage','osd','notifications'] if p.get('all') else [p['name']]
+    store=Store('integrations');names=['claude','codex','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
-        if name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
+        if name=='requests':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--apply']
+        elif name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
         elif name in ('claude','codex'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
         else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
         if not enabled:argv.append('--remove')
@@ -88,7 +95,7 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','usage'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','usage','requests'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():

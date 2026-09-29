@@ -107,6 +107,7 @@ FocusScope {
                         surface: root.surface
                         onBrowseRequested: root.page = "activity"
                         onDismissRequested: root.collapseRequested()
+                        onResponded: root.collapseRequested()
                     }
                 }
             }
