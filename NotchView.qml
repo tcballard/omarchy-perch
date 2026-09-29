@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
@@ -69,7 +69,7 @@ FocusScope {
                 color: Color.accent
                 font.pixelSize: Style.font.body
             }
-            ToolButton {
+            Controls.ToolButton {
                 visible: root.expanded
                 text: "×"
                 Accessible.name: "Collapse notch"
@@ -280,7 +280,7 @@ FocusScope {
                 spacing: Style.space(4)
                 Repeater {
                     model: ["top", "bottom", "left", "right"]
-                    delegate: Button {
+                    delegate: Controls.Button {
                         required property string modelData
                         Layout.fillWidth: true
                         text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
@@ -303,7 +303,7 @@ FocusScope {
                 spacing: Style.space(5)
                 Repeater {
                     model: ["Hide idle", "Reduce motion", "Screen edge"]
-                    delegate: CheckBox {
+                    delegate: Controls.CheckBox {
                         required property int index
                         required property string modelData
                         text: modelData

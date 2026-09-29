@@ -28,3 +28,7 @@ These compositor, real DBus and installed-host checks have not been run here. Do
 ## Four-edge update
 
 Portable geometry tests cover all 16 edge/bar combinations, hidden bars and flush attachment. Native Qt tests verify compact and expanded dimensions on all four edges, upright controls and settings expansion. Lifecycle tests execute the production setEdge method to verify collapse, remap scheduling and focus release. Live acceptance must test all four edges, especially inward expansion and bar clearance.
+
+## Startup fix — explicit Qt Controls imports
+
+The XPS shell log reported `NotchView.qml: Cannot assign to non-existent property "checked"`. The unqualified settings Button resolved to `qs.Ui.Button`, whose API uses `selected`, rather than Qt Quick Controls Button. Qualifying the view's Qt controls removes the collision. The test host now includes a competing `qs.Ui.Button` without `checked` or `checkable`; the original view fails to load against it, while the corrected view passes. Live shell startup must still be confirmed on the XPS.
