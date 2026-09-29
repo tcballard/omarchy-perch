@@ -141,7 +141,7 @@ Polish on the confirmed base: Hyprland global shortcut (`perch:toggle`), page/co
 
 Live checks for rc.5 on the XPS:
 
-1. Add `bind = SUPER, N, global, perch:toggle` to Hyprland, reload, press it: Perch opens on the focused display with keyboard focus; pressing again closes it; Escape and outside click still work. Check `hyprctl globalshortcuts` lists it once.
+1. Add `bind = SUPER, P, global, perch:toggle` to Hyprland, reload, press it: Perch opens on the focused display with keyboard focus; pressing again closes it; Escape and outside click still work. Check `hyprctl globalshortcuts` lists it once.
 2. Switch tabs and open Settings with reduced motion off, then on: the 140 ms slide/fade must not stutter or leave content offset; the compact pill transition must not fire on countdown ticks.
 3. Play a track with local artwork, then one without: the compact pill shows the cover, then the icon.
 4. Drag a shelf card into a file manager and a browser; click each card button; both must work.

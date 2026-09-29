@@ -47,10 +47,10 @@ omarchy-shell shell summon io.github.tcballard.perch
 Keyboard shortcut: Perch registers the Hyprland global shortcut `perch:toggle`. Add one line to your Hyprland bindings (for example `~/.config/hypr/bindings.conf`) and reload Hyprland:
 
 ```ini
-bind = SUPER, N, global, perch:toggle
+bind = SUPER, P, global, perch:toggle
 ```
 
-The shortcut opens Perch on the focused display with keyboard focus and closes it if it is open. No binding is written for you.
+The shortcut opens Perch on the focused display with keyboard focus and closes it if it is open. No binding is written for you. Any key works; if Hyprland or Omarchy already uses your choice, the earlier binding wins, so check with `hyprctl binds | grep -i "global"` and `hyprctl binds | grep -w P`.
 
 Open a particular view:
 

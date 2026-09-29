@@ -2,7 +2,7 @@
 
 ## 0.1.0-rc.5 — 2026-09-29
 
-- Hyprland global shortcut `perch:toggle` opens Perch with keyboard focus on the focused display or closes it. Bind it with `bind = SUPER, N, global, perch:toggle`; nothing is written to Hyprland configuration.
+- Hyprland global shortcut `perch:toggle` opens Perch with keyboard focus on the focused display or closes it. Bind it with `bind = SUPER, P, global, perch:toggle`; nothing is written to Hyprland configuration.
 - Page changes, Settings and compact context changes fade and slide in over 140 ms, matching the expansion timing. Reduced motion disables them. Countdown ticks do not animate.
 - The compact pill shows the current cover instead of the music icon when artwork is available.
 - The whole shelf card is now the drag source, with a grip mark; buttons still click normally.

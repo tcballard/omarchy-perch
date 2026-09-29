@@ -181,7 +181,7 @@ Item {
         if (service && service.preferences.ready)
             Qt.callLater(root.applyPreferences);
     }
-    // Hyprland: bind = SUPER, N, global, perch:toggle
+    // Hyprland: bind = SUPER, P, global, perch:toggle
     GlobalShortcut {
         appid: "perch"
         name: "toggle"
