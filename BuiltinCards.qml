@@ -38,7 +38,7 @@ Item {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                text: cards.host.work ? (cards.host.work.busy ? "Working…" : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
+                text: cards.host.work ? (cards.host.work.busy ? PerchStrings.t("Working…") : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
@@ -73,7 +73,7 @@ Item {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                text: cards.host.work ? (cards.host.work.busy ? "Working…" : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
+                text: cards.host.work ? (cards.host.work.busy ? PerchStrings.t("Working…") : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
@@ -107,7 +107,7 @@ Item {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                text: cards.host.work ? (cards.host.work.busy ? "Working…" : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
+                text: cards.host.work ? (cards.host.work.busy ? PerchStrings.t("Working…") : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
@@ -301,7 +301,7 @@ Item {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: cards.host.hasPlayer ? cards.host.media.artist : "Play music or a video.\nYour controls will appear here."
+                                text: cards.host.hasPlayer ? cards.host.media.artist : PerchStrings.t("Play music or a video.\nYour controls will appear here.")
                                 textFormat: Text.PlainText
                                 color: Qt.alpha(cards.host.ink, 0.55)
                                 font.family: Style.font.family
@@ -318,13 +318,13 @@ Item {
                         spacing: Style.space(10)
                         Text {
                             Layout.fillWidth: true
-                            text: cards.host.playing ? "Playing" : "Paused"
+                            text: cards.host.playing ? PerchStrings.t("Playing") : PerchStrings.t("Paused")
                             color: Qt.alpha(cards.host.ink, 0.45)
                             font.pixelSize: Style.space(10)
                         }
                         NotchButton {
                             glyph: "previous"
-                            label: "Previous track"
+                            label: PerchStrings.t("Previous track")
                             ink: cards.host.ink
                             surface: cards.host.surface
                             enabled: cards.host.hasPlayer && cards.host.media.canPrevious
@@ -333,7 +333,7 @@ Item {
                         NotchButton {
                             objectName: "playback"
                             glyph: cards.host.playing ? "pause" : "play"
-                            label: cards.host.playing ? "Pause" : "Play"
+                            label: cards.host.playing ? PerchStrings.t("Pause") : PerchStrings.t("Play")
                             prominent: true
                             ink: cards.host.ink
                             surface: cards.host.surface
@@ -342,7 +342,7 @@ Item {
                         }
                         NotchButton {
                             glyph: "next"
-                            label: "Next track"
+                            label: PerchStrings.t("Next track")
                             ink: cards.host.ink
                             surface: cards.host.surface
                             enabled: cards.host.hasPlayer && cards.host.media.canNext
@@ -354,7 +354,7 @@ Item {
                         NotchButton {
                             visible: cards.host.hasPlayer
                             glyph: "players"
-                            label: "Switch player"
+                            label: PerchStrings.t("Switch player")
                             ink: cards.host.ink
                             surface: cards.host.surface
                             onClicked: cards.host.page = "players"
@@ -407,14 +407,14 @@ Item {
                         }
                         RowLayout {
                             PerchAction {
-                                text: "Load lyrics"
+                                text: PerchStrings.t("Load lyrics")
                                 ink: cards.host.ink
                                 surface: cards.host.surface
                                 enabled: cards.host.hasPlayer && !cards.host.demo
                                 onClicked: cards.host.openLyrics()
                             }
                             PerchAction {
-                                text: "Read lyrics"
+                                text: PerchStrings.t("Read lyrics")
                                 ink: cards.host.ink
                                 surface: cards.host.surface
                                 enabled: !!cards.host.media && !!cards.host.media.lyrics && cards.host.media.lyrics.length > 0

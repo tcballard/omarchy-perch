@@ -17,7 +17,7 @@ ColumnLayout {
             Layout.fillWidth: true
         }
         PerchAction {
-            text: "Add files"
+            text: PerchStrings.t("Add files")
             ink: root.ink
             surface: root.surface
             enabled: !!root.work && !root.work.busy
@@ -26,7 +26,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Drop files here. Drag a card out to another app. Originals stay where they are."
+        text: PerchStrings.t("Drop files here. Drag a card out to another app. Originals stay where they are.")
         color: Qt.alpha(root.ink, 0.55)
         font.pixelSize: Style.space(10)
         wrapMode: Text.WordWrap
@@ -94,7 +94,7 @@ ColumnLayout {
                             Text {
                                 id: filename
                                 Layout.fillWidth: true
-                                text: card.modelData.name + (card.modelData.exists ? "" : " · missing")
+                                text: card.modelData.name + (card.modelData.exists ? "" : PerchStrings.t(" · missing"))
                                 textFormat: Text.PlainText
                                 color: root.ink
                                 font.pixelSize: Style.space(12)
@@ -109,7 +109,7 @@ ColumnLayout {
                                     Layout.fillWidth: true
                                     text: ({
                                             preview: "View",
-                                            open: "Open",
+                                            open: PerchStrings.t("Open"),
                                             reveal: "Folder",
                                             share: "Share",
                                             remove: "×"
@@ -128,7 +128,7 @@ ColumnLayout {
             Text {
                 Layout.fillWidth: true
                 visible: !!root.work && root.work.files.length === 0
-                text: "Your shelf is empty"
+                text: PerchStrings.t("Your shelf is empty")
                 color: Qt.alpha(root.ink, 0.6)
                 font.pixelSize: Style.space(12)
             }
@@ -154,7 +154,7 @@ ColumnLayout {
             Text {
                 Layout.fillWidth: true
                 visible: !!root.work && root.work.previewKind === "external"
-                text: "Use Open to preview this file in its application."
+                text: PerchStrings.t("Use Open to preview this file in its application.")
                 color: root.ink
                 wrapMode: Text.WordWrap
                 font.pixelSize: Style.space(11)

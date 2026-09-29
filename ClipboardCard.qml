@@ -12,7 +12,7 @@ ColumnLayout {
     Controls.TextField {
         objectName: "clipboard-search"
         Layout.fillWidth: true
-        placeholderText: "Search recent clipboard previews…"
+        placeholderText: PerchStrings.t("Search recent clipboard previews…")
         text: root.state ? root.state.query : ""
         maximumLength: 120
         color: root.ink
@@ -93,7 +93,7 @@ ColumnLayout {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         textFormat: Text.PlainText
-        text: !root.state ? "Clipboard unavailable" : root.state.clipboardError || root.state.copyMessage || (root.state.clipboardBusy ? "Reading…" : root.state.clips.length ? "Select to copy; then paste in your app. History is owned by Omarchy." : "No matching entries. History is owned by Omarchy.")
+        text: !root.state ? PerchStrings.t("Clipboard unavailable") : root.state.clipboardError || root.state.copyMessage || (root.state.clipboardBusy ? PerchStrings.t("Reading…") : root.state.clips.length ? PerchStrings.t("Select to copy; then paste in your app. History is owned by Omarchy.") : PerchStrings.t("No matching entries. History is owned by Omarchy."))
         color: Qt.alpha(root.ink, 0.65)
         font.pixelSize: Style.space(10)
     }

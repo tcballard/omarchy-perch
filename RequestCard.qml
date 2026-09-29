@@ -24,7 +24,7 @@ ColumnLayout {
     spacing: Style.space(10)
     Text {
         Layout.fillWidth: true
-        text: state.request ? state.request.cwd : "Loading request…"
+        text: state.request ? state.request.cwd : PerchStrings.t("Loading request…")
         textFormat: Text.PlainText
         wrapMode: Text.WrapAnywhere
         color: Qt.alpha(root.ink, 0.65)
@@ -105,7 +105,7 @@ ColumnLayout {
             Controls.TextField {
                 Layout.fillWidth: true
                 text: root.answers[questionRow.modelData.question] || ""
-                placeholderText: questionRow.modelData.multiSelect ? "Select options or type your answer" : "Choose or type your answer"
+                placeholderText: questionRow.modelData.multiSelect ? PerchStrings.t("Select options or type your answer") : PerchStrings.t("Choose or type your answer")
                 maximumLength: 2000
                 color: root.ink
                 palette.base: root.surface
@@ -119,7 +119,7 @@ ColumnLayout {
         spacing: Style.space(6)
         PerchAction {
             objectName: "request-allow"
-            text: state.request && state.request.kind === "question" ? "Send answers" : "Allow once"
+            text: state.request && state.request.kind === "question" ? PerchStrings.t("Send answers") : PerchStrings.t("Allow once")
             ink: root.ink
             surface: root.surface
             enabled: !!state.request && !state.expired && !state.busy && !state.delivered
@@ -127,7 +127,7 @@ ColumnLayout {
         }
         PerchAction {
             objectName: "request-deny"
-            text: "Deny"
+            text: PerchStrings.t("Deny")
             ink: root.ink
             surface: root.surface
             enabled: !!state.request && !state.expired && !state.busy && !state.delivered
@@ -135,7 +135,7 @@ ColumnLayout {
         }
         PerchAction {
             objectName: "request-session"
-            text: "Answer in session"
+            text: PerchStrings.t("Answer in session")
             ink: root.ink
             surface: root.surface
             enabled: !!state.request && !state.expired && !state.busy && !state.delivered
@@ -144,7 +144,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: state.error || (state.expired ? "Expired. Continue in your agent session." : state.request ? "Returns to the session in " + Math.max(0, Math.ceil(state.request.expiresAt - state.now)) + "s. Allow applies to this request only." : "Request is unavailable.")
+        text: state.error || (state.expired ? PerchStrings.t("Expired. Continue in your agent session.") : state.request ? PerchStrings.t("Returns to the session in ") + Math.max(0, Math.ceil(state.request.expiresAt - state.now)) + PerchStrings.t("s. Allow applies to this request only.") : PerchStrings.t("Request is unavailable."))
         textFormat: Text.PlainText
         wrapMode: Text.Wrap
         color: Qt.alpha(root.ink, 0.6)

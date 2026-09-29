@@ -15,7 +15,7 @@ ColumnLayout {
     spacing: Style.space(12)
     Text {
         Layout.fillWidth: true
-        text: root.item ? root.item.title : "This activity has finished"
+        text: root.item ? root.item.title : PerchStrings.t("This activity has finished")
         textFormat: Text.PlainText
         color: root.ink
         font.pixelSize: Style.space(18)
@@ -51,7 +51,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: !!root.item && root.item.state === "waiting" && !root.item.requestId
-        text: root.item && root.item.attention === "approval" ? "Review this request in your agent session." : "Continue in your session when you’re ready."
+        text: root.item && root.item.attention === "approval" ? PerchStrings.t("Review this request in your agent session.") : PerchStrings.t("Continue in your session when you’re ready.")
         color: Qt.alpha(root.ink, 0.55)
         font.pixelSize: Style.space(11)
         wrapMode: Text.Wrap
@@ -70,7 +70,7 @@ ColumnLayout {
         PerchAction {
             objectName: "event-return"
             visible: !!root.item && root.item.kind === "agent" && root.item.target !== ""
-            text: root.live && root.live.jumpBusy ? "Opening…" : "Go to session"
+            text: root.live && root.live.jumpBusy ? PerchStrings.t("Opening…") : PerchStrings.t("Go to session")
             enabled: !!root.live && !root.live.jumpBusy
             ink: root.ink
             surface: root.surface
@@ -85,7 +85,7 @@ ColumnLayout {
         }
         PerchAction {
             objectName: "event-dismiss"
-            text: "Dismiss"
+            text: PerchStrings.t("Dismiss")
             ink: root.ink
             surface: root.surface
             onClicked: root.dismissRequested()

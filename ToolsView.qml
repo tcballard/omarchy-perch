@@ -15,7 +15,7 @@ ColumnLayout {
         id: search
         objectName: "tools-search"
         Layout.fillWidth: true
-        placeholderText: "Find a tool or plugin…"
+        placeholderText: PerchStrings.t("Find a tool or plugin…")
         color: root.ink
         placeholderTextColor: Qt.alpha(root.ink, 0.5)
         selectionColor: Qt.alpha(root.ink, 0.25)
@@ -44,13 +44,13 @@ ColumnLayout {
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true
-            text: root.results.length + (root.results.length === 1 ? " result" : " results")
+            text: root.results.length + (root.results.length === 1 ? PerchStrings.t(" result") : PerchStrings.t(" results"))
             color: Qt.alpha(root.ink, 0.55)
             font.pixelSize: Style.space(10)
         }
         PerchAction {
             objectName: "tools-refresh"
-            text: root.host && root.host.pluginState && root.host.pluginState.busy ? "Loading…" : "Refresh plugins"
+            text: root.host && root.host.pluginState && root.host.pluginState.busy ? PerchStrings.t("Loading…") : PerchStrings.t("Refresh plugins")
             enabled: !!root.host && !!root.host.pluginState && !root.host.pluginState.busy
             ink: root.ink
             surface: root.surface
@@ -60,7 +60,7 @@ ColumnLayout {
     Text {
         visible: root.results.length === 0
         Layout.fillWidth: true
-        text: "No tools or plugins match. Try another name."
+        text: PerchStrings.t("No tools or plugins match. Try another name.")
         color: Qt.alpha(root.ink, 0.6)
         wrapMode: Text.Wrap
         font.pixelSize: Style.space(12)
@@ -92,7 +92,7 @@ ColumnLayout {
                             spacing: Style.space(3)
                             Text {
                                 Layout.fillWidth: true
-                                text: modelData.title
+                                text: modelData.plugin ? modelData.title : PerchStrings.t(modelData.title)
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 color: root.ink
@@ -100,14 +100,14 @@ ColumnLayout {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: modelData.plugin ? (modelData.enabled ? "Plugin" : "Plugin · disabled") : "Built-in tool"
+                                text: modelData.plugin ? (modelData.enabled ? PerchStrings.t("Plugin") : PerchStrings.t("Plugin · disabled")) : PerchStrings.t("Built-in tool")
                                 color: Qt.alpha(root.ink, 0.5)
                                 font.pixelSize: Style.space(10)
                             }
                         }
                         PerchAction {
                             objectName: "tool-open-" + modelData.id
-                            text: "Open"
+                            text: PerchStrings.t("Open")
                             enabled: modelData.enabled
                             Accessible.name: "Open " + modelData.title
                             ink: root.ink
@@ -118,7 +118,7 @@ ColumnLayout {
                             objectName: "tool-pin-" + modelData.id
                             visible: modelData.id !== "setup"
                             readonly property bool pinned: !!root.host && root.host.moduleItems.indexOf(modelData.id) >= 0
-                            text: pinned ? "Unpin" : "Pin"
+                            text: pinned ? PerchStrings.t("Unpin") : PerchStrings.t("Pin")
                             enabled: !!root.host && (pinned ? root.host.moduleItems.length > 1 : root.host.moduleItems.length < 8)
                             Accessible.name: (pinned ? "Unpin " : "Pin ") + modelData.title
                             ink: root.ink

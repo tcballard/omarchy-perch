@@ -18,7 +18,7 @@ ColumnLayout {
     signal changed(var order)
     Text {
         visible: root.showModules
-        text: "Strip modules · up to eight"
+        text: PerchStrings.t("Strip modules · up to eight")
         color: root.ink
         font.pixelSize: Style.space(13)
     }
@@ -35,7 +35,7 @@ ColumnLayout {
                 text: {
                     var id = Modules.pluginId(modelData);
                     var p = id && root.pluginState ? root.pluginState.get(id) : null;
-                    return p ? p.name + (p.enabled ? "" : " · disabled") : id ? id + " · unavailable" : Modules.get(modelData).title;
+                    return p ? p.name + (p.enabled ? "" : " · disabled") : id ? id + " · unavailable" : PerchStrings.t(Modules.get(modelData).title);
                 }
                 color: root.ink
                 font.pixelSize: Style.space(11)
@@ -70,7 +70,7 @@ ColumnLayout {
         visible: root.showModules
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
-        text: "Shortcuts work while Perch has keyboard focus. Use Ctrl+Alt and a letter or digit. Escape cancels recording."
+        text: PerchStrings.t("Shortcuts work while Perch has keyboard focus. Use Ctrl+Alt and a letter or digit. Escape cancels recording.")
         color: Qt.alpha(root.ink, 0.6)
         font.pixelSize: Style.space(10)
     }
@@ -81,7 +81,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Text {
                 Layout.fillWidth: true
-                text: Modules.get(modelData).title
+                text: PerchStrings.t(Modules.get(modelData).title)
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
                 color: root.ink
@@ -93,13 +93,13 @@ ColumnLayout {
                 surface: root.surface
                 onRecorded: chord => {
                     var next = Shortcuts.assign(root.shortcuts, root.items, modelData, chord);
-                    root.shortcutError = next ? "" : "That shortcut is already assigned.";
+                    root.shortcutError = next ? "" : PerchStrings.t("That shortcut is already assigned.");
                     if (next)
                         root.shortcutChanged(next);
                 }
             }
             PerchAction {
-                text: "Clear"
+                text: PerchStrings.t("Clear")
                 enabled: !!root.shortcuts[modelData]
                 ink: root.ink
                 surface: root.surface
@@ -129,7 +129,7 @@ ColumnLayout {
             })
             delegate: PerchAction {
                 required property var modelData
-                text: "+ " + modelData.title
+                text: "+ " + PerchStrings.t(modelData.title)
                 enabled: root.items.length < 8
                 ink: root.ink
                 surface: root.surface
@@ -142,12 +142,12 @@ ColumnLayout {
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true
-            text: "Pin installed plugins"
+            text: PerchStrings.t("Pin installed plugins")
             color: root.ink
             font.pixelSize: Style.space(13)
         }
         PerchAction {
-            text: "Refresh"
+            text: PerchStrings.t("Refresh")
             enabled: !!root.pluginState && !root.pluginState.busy
             ink: root.ink
             surface: root.surface
@@ -160,7 +160,7 @@ ColumnLayout {
         color: Qt.alpha(root.ink, 0.65)
         font.pixelSize: Style.space(10)
         visible: root.showPlugins
-        text: !root.pluginState ? "Plugin discovery unavailable" : root.pluginState.error || root.pluginState.message || (root.pluginState.busy ? "Checking installed plugins…" : !root.pluginState.plugins.length ? "No installed plugins with a supported panel. Install and enable plugins through Omarchy." : "Click a pinned plugin to open its own panel. Disabled plugins must first be enabled in Omarchy.")
+        text: !root.pluginState ? PerchStrings.t("Plugin discovery unavailable") : root.pluginState.error || root.pluginState.message || (root.pluginState.busy ? PerchStrings.t("Checking installed plugins…") : !root.pluginState.plugins.length ? PerchStrings.t("No installed plugins with a supported panel. Install and enable plugins through Omarchy.") : PerchStrings.t("Click a pinned plugin to open its own panel. Disabled plugins must first be enabled in Omarchy."))
     }
     Repeater {
         model: root.showPlugins && root.pluginState ? root.pluginState.plugins : []
@@ -177,7 +177,7 @@ ColumnLayout {
             }
             PerchAction {
                 readonly property bool pinned: root.items.indexOf("plugin:" + modelData.id) >= 0
-                text: pinned ? "Unpin" : "Pin"
+                text: pinned ? PerchStrings.t("Unpin") : PerchStrings.t("Pin")
                 enabled: pinned ? root.items.length > 1 : modelData.enabled && root.items.length < 8
                 ink: root.ink
                 surface: root.surface
@@ -189,7 +189,7 @@ ColumnLayout {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         visible: root.showModules
-        text: "Drag tiles to reorder, or focus one and use Ctrl + arrow keys. Cards keep the strip visible for switching."
+        text: PerchStrings.t("Drag tiles to reorder, or focus one and use Ctrl + arrow keys. Cards keep the strip visible for switching.")
         color: Qt.alpha(root.ink, 0.65)
         font.pixelSize: Style.space(10)
     }

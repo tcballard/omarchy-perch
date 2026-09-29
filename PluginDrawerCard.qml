@@ -11,7 +11,7 @@ ColumnLayout {
     spacing: Style.space(10)
     Text {
         Layout.fillWidth: true
-        text: !root.state ? "Plugin cards are unavailable" : root.state.busy ? "Loading…" : root.state.error || root.state.message || (root.state.card ? root.state.card.summary : "Open the plugin’s full panel, or retry its native card.")
+        text: !root.state ? PerchStrings.t("Plugin cards are unavailable") : root.state.busy ? PerchStrings.t("Loading…") : root.state.error || root.state.message || (root.state.card ? root.state.card.summary : PerchStrings.t("Open the plugin’s full panel, or retry its native card."))
         textFormat: Text.PlainText
         color: Qt.alpha(root.ink, 0.7)
         font.pixelSize: Style.space(12)

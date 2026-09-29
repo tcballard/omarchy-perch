@@ -13,13 +13,13 @@ ColumnLayout {
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true
-            text: "Make Perch yours"
+            text: PerchStrings.t("Make Perch yours")
             color: root.ink
             font.pixelSize: Style.space(14)
             font.bold: true
         }
         PerchAction {
-            text: "Check"
+            text: PerchStrings.t("Check")
             ink: root.ink
             surface: root.surface
             enabled: !!root.work && !root.work.busy
@@ -28,7 +28,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Choose what Perch handles. Notifications and system feedback replace their built-in counterparts; disabling restores them."
+        text: PerchStrings.t("Choose what Perch handles. Notifications and system feedback replace their built-in counterparts; disabling restores them.")
         wrapMode: Text.WordWrap
         color: Qt.alpha(root.ink, 0.6)
         font.pixelSize: Style.space(11)
@@ -45,43 +45,43 @@ ColumnLayout {
                 model: [
                     {
                         id: "requests",
-                        name: "Claude approvals & questions",
-                        detail: "Explicit responses in Perch; tool inputs visible only while a request is pending"
+                        name: PerchStrings.t("Claude approvals & questions"),
+                        detail: PerchStrings.t("Explicit responses in Perch; tool inputs visible only while a request is pending")
                     },
                     {
                         id: "usage",
-                        name: "Claude usage status line",
-                        detail: "Opt-in local rate-limit counters; preserves custom status lines"
+                        name: PerchStrings.t("Claude usage status line"),
+                        detail: PerchStrings.t("Opt-in local rate-limit counters; preserves custom status lines")
                     },
                     {
                         id: "notifications",
-                        name: "Notifications",
-                        detail: "Inbox, replies and persistent history"
+                        name: PerchStrings.t("Notifications"),
+                        detail: PerchStrings.t("Inbox, replies and persistent history")
                     },
                     {
                         id: "osd",
-                        name: "System feedback",
-                        detail: "One set of volume and brightness overlays"
+                        name: PerchStrings.t("System feedback"),
+                        detail: PerchStrings.t("One set of volume and brightness overlays")
                     },
                     {
                         id: "claude",
                         name: "Claude Code",
-                        detail: "Working, attention and completion"
+                        detail: PerchStrings.t("Working, attention and completion")
                     },
                     {
                         id: "gemini",
                         name: "Gemini CLI",
-                        detail: "Working, permission attention and completion; respond in Gemini"
+                        detail: PerchStrings.t("Working, permission attention and completion; respond in Gemini")
                     },
                     {
                         id: "cursor",
                         name: "Cursor",
-                        detail: "Working, completion and errors; local desktop sessions"
+                        detail: PerchStrings.t("Working, completion and errors; local desktop sessions")
                     },
                     {
                         id: "codex",
                         name: "Codex",
-                        detail: "Turn completion only"
+                        detail: PerchStrings.t("Turn completion only")
                     }
                 ]
                 delegate: ColumnLayout {
@@ -98,7 +98,7 @@ ColumnLayout {
                         }
                         PerchAction {
                             readonly property bool outdated: !!root.work && Array.isArray(root.work.health.updates) && root.work.health.updates.indexOf(entry.modelData.id) >= 0
-                            text: outdated ? "Update now" : "Update"
+                            text: outdated ? PerchStrings.t("Update now") : PerchStrings.t("Update")
                             selected: outdated
                             visible: !!root.work && root.work.health[entry.modelData.id] === "enabled"
                             enabled: !!root.work && !root.work.busy && !(root.work.health.job && root.work.health.job.status === "working")
@@ -108,7 +108,7 @@ ColumnLayout {
                         }
                         PerchAction {
                             readonly property string state: root.work && root.work.health[entry.modelData.id] !== undefined ? root.work.health[entry.modelData.id] : "not checked"
-                            text: state === "enabled" ? "Disable" : "Enable"
+                            text: state === "enabled" ? PerchStrings.t("Disable") : PerchStrings.t("Enable")
                             enabled: !!root.work && !root.work.busy && !(root.work.health.job && root.work.health.job.status === "working")
                             ink: root.ink
                             surface: root.surface
@@ -142,7 +142,7 @@ ColumnLayout {
             }
             PerchAction {
                 Layout.fillWidth: true
-                text: root.confirmRemove ? "Confirm: restore defaults and remove hooks" : "Prepare Perch for removal"
+                text: root.confirmRemove ? PerchStrings.t("Confirm: restore defaults and remove hooks") : PerchStrings.t("Prepare Perch for removal")
                 ink: root.ink
                 surface: root.surface
                 enabled: !!root.work && !root.work.busy
@@ -156,7 +156,7 @@ ColumnLayout {
             }
             Text {
                 Layout.fillWidth: true
-                text: "Run this before disabling or removing Perch. Saved files, calendars and history are retained; shelf originals are never deleted."
+                text: PerchStrings.t("Run this before disabling or removing Perch. Saved files, calendars and history are retained; shelf originals are never deleted.")
                 wrapMode: Text.WordWrap
                 color: Qt.alpha(root.ink, 0.5)
                 font.pixelSize: Style.space(10)

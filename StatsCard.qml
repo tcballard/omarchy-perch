@@ -15,11 +15,11 @@ ColumnLayout {
                 value: root.state ? root.state.cpu : -1
             },
             {
-                label: "Memory",
+                label: PerchStrings.t("Memory"),
                 value: root.state && root.state.sample ? root.state.sample.memory : -1
             },
             {
-                label: "Root disk",
+                label: PerchStrings.t("Root disk"),
                 value: root.state && root.state.sample ? root.state.sample.disk : -1
             }
         ]
@@ -34,7 +34,7 @@ ColumnLayout {
                     font.pixelSize: Style.space(13)
                 }
                 Text {
-                    text: modelData.value >= 0 ? Math.round(modelData.value) + "%" : "Measuring…"
+                    text: modelData.value >= 0 ? Math.round(modelData.value) + "%" : PerchStrings.t("Measuring…")
                     color: root.ink
                     font.pixelSize: Style.space(16)
                 }
@@ -73,7 +73,7 @@ ColumnLayout {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         textFormat: Text.PlainText
-        text: !root.state ? "Statistics unavailable" : root.state.statsError || "Refreshes every " + root.state.statsInterval + " seconds while visible. CPU history covers the last 30 samples."
+        text: !root.state ? PerchStrings.t("Statistics unavailable") : root.state.statsError || PerchStrings.t("Refreshes every ") + root.state.statsInterval + PerchStrings.t(" seconds while visible. CPU history covers the last 30 samples.")
         color: Qt.alpha(root.ink, 0.65)
         font.pixelSize: Style.space(11)
     }

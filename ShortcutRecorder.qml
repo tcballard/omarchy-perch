@@ -5,7 +5,7 @@ PerchAction {
     property string sequence: ""
     property bool recording: false
     signal recorded(string chord)
-    text: recording ? "Press Ctrl+Alt+key…" : sequence || "Record"
+    text: recording ? PerchStrings.t("Press Ctrl+Alt+key…") : sequence || PerchStrings.t("Record")
     Accessible.name: recording ? "Press Control Alt and a letter or digit; Escape cancels" : "Record shortcut " + sequence
     selected: recording
     onClicked: {

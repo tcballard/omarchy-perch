@@ -14,12 +14,12 @@ ColumnLayout {
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true
-            text: "Your next 30 days"
+            text: PerchStrings.t("Your next 30 days")
             color: root.ink
             font.pixelSize: Style.space(14)
         }
         PerchAction {
-            text: "Add ICS"
+            text: PerchStrings.t("Add ICS")
             ink: root.ink
             surface: root.surface
             enabled: !!root.work && !root.work.busy
@@ -36,7 +36,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Choose a calendar export or an ICS file maintained by your sync tool."
+        text: PerchStrings.t("Choose a calendar export or an ICS file maintained by your sync tool.")
         wrapMode: Text.WordWrap
         color: Qt.alpha(root.ink, 0.55)
         font.pixelSize: Style.space(10)
@@ -93,7 +93,7 @@ ColumnLayout {
                             font.pixelSize: Style.space(10)
                         }
                         PerchAction {
-                            text: "Open meeting link"
+                            text: PerchStrings.t("Open meeting link")
                             visible: modelData.url !== ""
                             enabled: !!root.work && !root.work.busy
                             ink: root.ink
@@ -108,7 +108,7 @@ ColumnLayout {
                 delegate: PerchAction {
                     required property string modelData
                     Layout.fillWidth: true
-                    text: "Remove source · " + modelData.split('/').pop()
+                    text: PerchStrings.t("Remove source · ") + modelData.split('/').pop()
                     ink: root.ink
                     surface: root.surface
                     enabled: !!root.work && !root.work.busy

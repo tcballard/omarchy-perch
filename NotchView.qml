@@ -68,16 +68,16 @@ FocusScope {
     PerchModule {
         id: pluginCardDefinition
         moduleId: root.page
-        title: root.cardState && root.cardState.card ? root.cardState.card.title : root.pluginState && root.pluginState.get(Modules.pluginId(root.page)) ? root.pluginState.get(Modules.pluginId(root.page)).name : "Plugin drawer"
+        title: root.cardState && root.cardState.card ? root.cardState.card.title : root.pluginState && root.pluginState.get(Modules.pluginId(root.page)) ? root.pluginState.get(Modules.pluginId(root.page)).name : PerchStrings.t("Plugin drawer")
         actions: [
             {
                 id: "refresh",
-                title: "Refresh",
+                title: PerchStrings.t("Refresh"),
                 enabled: !!root.cardState && !root.cardState.busy
             },
             {
                 id: "open",
-                title: "Open",
+                title: PerchStrings.t("Open"),
                 enabled: !root.cardState || !root.cardState.busy
             }
         ]
@@ -90,7 +90,7 @@ FocusScope {
     PerchModule {
         id: eventDefinition
         moduleId: "event"
-        title: !root.selectedEvent ? "Activity" : root.selectedEvent.state === "done" ? "Complete" : root.selectedEvent.state === "error" ? "Something needs attention" : root.selectedEvent.attention === "approval" ? "Permission needed" : root.selectedEvent.attention === "question" ? "Input needed" : "Needs your attention"
+        title: !root.selectedEvent ? PerchStrings.t("Activity") : root.selectedEvent.state === "done" ? PerchStrings.t("Complete") : root.selectedEvent.state === "error" ? PerchStrings.t("Something needs attention") : root.selectedEvent.attention === "approval" ? PerchStrings.t("Permission needed") : root.selectedEvent.attention === "question" ? PerchStrings.t("Input needed") : PerchStrings.t("Needs your attention")
         card: Component {
             Item {
                 property color ink
@@ -413,7 +413,7 @@ FocusScope {
             spacing: Style.space(4)
             Text {
                 Layout.fillWidth: true
-                text: root.settingsOpen ? "Perch settings" : root.demo ? "Perch / demo" : "Perch"
+                text: root.settingsOpen ? PerchStrings.t("Perch settings") : root.demo ? "Perch / demo" : "Perch"
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
                 color: Qt.alpha(root.ink, 0.55)
@@ -424,7 +424,7 @@ FocusScope {
             NotchButton {
                 objectName: "open-inbox"
                 glyph: "bell"
-                label: "Notifications"
+                label: PerchStrings.t("Notifications")
                 ink: root.ink
                 surface: root.surface
                 onClicked: {
@@ -435,7 +435,7 @@ FocusScope {
             NotchButton {
                 objectName: "open-desktop"
                 glyph: "desktop"
-                label: "All tools and plugins"
+                label: PerchStrings.t("All tools and plugins")
                 ink: root.ink
                 surface: root.surface
                 onClicked: {
@@ -444,14 +444,14 @@ FocusScope {
             }
             NotchButton {
                 glyph: "settings"
-                label: root.settingsOpen ? "Back to card" : "Settings"
+                label: root.settingsOpen ? PerchStrings.t("Back to card") : PerchStrings.t("Settings")
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.settingsOpen = !root.settingsOpen
             }
             NotchButton {
                 glyph: "close"
-                label: "Collapse Perch"
+                label: PerchStrings.t("Collapse Perch")
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.collapseRequested()

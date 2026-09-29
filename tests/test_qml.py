@@ -19,7 +19,7 @@ component=QQmlComponent(engine,QUrl.fromLocalFile(str(root/'ServiceHarness.qml')
 assert not component.isError(), component.errors()
 host=component.create(); assert host is not None, component.errors()
 def evaluate(code):
-    e=QQmlExpression(engine.rootContext(),host,code)
+    e=QQmlExpression(QQmlEngine.contextForObject(host),host,code)
     result=e.evaluate()
     assert not e.hasError(), e.error().toString()
     return result[0] if isinstance(result,tuple) else result
@@ -583,6 +583,16 @@ recorder.setProperty('recording',True)
 QTest.keyClick(view,Qt.Key_Escape)
 assert not recorder.property('recording') and len(chords)==1
 recorder.deleteLater()
+
+# Language follows the persisted preference, and changes existing UI bindings.
+evaluate('service.preferences.update({language:"zh-CN"})')
+assert evaluate('PerchStrings.language')=='zh-CN'
+assert evaluate('PerchStrings.t("Settings")')=='设置'
+evaluate('service.preferences.update({language:"en"})')
+visual_eval('PerchStrings.language="zh-CN"; notch.width=344; notch.expanded=true; notch.settingsOpen=true');QTest.qWait(30)
+assert visible_named(visual,'settings-compact-behavior').property('text')=='行为'
+visual_eval('PerchStrings.language="en"')
+assert visible_named(visual,'settings-compact-behavior').property('text')=='Behaviour'
 
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

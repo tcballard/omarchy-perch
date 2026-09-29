@@ -26,6 +26,11 @@ Item {
         id: moduleState
         preferences: prefsStore
     }
+    Binding {
+        target: PerchStrings
+        property: "language"
+        value: prefsStore.values.language
+    }
     property alias preferences: prefsStore
     property alias live: activityState
     property alias workspace: workspaceState

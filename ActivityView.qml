@@ -13,7 +13,7 @@ ColumnLayout {
     function age(updatedAt) {
         var seconds = Math.max(0, Math.floor(((root.live ? root.live.now : Date.now()) - updatedAt) / 1000));
         if (seconds < 10)
-            return "now";
+            return PerchStrings.t("now");
         if (seconds < 60)
             return seconds + "s";
         var minutes = Math.floor(seconds / 60);
@@ -32,7 +32,7 @@ ColumnLayout {
         }
         Text {
             Layout.fillWidth: true
-            text: root.live && root.live.attentionItems.length === 1 ? "1 needs your attention" : (root.live ? root.live.attentionItems.length : 0) + " need your attention"
+            text: root.live && root.live.attentionItems.length === 1 ? PerchStrings.t("1 needs your attention") : (root.live ? root.live.attentionItems.length : 0) + PerchStrings.t(" need your attention")
             color: root.ink
             font.pixelSize: Style.space(12)
             font.weight: Font.DemiBold
@@ -42,7 +42,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: !root.live || !root.live.items.length
-        text: "Builds, downloads, backups.\nLet your scripts report their progress here."
+        text: PerchStrings.t("Builds, downloads, backups.\nLet your scripts report their progress here.")
         color: Qt.alpha(root.ink, 0.6)
         font.pixelSize: Style.space(12)
         wrapMode: Text.WordWrap
@@ -50,7 +50,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: !root.live || !root.live.items.length
-        text: "Connect a script using Perch’s activity command. See the README for examples."
+        text: PerchStrings.t("Connect a script using Perch’s activity command. See the README for examples.")
         color: Qt.alpha(root.ink, 0.45)
         font.pixelSize: Style.space(11)
         wrapMode: Text.WordWrap
@@ -84,7 +84,7 @@ ColumnLayout {
                         spacing: Style.space(7)
                         PerchAction {
                             visible: !!modelData.requestId
-                            text: "Review request"
+                            text: PerchStrings.t("Review request")
                             ink: root.ink
                             surface: root.surface
                             onClicked: root.reviewRequested(modelData.id)
@@ -151,14 +151,14 @@ ColumnLayout {
                             Layout.fillWidth: true
                             Text {
                                 Layout.fillWidth: true
-                                text: (modelData.state === "idle" ? "Last seen" : modelData.state === "waiting" ? "Needs attention" : modelData.state === "error" ? "Failed" : modelData.state === "done" ? "Complete" : "In progress") + " · " + root.age(modelData.updatedAt)
+                                text: (modelData.state === "idle" ? PerchStrings.t("Last seen") : modelData.state === "waiting" ? PerchStrings.t("Needs attention") : modelData.state === "error" ? PerchStrings.t("Failed") : modelData.state === "done" ? PerchStrings.t("Complete") : PerchStrings.t("In progress")) + " · " + root.age(modelData.updatedAt)
                                 color: Qt.alpha(root.ink, 0.5)
                                 font.pixelSize: Style.space(10)
                             }
                             PerchAction {
                                 objectName: "jump-session-" + modelData.id
                                 visible: modelData.kind === "agent" && modelData.target !== ""
-                                text: root.live && root.live.jumpBusy ? "Opening…" : "Go to session"
+                                text: root.live && root.live.jumpBusy ? PerchStrings.t("Opening…") : PerchStrings.t("Go to session")
                                 enabled: !!root.live && !root.live.jumpBusy
                                 ink: root.ink
                                 surface: root.surface

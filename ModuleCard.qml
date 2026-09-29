@@ -21,7 +21,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true
-            text: root.definition ? root.definition.title : "Module unavailable"
+            text: root.definition ? root.definition.title : PerchStrings.t("Module unavailable")
             color: root.ink
             font.pixelSize: Style.space(14)
             font.bold: true
@@ -42,7 +42,7 @@ ColumnLayout {
         }
         PerchAction {
             visible: !!root.definition && !!root.definition.settings
-            text: root.configuring ? "Done" : "Configure"
+            text: root.configuring ? PerchStrings.t("Done") : PerchStrings.t("Configure")
             ink: root.ink
             surface: root.surface
             onClicked: root.configuring = !root.configuring

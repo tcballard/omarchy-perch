@@ -272,3 +272,13 @@ Contracts: [Gemini hook reference](https://geminicli.com/docs/hooks/reference/)
 and [Cursor hook reference](https://cursor.com/docs/hooks). These integrations
 have fixture coverage; actual client delivery and terminal focus need live
 acceptance on Omarchy.
+
+### Interface language
+
+**Settings → Behaviour → Interface language** switches Perch’s own navigation,
+settings, built-in card labels and request controls between English and
+Simplified Chinese without restarting the shell. English is the default.
+User-authored labels, agent questions/tool inputs, notification content, plugin
+provider text and diagnostic messages retain their original language. A font
+with Chinese glyph coverage is needed on the desktop. This preference belongs
+to Perch and does not change the rest of Omarchy’s language.
