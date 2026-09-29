@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Bounded local operations for the hosted Perch plugin. No privileged actions."""
 import json
+import http.client
 from pathlib import Path
 import sys
 import subprocess
@@ -31,6 +32,6 @@ if __name__=='__main__':
         result={'ok':True,**main(sys.argv[1],payload)}
         output=json.dumps(result,ensure_ascii=True)
         if len(output)>131072:raise ValueError('Result exceeds limit')
-    except (OSError,ValueError,TypeError,KeyError,RecursionError,subprocess.SubprocessError) as e:
+    except (OSError,ValueError,TypeError,KeyError,RecursionError,subprocess.SubprocessError,http.client.HTTPException) as e:
         output=json.dumps({'ok':False,'error':str(e)[:240]})
     print(output)

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Production helper regressions; isolated XDG state and fake shell IPC."""
 import datetime as dt
+import http.server
+import threading
 import importlib.machinery
 import json
 import os
@@ -74,6 +76,23 @@ with tempfile.TemporaryDirectory() as temporary:
             assert call('scripts/perch-task','copy',str(source),str(dest)).returncode==1
             assert call('scripts/perch-task','--max-bytes','2','copy',str(source),str(temp/'too-big')).returncode==1
             assert not list(temp.glob('.perch-transfer-*'))
+            class Handler(http.server.BaseHTTPRequestHandler):
+                def do_GET(self):
+                    self.send_response(200)
+                    self.send_header('Content-Length','50' if self.path=='/truncated' else '5')
+                    self.end_headers();self.wfile.write(b'hello')
+                def log_message(self,*args):pass
+            server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
+            thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+            try:
+                base='http://127.0.0.1:'+str(server.server_port)
+                target=temp/'downloaded'
+                assert call('scripts/perch-task','download',base+'/ok',str(target)).returncode==0
+                assert target.read_bytes()==b'hello'
+                outcome=call('scripts/perch-task','download',base+'/truncated',str(temp/'incomplete'))
+                assert outcome.returncode==1 and 'Traceback' not in outcome.stderr
+                assert not (temp/'incomplete').exists() and not list(temp.glob('.perch-transfer-*'))
+            finally:server.shutdown();server.server_close();thread.join()
             assert call('scripts/perch-task','run','--',sys.executable,'-c','raise SystemExit(7)').returncode==7
             assert call('scripts/perch-task','--timeout','1','run','--',sys.executable,'-c','import time;time.sleep(20)').returncode==130
 print('rc3: private durable shelf/history, calendar recurrence/timezone, lyrics/artwork bounds, helper timeout/output limits and task cleanup passed.')

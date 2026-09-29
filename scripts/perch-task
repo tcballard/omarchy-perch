@@ -2,6 +2,7 @@
 """Run an explicitly requested build, download or file copy with Perch progress."""
 import argparse
 import json
+import http.client
 import os
 from pathlib import Path
 import signal
@@ -93,7 +94,7 @@ def main():
         else:result=transfer(args.source,args.destination,report,args.max_bytes,args.kind=='download')
         report.send('done' if result==0 else 'error',1 if result==0 else -1,'Completed' if result==0 else f'Exited {result}',True)
         return result
-    except (OSError,ValueError) as error:
+    except (OSError,ValueError,http.client.HTTPException) as error:
         report.send('error',detail=str(error),force=True)
         print(f'Perch: {error}',file=sys.stderr)
         return 130 if isinstance(error,InterruptedError) else 1
