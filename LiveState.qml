@@ -13,14 +13,46 @@ Item {
     property var timerState: Activities.timer(null, now)
     property bool restored: false
     property string error: ""
+    property string actionMessage: ""
+    property bool jumpBusy: false
+    signal sessionOpened
     readonly property string timerStatus: timerState.status
     readonly property int remaining: timerStatus === "running" ? Math.max(0, Math.ceil((timerState.deadline - now) / 1000)) : timerStatus === "paused" ? timerState.remaining : 0
     readonly property bool timerActive: timerStatus !== "idle"
     readonly property real timerProgress: timerState.total > 0 ? Math.min(1, remaining / timerState.total) : 0
     readonly property var focused: Activities.focus(items)
+    readonly property var attentionItems: Activities.attention(items)
+    readonly property var displayItems: attentionItems.concat(items.filter(function (item) {
+        return item.state !== "waiting" && item.state !== "error";
+    }).sort(function (a, b) {
+        return b.updatedAt - a.updatedAt;
+    }))
     readonly property bool hasActivity: timers.length > 0 || items.length > 0
     readonly property string clock: Qt.formatTime(new Date(now), "HH:mm")
     readonly property string summary: timerStatus === "done" ? timerState.label + " finished" : focused && (focused.state === "error" || focused.state === "waiting") ? focused.title : timerActive ? Media.time(remaining) + " · " + timerState.label : focused ? focused.title : ""
+    function jumpTo(item) {
+        if (!item || item.kind !== "agent" || !item.target || jumpBusy)
+            return false;
+        error = "";
+        actionMessage = "";
+        if (!jumpJob.run("agent-jump", {address:item.target}))
+            return false;
+        jumpBusy = true;
+        return true;
+    }
+    ToolJob {
+        id: jumpJob
+        timeout: 3000
+        onCompleted: function (op, result) {
+            root.jumpBusy = false;
+            if (!result.ok) {
+                root.error = result.error || "Could not return to that session";
+                return;
+            }
+            root.actionMessage = result.message || "Session focused";
+            root.sessionOpened();
+        }
+    }
     function restore() {
         if (restored || !preferences || !preferences.ready)
             return;

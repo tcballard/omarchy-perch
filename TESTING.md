@@ -201,3 +201,8 @@ remain calm when idle/paused, route completed timers correctly, and open the
 same expanded cards and pins. Switch modes and restart; preserve pins/order.
 Verify all four edges and hover/keyboard/focus on the XPS. Portable tests cover
 priority, dimensions, keyboard opening, hidden sampling and mode changes.
+## Agent session checks
+
+- Enable the Claude or Codex integration from Setup, start an agent inside a terminal, and confirm Activity shows the project folder. Move to another window, choose **Go to session**, and verify Hyprland returns to the originating terminal and Perch collapses. Repeat from a tmux pane and the terminal used most often; an unmatched client should omit the action rather than guessing.
+- Trigger two attention activities and confirm the compact notch reads “2 need you”, Activity sorts both above running/completed work, and the panel grows without exceeding its normal maximum height.
+- Close a target terminal before clicking Go to session: leave Perch open with a useful error. Repeat after keyboard summon and pointer opening; the keyboard grab must release before a successful window switch. A Hyprland window target does not select a tmux pane or terminal tab.

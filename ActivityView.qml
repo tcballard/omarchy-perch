@@ -9,6 +9,34 @@ ColumnLayout {
     property color ink: Color.foreground
     property color surface: Color.background
     spacing: Style.space(12)
+    function age(updatedAt) {
+        var seconds = Math.max(0, Math.floor(((root.live ? root.live.now : Date.now()) - updatedAt) / 1000));
+        if (seconds < 10)
+            return "now";
+        if (seconds < 60)
+            return seconds + "s";
+        var minutes = Math.floor(seconds / 60);
+        return minutes < 60 ? minutes + "m" : Math.floor(minutes / 60) + "h";
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        visible: !!root.live && root.live.attentionItems.length > 0
+        spacing: Style.space(8)
+        Rectangle {
+            implicitWidth: Style.space(8)
+            implicitHeight: implicitWidth
+            radius: implicitWidth / 2
+            color: "#f2b84b"
+        }
+        Text {
+            Layout.fillWidth: true
+            text: root.live && root.live.attentionItems.length === 1 ? "1 needs your attention" : (root.live ? root.live.attentionItems.length : 0) + " need your attention"
+            color: root.ink
+            font.pixelSize: Style.space(12)
+            font.weight: Font.DemiBold
+        }
+    }
 
     Text {
         Layout.fillWidth: true
@@ -36,7 +64,7 @@ ColumnLayout {
             width: parent.width
             spacing: Style.space(8)
             Repeater {
-                model: root.live ? root.live.items : []
+                model: root.live ? root.live.displayItems : []
                 delegate: Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
@@ -63,6 +91,14 @@ ColumnLayout {
                                 font.pixelSize: Style.space(12)
                                 font.weight: Font.DemiBold
                             }
+                            Text {
+                                visible: modelData.kind === "agent" && modelData.agent !== ""
+                                text: modelData.agent.toUpperCase()
+                                textFormat: Text.PlainText
+                                color: Qt.alpha(root.ink, 0.48)
+                                font.pixelSize: Style.space(9)
+                                font.letterSpacing: 0.8
+                            }
                             NotchButton {
                                 glyph: "close"
                                 label: "Dismiss " + modelData.title
@@ -80,6 +116,15 @@ ColumnLayout {
                             font.pixelSize: Style.space(11)
                             wrapMode: Text.Wrap
                         }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: modelData.project !== ""
+                            text: modelData.project
+                            textFormat: Text.PlainText
+                            elide: Text.ElideMiddle
+                            color: Qt.alpha(root.ink, 0.48)
+                            font.pixelSize: Style.space(10)
+                        }
                         Rectangle {
                             Layout.fillWidth: true
                             visible: modelData.progress >= 0
@@ -93,14 +138,36 @@ ColumnLayout {
                                 color: root.ink
                             }
                         }
-                        Text {
-                            text: modelData.state === "waiting" ? "Needs attention" : modelData.state === "error" ? "Failed" : modelData.state === "done" ? "Complete" : "In progress"
-                            color: Qt.alpha(root.ink, 0.5)
-                            font.pixelSize: Style.space(10)
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text {
+                                Layout.fillWidth: true
+                                text: (modelData.state === "waiting" ? "Needs attention" : modelData.state === "error" ? "Failed" : modelData.state === "done" ? "Complete" : "In progress") + " · " + root.age(modelData.updatedAt)
+                                color: Qt.alpha(root.ink, 0.5)
+                                font.pixelSize: Style.space(10)
+                            }
+                            PerchAction {
+                                objectName: "jump-session-" + modelData.id
+                                visible: modelData.kind === "agent" && modelData.target !== ""
+                                text: root.live && root.live.jumpBusy ? "Opening…" : "Go to session"
+                                enabled: !!root.live && !root.live.jumpBusy
+                                ink: root.ink
+                                surface: root.surface
+                                onClicked: root.live.jumpTo(modelData)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+    Text {
+        Layout.fillWidth: true
+        visible: !!root.live && (root.live.error !== "" || root.live.actionMessage !== "")
+        text: root.live ? (root.live.error || root.live.actionMessage) : ""
+        textFormat: Text.PlainText
+        color: root.live && root.live.error ? "#e47b76" : Qt.alpha(root.ink, 0.6)
+        font.pixelSize: Style.space(10)
+        wrapMode: Text.WordWrap
     }
 }

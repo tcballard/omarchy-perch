@@ -7,10 +7,11 @@ import sys
 import subprocess
 # The isolated interpreter imports only modules from this checkout and stdlib.
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from perchlib import shelf,calendar,integrations,media,apps,modules,plugins
+from perchlib import shelf,calendar,integrations,media,apps,modules,plugins,sessions
 
 def main(op,p):
     if op.startswith('plugin-'):return plugins.handle(op,p)
+    if op.startswith('agent-'):return sessions.handle(op,p)
     if op=='module-stats':return modules.stats()
     if op=='module-weather':return modules.weather(p)
     if op=='module-clipboard':return modules.clipboard_list(p)

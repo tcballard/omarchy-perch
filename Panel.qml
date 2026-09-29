@@ -19,6 +19,15 @@ Item {
     property bool expanded: false
     property bool keyboardMode: false
     property bool focusPrimed: false
+    readonly property bool sessionJumpPending: !!(media && media.live && media.live.jumpBusy)
+    onSessionJumpPendingChanged: if (sessionJumpPending)
+        prepareSessionJump()
+    function prepareSessionJump() {
+        keyboardMode = false;
+        focusPrimed = false;
+        focusPrimeTimer.stop();
+        leaveTimer.stop();
+    }
     property bool hideIdle: false
     property bool reducedMotion: false
     property bool edgeAttached: false
@@ -205,9 +214,9 @@ Item {
         onPressed: root.toggle()
     }
     HyprlandFocusGrab {
-        active: root.shown && root.expanded && root.keyboardMode && root.focusPrimed && !view.interactionActive
+        active: root.shown && root.expanded && root.keyboardMode && root.focusPrimed && !view.interactionActive && !root.sessionJumpPending
         windows: [notchWindow]
-        onCleared: if (!root.edgeRemapping && !remapGuard.remapping && !view.interactionActive)
+        onCleared: if (!root.edgeRemapping && !remapGuard.remapping && !view.interactionActive && !root.sessionJumpPending)
             root.collapse()
     }
     Timer {
@@ -231,7 +240,7 @@ Item {
     Timer {
         id: leaveTimer
         interval: 220
-        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive && !view.popupOpen)
+        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive && !view.popupOpen && !root.sessionJumpPending)
             root.collapse()
     }
     // Dropdown popups sit outside the masked item; a closed popup with the

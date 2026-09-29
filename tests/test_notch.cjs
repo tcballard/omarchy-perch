@@ -7,6 +7,8 @@ media.live.timerActive=true;media.live.summary='10:00 · Focus';media.live.selec
 assert.equal(context(media).timerId,'a');
 media.live.focused={state:'waiting',title:'Needs input'};
 assert.equal(context(media).id,'activity');
+media.live.attentionItems=[{},{},{}];
+assert.equal(context(media).title,'3 need you');
 media.live.timers=[{id:'b',status:'done',label:'Tea'}];
 assert.equal(context(media).timerId,'b');
 assert.equal(context(media).attention,true);

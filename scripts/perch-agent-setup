@@ -103,7 +103,7 @@ def main():
     old = read(path)
     new = transform(args.agent, old, adapter, args.remove)
     print(('Remove' if args.remove else 'Install') + f' Perch {args.agent} hooks in {path}')
-    print('Reports only generic status and a hashed session identifier. Existing unrelated settings/hooks are preserved.')
+    print('Reports generic status, project folder name and a local Hyprland window target. Existing unrelated settings/hooks are preserved.')
     if not args.apply:
         print('Preview only. Add --apply to write changes. No configuration contents are printed.')
         return

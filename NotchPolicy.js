@@ -4,8 +4,10 @@ function context(media) {
     var timers = live && Array.isArray(live.timers) ? live.timers : [];
     var done = timers.find(function(t) { return t.status === "done"; });
     if (done) return {id:"timer",page:"timer",timerId:done.id,title:done.label + " finished",glyph:"✓",attention:true};
-    if (live && live.focused && ["waiting","error"].indexOf(live.focused.state) >= 0)
-        return {id:"activity",page:"activity",title:live.focused.title,glyph:"!",attention:true};
+    if (live && live.focused && ["waiting","error"].indexOf(live.focused.state) >= 0) {
+        var attentionCount = live.attentionItems ? live.attentionItems.length : 1;
+        return {id:"activity",page:"activity",title:attentionCount > 1 ? attentionCount + " need you" : live.focused.title,glyph:"!",attention:true};
+    }
     if (live && live.timerActive)
         return {id:"timer",page:"timer",timerId:live.selectedTimer,title:live.summary || "Timer",glyph:"◷",attention:false};
     if (media && media.state === "playing")

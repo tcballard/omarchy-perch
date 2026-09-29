@@ -1,5 +1,9 @@
 # Perch — design and progress
 
+## Agent sessions
+
+Agent hooks enrich the bounded activity model with a project label and an optional Hyprland client address. Attention sessions sort first and determine the quiet notch context. Activity uses a panel sized to its current session count. **Go to session** passes only a validated hexadecimal client address to fixed `hyprctl dispatch focuswindow` arguments, then collapses Perch after success. The address expires with the activity.
+
 29 September 2026. Scope agreed with Tom: an independent music-first notch, keeping the stock bar in place. Existing alternatives were reviewed; Tom explicitly chose to build his own.
 
 - ID: `io.github.tcballard.perch`.

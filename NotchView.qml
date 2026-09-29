@@ -135,7 +135,8 @@ FocusScope {
     readonly property color ink: lightTheme ? Color.background : Color.foreground
     readonly property real maximumWidth: Math.max(preferredWidth, stripLength, Style.space(600))
     readonly property real expandedWidth: settingsOpen ? maximumWidth : Math.max(preferredWidth, stripLength)
-    readonly property real expandedHeight: Style.space(468)
+    readonly property real activityHeight: Style.space(Math.min(468, 380 + Math.max(0, live && live.items ? live.items.length - 1 : 0) * 72))
+    readonly property real expandedHeight: settingsOpen ? Style.space(468) : page === "activity" ? activityHeight : Style.space(468)
     readonly property real maximumHeight: Style.space(468)
     implicitWidth: expanded ? expandedWidth : compactWidth
     implicitHeight: expanded ? expandedHeight : compactHeight
@@ -152,6 +153,10 @@ FocusScope {
             settingsOpen = false;
             popupOpen = false;
         }
+    }
+    Connections {
+        target: root.live
+        function onSessionOpened() { root.collapseRequested(); }
     }
     Keys.onEscapePressed: {
         if (settingsOpen)

@@ -231,6 +231,14 @@ visual_eval('demoMedia.live.activity(JSON.stringify({id:"test",state:"waiting",t
 QTest.qWait(60)
 assert visual_eval('notch.liveAttention') is True
 assert visual_eval('notch.live.focused.title') == 'Build needs input'
+assert visual_eval('notch.live.attentionItems.length') == 1
+assert visual_eval('notch.implicitHeight') == 380
+visual_eval('demoMedia.live.activity(JSON.stringify({id:"claude.1",state:"waiting",title:"Perch",detail:"Needs permission",kind:"agent",agent:"Claude",project:"perch",target:"0x123"})); notch.page="activity"')
+QTest.qWait(60)
+assert visual_eval('notch.live.attentionItems.length') == 2
+assert visual_eval('notch.implicitHeight') == 452
+assert visual_item(visual,'jump-session-claude.1') is not None
+visual_eval('demoMedia.live.dismiss("claude.1")')
 visual_eval('demoMedia.live.dismiss("test"); demoMedia.live.cancel()')
 # Load every migrated card, including secondary pages, through the shared host.
 for page in ['music','timer','system','activity','players','lyrics','hub','shelf','calendar','desktop','inbox','setup']:

@@ -9,7 +9,9 @@ function normalize(encoded, now) {
         if (!isFinite(ttl) || ttl < 5 || ttl > 86400) return null
         var progress = p.progress === undefined ? -1 : Number(p.progress)
         if (!isFinite(progress) || progress < -1 || progress > 1) return null
-        return {id:p.id, title:text(p.title, "Activity", 120), detail:text(p.detail, "", 240), state:p.state, progress:progress, expiresAt:now + ttl * 1000, updatedAt:now}
+        var kind = p.kind === "agent" ? "agent" : "task"
+        var target = typeof p.target === "string" && /^0x[0-9a-fA-F]{1,16}$/.test(p.target) ? p.target : ""
+        return {id:p.id, title:text(p.title, "Activity", 120), detail:text(p.detail, "", 240), state:p.state, progress:progress, kind:kind, project:text(p.project, "", 100), agent:text(p.agent, "", 40), target:target, expiresAt:now + ttl * 1000, updatedAt:now}
     } catch (_) { return null }
 }
 function upsert(items, item, now) {
@@ -22,6 +24,9 @@ function focus(items) {
     var rank = {error:4, waiting:3, running:2, done:1}
     return items.slice().sort(function(a,b) { return rank[b.state] - rank[a.state] || b.updatedAt - a.updatedAt })[0] || null
 }
+function attention(items) {
+    return items.filter(function(p) { return p.state === "waiting" || p.state === "error" }).sort(function(a,b) { return b.updatedAt - a.updatedAt })
+}
 function timer(value, now) {
     if (!value || typeof value !== "object" || Array.isArray(value)) return {status:"idle", deadline:0, remaining:0, total:0, label:"Timer"}
     var status = ["running", "paused", "done"].indexOf(value.status) >= 0 ? value.status : "idle"
@@ -30,4 +35,4 @@ function timer(value, now) {
     if (status === "running" && deadline <= now) status = "done"
     return {status:status, deadline:deadline, remaining:remaining, total:total, label:text(value.label,"Timer",80)}
 }
-if (typeof module !== "undefined") module.exports = {normalize,upsert,focus,timer}
+if (typeof module !== "undefined") module.exports = {normalize,upsert,focus,attention,timer}

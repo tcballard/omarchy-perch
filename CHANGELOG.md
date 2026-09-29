@@ -2,6 +2,8 @@
 
 ## Unreleased — native modules
 
+- Turn agent activity into project-labelled session rows with attention-first ordering, count-sized panels and explicit return to the originating Hyprland window.
+
 - Add Notch as the default compact presentation, showing one context and opening its card. Plugin Perch remains an explicit strip option; both share cards and pins. Hidden stats/weather tiles stop sampling while Notch is collapsed.
 
 - Sectioned settings with responsive navigation, labelled toggles, keyboard controls and persistent save/error feedback. Remove duplicate card headings and bound content to available panel space.

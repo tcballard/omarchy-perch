@@ -2,10 +2,50 @@
 """Best-effort, status-only Claude Code / Codex hook. Always succeeds silently."""
 import hashlib
 import json
+import os
+from pathlib import Path
 import subprocess
 import sys
 
 LIMIT = 65536
+
+def parent_pids(pid):
+    result = []
+    for _ in range(32):
+        try:
+            stat = Path(f'/proc/{pid}/stat').read_text()
+            tail = stat[stat.rfind(')') + 2:].split()
+            pid = int(tail[1])
+        except (OSError, ValueError, IndexError):
+            break
+        if pid <= 1:
+            break
+        result.append(pid)
+    return result
+
+def hyprland_target():
+    if not os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        return ''
+    try:
+        completed = subprocess.run(['hyprctl', '-j', 'clients'], stdin=subprocess.DEVNULL,
+            capture_output=True, timeout=.75, check=False)
+        if completed.returncode or len(completed.stdout) > 262144:
+            return ''
+        ancestors = set(parent_pids(os.getpid()))
+        matches = [c for c in json.loads(completed.stdout) if isinstance(c, dict) and c.get('pid') in ancestors]
+        if not matches:
+            return ''
+        address = matches[0].get('address', '')
+        return address if isinstance(address, str) and address.startswith('0x') else ''
+    except (OSError, ValueError, TypeError, subprocess.SubprocessError):
+        return ''
+
+def project_name(data):
+    cwd = data.get('cwd') if isinstance(data, dict) else None
+    if not isinstance(cwd, str) or not cwd or len(cwd) > 4096:
+        return ''
+    name = Path(cwd).name
+    return name[:100] if name not in ('', '.', '/') else cwd[:100]
 
 def report(agent, data):
     if not isinstance(data, dict):
@@ -35,8 +75,10 @@ def report(agent, data):
     if not isinstance(session, str) or not session or len(session) > 4096:
         return None
     key = hashlib.sha256(session.encode()).hexdigest()[:20]
-    return {'id': agent + '.' + key, 'title': 'Codex' if agent == 'codex' else 'Claude Code',
-            'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600}
+    return {'id': agent + '.' + key, 'title': project_name(data) or ('Codex' if agent == 'codex' else 'Claude Code'),
+            'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
+            'kind': 'agent', 'agent': 'Codex' if agent == 'codex' else 'Claude',
+            'project': project_name(data), 'target': hyprland_target()}
 
 def main():
     # A stable marker makes setup/removal ownership exact, not substring based.
