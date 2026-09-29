@@ -69,6 +69,16 @@ ColumnLayout {
                         detail: "Working, attention and completion"
                     },
                     {
+                        id: "gemini",
+                        name: "Gemini CLI",
+                        detail: "Working, permission attention and completion; respond in Gemini"
+                    },
+                    {
+                        id: "cursor",
+                        name: "Cursor",
+                        detail: "Working, completion and errors; local desktop sessions"
+                    },
+                    {
                         id: "codex",
                         name: "Codex",
                         detail: "Turn completion only"

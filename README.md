@@ -195,7 +195,7 @@ cd ~/.config/omarchy/plugins/io.github.tcballard.perch
 
 Omit `--apply` for a read-only preview. Restart the agent after setup. The installer uses user-level settings (`CLAUDE_CONFIG_DIR` / `CODEX_HOME` when set), preserves unrelated settings and hooks, makes mode-600 dated backups beside modified config files, and installs a small adapter under `~/.local/share/omarchy-perch/`. It refuses to overwrite an existing Codex notifier or a modified Perch notify block. Claude JSON formatting may change; unrelated values are preserved. Managed hook restrictions and disabled-hook preferences are not overridden.
 
-Claude Code sends working on prompt/tool completion, attention on permission/idle/elicitation notifications, and completion on Stop/SessionEnd. These are reported events, not an inferred process monitor; event support varies across agent clients. Working/attention cards expire after an hour without another event, completed cards after 30 seconds. Codex's supported `notify` contract reports **turn completion only**; it does not supply working or approval state. Oversized events above 64 KiB are ignored. Hooks always return silently and cannot approve, reject or alter an agent operation. Prompt text, transcripts, tool inputs and credentials are never forwarded; session IDs are hashed for card identity. Perch sends the final working-directory component as the project label and, when the hook can match its process ancestry to a Hyprland client, the client address for the explicit **Go to session** action. The address is used only as fixed `hyprctl focuswindow` input and expires with the activity.
+Claude Code sends working on prompt/tool completion, attention on permission/idle/elicitation notifications, and completion on Stop/SessionEnd. These are reported events, not an inferred process monitor; event support varies across agent clients. Working/attention cards expire after an hour without another event, completed cards after 30 seconds. Codex's supported `notify` contract reports **turn completion only**; it does not supply working or approval state. Oversized events above 64 KiB are ignored. These status hooks cannot approve, reject or alter a tool operation. Claude/Codex return silently; Gemini/Cursor return the neutral JSON required by their hook protocols. The separate, opt-in Claude request bridge described above handles explicit user responses. Prompt text, transcripts, tool inputs and credentials are never forwarded; session IDs are hashed for card identity. Perch sends the final working-directory component as the project label and, when the hook can match its process ancestry to a Hyprland client, the client address for the explicit **Go to session** action. The address is used only as fixed `hyprctl focuswindow` input and expires with the activity.
 
 Remove each integration before removing Perch (existing unrelated hooks remain):
 
@@ -255,3 +255,20 @@ pinned module or plugin. Perch rejects duplicate assignments; Clear removes a
 binding. These shortcuts work while the open panel has keyboard focus and are
 suspended in Settings so recording cannot launch another card. They do not
 install desktop-wide keybindings or replace your Hyprland bindings.
+
+### Gemini CLI and Cursor
+
+Setup can also enable and remove user-level **Gemini CLI** and **Cursor** status
+hooks. Existing unrelated hooks and settings are preserved and backed up.
+Gemini reports working, turn completion, and tool-permission attention; answer
+permissions in Gemini. Cursor reports working, completion, cancellation and
+errors for local desktop conversations. Perch installs no Cursor permission
+hooks and never supplies follow-up prompts. Neither integration forwards prompt,
+response, or tool content. Client versions and managed settings determine which
+events are actually delivered; remote/cloud Cursor sessions are not connected
+by installing a local user hook.
+
+Contracts: [Gemini hook reference](https://geminicli.com/docs/hooks/reference/)
+and [Cursor hook reference](https://cursor.com/docs/hooks). These integrations
+have fixture coverage; actual client delivery and terminal focus need live
+acceptance on Omarchy.

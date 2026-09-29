@@ -13,6 +13,8 @@ import tomllib
 START = '# BEGIN PERCH NOTIFY v1\n'
 END = '# END PERCH NOTIFY v1\n'
 EVENTS = ['UserPromptSubmit', 'PostToolUse', 'Notification', 'Stop', 'SessionEnd']
+GEMINI_EVENTS = ['BeforeAgent','AfterTool','AfterAgent','Notification','SessionEnd']
+CURSOR_EVENTS = ['beforeSubmitPrompt','postToolUse','stop','sessionEnd']
 
 
 def read(path):
@@ -57,6 +59,7 @@ def transform(agent, old, adapter, remove):
             result = block + old
         tomllib.loads(result)
         return result
+    if agent not in ('claude','gemini','cursor'):raise ValueError('Unsupported agent')
     data = json.loads(old) if old.strip() else {}
     if not isinstance(data, dict):
         raise ValueError('Claude settings must be a JSON object')
@@ -67,7 +70,24 @@ def transform(agent, old, adapter, remove):
     if not isinstance(hooks, dict):
         raise ValueError('Claude hooks must be an object')
     command = shlex.join(argv)
-    for event in EVENTS:
+    if agent == 'cursor':
+        if result.get('version',1) != 1:raise ValueError('Unsupported Cursor hooks version')
+        if not remove:result.setdefault('version',1)
+        for event in CURSOR_EVENTS:
+            entries=hooks.get(event,[])
+            if not isinstance(entries,list) or not all(isinstance(h,dict) for h in entries):raise ValueError('Invalid Cursor hook entries')
+            kept=[h for h in entries if h.get('command') != command or h.get('type','command') != 'command']
+            if not remove:kept.append({'command':command,'timeout':3})
+            if kept:hooks[event]=kept
+            else:hooks.pop(event,None)
+        if not hooks:result.pop('hooks',None)
+        return old if result == data else json.dumps(result,indent=2)+'\n'
+    if agent == 'gemini' and not remove:
+        if hooks.get('enabled') is False or (isinstance(data.get('tools'),dict) and data['tools'].get('enableHooks') is False):
+            raise ValueError('Gemini hooks are disabled; no changes made')
+        disabled=hooks.get('disabled',[])
+        if isinstance(disabled,list) and ('perch-status' in disabled or command in disabled):raise ValueError('Perch hook is disabled; no changes made')
+    for event in GEMINI_EVENTS if agent == 'gemini' else EVENTS:
         groups = hooks.get(event, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get('hooks'), list) for g in groups):
             raise ValueError(f'Unrecognized {event} hook configuration; no changes made.')
@@ -80,7 +100,7 @@ def transform(agent, old, adapter, remove):
             elif not group['hooks']:
                 remaining.append(group)
         if not remove:
-            remaining.append({'hooks': [{'type': 'command', 'command': command, 'timeout': 2}]})
+            remaining.append({'hooks': [{'type': 'command', 'command': command, 'timeout': 3000 if agent == 'gemini' else 3, **({'name':'perch-status'} if agent == 'gemini' else {})}]})
         if remaining:
             hooks[event] = remaining
         else:
@@ -92,14 +112,15 @@ def transform(agent, old, adapter, remove):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('agent', choices=['claude', 'codex'])
+    parser.add_argument('agent', choices=['claude', 'codex', 'gemini', 'cursor'])
     parser.add_argument('--remove', action='store_true')
     parser.add_argument('--apply', action='store_true', help='Write the previewed changes and a dated backup')
     args = parser.parse_args()
     home = Path.home()
     adapter = home / '.local/share/omarchy-perch/perch-agent-hook'
     config_dir = Path(os.environ.get('CODEX_HOME', home / '.codex')) if args.agent == 'codex' else Path(os.environ.get('CLAUDE_CONFIG_DIR', home / '.claude'))
-    path = config_dir / ('config.toml' if args.agent == 'codex' else 'settings.json')
+    if args.agent in ('gemini','cursor'):config_dir = home / ('.'+args.agent)
+    path = config_dir / ('config.toml' if args.agent == 'codex' else 'hooks.json' if args.agent == 'cursor' else 'settings.json')
     old = read(path)
     new = transform(args.agent, old, adapter, args.remove)
     print(('Remove' if args.remove else 'Install') + f' Perch {args.agent} hooks in {path}')

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Best-effort, status-only Claude Code / Codex hook. Always succeeds silently."""
+# Also supports the documented Gemini CLI and Cursor status event formats.
 import hashlib
 import json
 import os
@@ -76,14 +77,37 @@ def report(agent, data):
             state, detail = states[event]
         else:
             return None
+    elif agent == 'gemini':
+        session = data.get('session_id')
+        event = data.get('hook_event_name')
+        states = {'BeforeAgent': ('running','Working'), 'AfterTool': ('running','Working'),
+                  'AfterAgent': ('done','Turn complete'), 'SessionEnd': ('done','Session ended')}
+        if event == 'Notification' and data.get('notification_type') == 'ToolPermission':
+            state,detail,attention = 'waiting','Needs your attention in Gemini CLI','approval'
+        elif event in states:
+            state,detail = states[event]
+        else:return None
+    elif agent == 'cursor':
+        session = data.get('conversation_id') or data.get('session_id')
+        event = data.get('hook_event_name')
+        if event in ('beforeSubmitPrompt','postToolUse'):
+            state,detail = 'running','Working'
+        elif event in ('stop','sessionEnd'):
+            status = data.get('status') or data.get('reason')
+            state = 'error' if status == 'error' else 'done'
+            detail = 'Agent stopped with an error' if state == 'error' else 'Turn cancelled' if status == 'aborted' else 'Session ended' if event == 'sessionEnd' else 'Turn complete'
+        else:return None
+        roots=data.get('workspace_roots')
+        if isinstance(roots,list) and roots and isinstance(roots[0],str):data=dict(data,cwd=roots[0])
     else:
         return None
     if not isinstance(session, str) or not session or len(session) > 4096:
         return None
     key = hashlib.sha256(session.encode()).hexdigest()[:20]
-    return {'id': agent + '.' + key, 'title': project_name(data) or ('Codex' if agent == 'codex' else 'Claude Code'),
+    label = {'claude':'Claude','codex':'Codex','gemini':'Gemini','cursor':'Cursor'}[agent]
+    return {'id': agent + '.' + key, 'title': project_name(data) or label,
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
-            'kind': 'agent', 'agent': 'Codex' if agent == 'codex' else 'Claude',
+            'kind': 'agent', 'agent': label,
             'project': project_name(data), **hyprland_target(), 'attention': attention,
             'eventKey': hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:32]}
 
@@ -97,7 +121,7 @@ def main():
         if len(sys.argv) != 4:
             return
         raw = sys.argv[3]
-    elif agent == 'claude' and len(sys.argv) == 3:
+    elif agent in ('claude','gemini','cursor') and len(sys.argv) == 3:
         raw = sys.stdin.buffer.read(LIMIT + 1)
     else:
         return
@@ -114,3 +138,8 @@ if __name__ == '__main__':
         main()
     except (ValueError, TypeError, OSError, RecursionError, subprocess.SubprocessError):
         pass
+
+    finally:
+        # Status-only observers never return permission decisions, follow-ups or prompt content.
+        if len(sys.argv) >= 3 and sys.argv[2] in ('gemini','cursor'):
+            print('{"continue":true}' if sys.argv[2] == 'cursor' else '{}')

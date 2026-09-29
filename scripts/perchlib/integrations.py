@@ -73,11 +73,26 @@ def health():
         for key in ('claude','usage','requests'):result[key]='configuration unreadable'
     for key,name in [('claude','perch-agent-hook'),('codex','perch-agent-hook'),('usage','perch-usage-statusline'),('requests','perch-request-hook')]:
         if result[key]=='enabled' and not adapter_current(name):result['updates'].append(key)
+    for agent,filename,events in [('gemini','settings.json',('BeforeAgent','AfterTool','AfterAgent','Notification','SessionEnd')),('cursor','hooks.json',('beforeSubmitPrompt','postToolUse','stop','sessionEnd'))]:
+        try:
+            data=json.loads(read_file(Path.home()/('.'+agent)/filename,1048576))
+            if not isinstance(data,dict):raise ValueError('Invalid settings')
+            command=shlex.join(['python3',adapter,'--perch-hook-v1',agent])
+            hooks=data.get('hooks',{})
+            if not isinstance(hooks,dict):raise ValueError('Invalid hooks')
+            if agent=='cursor':
+                present=[isinstance(hooks.get(e),list) and any(isinstance(h,dict) and h.get('type','command')=='command' and h.get('command')==command for h in hooks[e]) for e in events]
+            else:present=[exact_hooks(data,e,command) for e in events]
+            disabled=data.get('disableAllHooks') or hooks.get('enabled') is False or agent=='gemini' and (isinstance(data.get('tools'),dict) and data['tools'].get('enableHooks') is False or isinstance(hooks.get('disabled'),list) and ('perch-status' in hooks['disabled'] or command in hooks['disabled']))
+            result[agent]='hooks disabled' if disabled else 'enabled' if all(present) else 'incomplete' if any(present) else 'disabled'
+            if result[agent]=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append(agent)
+        except FileNotFoundError:result[agent]='not configured'
+        except (OSError,ValueError,TypeError):result[agent]='configuration unreadable'
     result['brightness']=backlight_state()
     result['sharing']='available' if (shutil.which('localsend') or shutil.which('localsend_app')) else 'LocalSend missing'
     result['alarm']='available' if shutil.which('canberra-gtk-play') else 'sound helper missing'
     state=job_state()
-    if state.get('status')=='working' and time.time()-state['started']>480:state={**state,'status':'failed','message':'Setup was interrupted. Refresh and retry.'}
+    if state.get('status')=='working' and time.time()-state['started']>900:state={**state,'status':'failed','message':'Setup was interrupted. Refresh and retry.'}
     result['job']=state
     return {'health':result}
 
@@ -94,12 +109,12 @@ def backlight_state():
     except (OSError,ValueError,subprocess.SubprocessError):return 'no backlight device'
 
 def worker(p):
-    store=Store('integrations');names=['claude','codex','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
+    store=Store('integrations');names=['claude','codex','gemini','cursor','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
         if name=='requests':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--apply']
         elif name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
-        elif name in ('claude','codex'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
+        elif name in ('claude','codex','gemini','cursor'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
         else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
         if not enabled:argv.append('--remove')
         try:run(argv,timeout=90,limit=16384,detail=True)
@@ -115,12 +130,12 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','usage','requests'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','usage','requests'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():
         current=job_state(store)
-        if current.get('status')=='working' and time.time()-current['started']<480:raise ValueError('Setup already running')
+        if current.get('status')=='working' and time.time()-current['started']<900:raise ValueError('Setup already running')
         # Deliberately detached: companion discovery reloads the hosting shell.
         subprocess.Popen(['/usr/bin/python3','-I',str(ROOT/'scripts/perch-tools'),'integration-worker',json.dumps(p)],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
         store.save({'status':'working','message':'Updating integrations…','started':time.time()})
