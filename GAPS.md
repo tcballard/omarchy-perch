@@ -1,27 +1,5 @@
 # Gap audit — rc.5 plus unreleased native modules
 
-The full, authoritative comparison target is now [OPEN-ISLAND-SCOPE.md](OPEN-ISLAND-SCOPE.md).
-The older category summary below is historical coverage, not completion of that target.
-
-## Open Island direction — 29 September 2026
-
-The benchmark is [Open Island](https://github.com/Octane0411/open-vibe-island).
-Reviewed its README, `SessionState.swift` and `TerminalJumpTargetResolver.swift`:
-keep session identity/attention separate from terminal target resolution.
-Perch's implementation is native QML/Python; no upstream Swift code was copied.
-
-| Area | Current stacked candidate | Next work |
-|---|---|---|
-| Quiet notch | One context; attention count; shared tool/plugin cards | Live hover, focus and four-edge acceptance |
-| Agent sessions | Project and agent labels, update age, attention-first ordering | Lifecycle health, discovery and durable session state |
-| Return to work | Validated Hyprland window address, closed-window rejection, focus handoff | Precise terminal tab/tmux pane targeting |
-| Agent actions | Claude status hooks; Codex completion notifications | Provider-specific live lifecycle and explicit approval response bridge |
-| Plugin Perch | Pins, data-only native drawer cards and paired RSS provider | Live IPC/desktop acceptance and additional partners |
-| Panel sizing | Activity height varies with item count, bounded scrolling | Content-derived sizing across cards and scaled-display acceptance |
-
-Inline approvals, automatic discovery and all Open Island agent integrations
-remain outstanding. Native third-party cards are in the next stacked candidate.
-
 Every comparison category has an implementation or an explicit platform boundary. This is not a claim that Perch now equals every macOS notch app. Feature presence and actual desktop acceptance are separate.
 
 | Category | Implemented in this candidate | Remaining boundary / live gate |
