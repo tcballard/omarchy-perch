@@ -2,8 +2,8 @@
 
 ## Unreleased — native modules
 
-- Optional compact module strip with up to eight chosen tools, drag/keyboard ordering, settings controls and a persistent switcher above expanded cards. The original context pill remains the default.
-- Native QML module descriptors, card/settings host and shared state; Clipboard, Stats and Weather use the same contract. Existing Perch pages can also be selected in the strip.
+- Single compact module strip with up to eight chosen tools, drag/keyboard ordering, settings controls and a persistent switcher above expanded cards. Replaces the original context pill; saved layouts migrate automatically.
+- Native QML module descriptors, card/settings host and shared state; all existing pages and Clipboard, Stats and Weather use the same contract. Cards load on demand and retain service-owned state.
 - Integrated search/type-filtered clipboard previews from Omarchy's history with race-safe explicit copy; no second capture service or history writes.
 - Visibility-driven CPU/memory/root-disk stats and a 30-sample CPU history; selectable refresh interval.
 - Opt-in coordinate-based Open-Meteo current weather and six-hour temperatures, bounded fetching and stale-response rejection.

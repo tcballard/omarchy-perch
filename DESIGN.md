@@ -102,3 +102,13 @@ Bun/TSX runtime or nested plugin marketplace. Shared data stays in Service;
 placement/selection/hover stays in NotchView. Bounded IO reuses the existing
 isolated helper path. MODULES.md records dependencies, persisted state, network
 opt-in, module extension steps and remaining live acceptance.
+
+## Single layout migration — 29 September 2026
+
+Tom confirmed that he is the sole user of the old view and authorized migration.
+The module strip now replaces the pill, without a legacy-layout switch. Every
+existing page is registered as a trusted PerchModule card; only the selected
+card loads. Services retain timers, media, files and other state across navigation.
+All tools remains a route to unselected modules. The fixed expanded envelope is
+468 logical pixels high; natural-height cards scroll inside the shared host.
+Old pill/hide-idle/idle-clock settings do not restore the removed view.

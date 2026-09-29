@@ -37,7 +37,7 @@ The XPS shell log reported `NotchView.qml: Cannot assign to non-existent propert
 
 User confirmed the import fix made Perch visible, then reported poor appearance and responsiveness. The rework passes native Qt service/view tests (including an actual pointer click on playback, hidden transport in empty state, Settings/Escape, all four edge dimensions, and light/dark theme contrast), lifecycle and geometry tests, and QML formatting. Actual production view renders were reviewed in playing, empty, compact and settings states; `tests/Review.qml` produces the overview in `preview.png`.
 
-The fixed compositor envelope and view-only animation remove per-frame window-size requests by construction. This is not a measured FPS/latency improvement: real Wayland input masking, hover transitions, outside-click focus, edge remapping and smoothness still require the XPS. Specifically verify that clicking the transparent area around a compact pill reaches the underlying app and that all four expansions remain anchored. No live performance claim is made.
+The fixed compositor envelope and view-only animation remove per-frame window-size requests by construction. This is not a measured FPS/latency improvement: real Wayland input masking, hover transitions, outside-click focus, edge remapping and smoothness still require the XPS. Specifically verify that clicking the transparent area around a compact strip reaches the underlying app and that all four expansions remain anchored. No live performance claim is made.
 
 ## 0.1.0-rc.1 evidence
 
@@ -131,7 +131,7 @@ Additional live checks for rc.4 on the XPS, in addition to the rc.3 list:
 2. After a keyboard summon, open a dropdown and click outside Perch: both the dropdown and Perch must close and focus must return.
 3. Update the core, open Setup: an enabled companion should read “installed copy is older than this Perch version” with “Update now”. Run it, restart the shell, reopen Setup: the mark clears and one notification owner / one OSD remain.
 4. Disable Perch in `shell.json` and press Enable for notifications: the job must fail with the “Enable Perch before…” reason shown in Setup, and nothing else must change.
-5. Add an ICS containing an all-day entry and a timed meeting: the compact pill shows only the timed countdown; the agenda lists both.
+5. Add an ICS containing an all-day entry and a timed meeting: the Calendar tile shows only the timed countdown; the agenda lists both.
 
 Live results for rc.4: **not run in the build environment**. Stable tagging remains gated.
 
@@ -142,8 +142,8 @@ Polish on the confirmed base: Hyprland global shortcut (`perch:toggle`), page/co
 Live checks for rc.5 on the XPS:
 
 1. Add `bind = SUPER, P, global, perch:toggle` to Hyprland, reload, press it: Perch opens on the focused display with keyboard focus; pressing again closes it; Escape and outside click still work. Check `hyprctl globalshortcuts` lists it once.
-2. Switch tabs and open Settings with reduced motion off, then on: the 140 ms slide/fade must not stutter or leave content offset; the compact pill transition must not fire on countdown ticks.
-3. Play a track with local artwork, then one without: the compact pill shows the cover, then the icon.
+2. Switch tabs and open Settings with reduced motion off, then on: the 140 ms slide/fade must not stutter or leave content offset; tile updates must not shift layout on countdown ticks.
+3. Play a track with local artwork, then one without: the Music card shows the cover, then the icon.
 4. Drag a shelf card into a file manager and a browser; click each card button; both must work.
 5. Start a one-minute timer, run `omarchy restart shell` after it ends but within 15 minutes with sound/notification enabled: one alert; repeat after 15 minutes: none.
 
@@ -163,7 +163,9 @@ stats sampling. Production Qt tests click through all three module cards, type a
 clipboard search, perform a fictional copy, open module settings, reorder with
 Ctrl+arrow and an actual pointer drag, check all four compact orientations, and
 verify data visibility flags turn off with the surface. Existing suites still
-exercise the pill and companion paths. modules-preview.png renders production
+exercise the migrated cards and companion paths. All previous pages load through
+the shared host; timer state survives card destruction/recreation. Saved pill
+preferences normalize to the strip. modules-preview.png renders production
 QML with fictional data/theme stubs.
 
 Live acceptance still required: copy text/link/file/image, close Perch, then paste

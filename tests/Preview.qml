@@ -3,7 +3,7 @@ import qs.Commons
 import ".."
 Rectangle {
     id: root
-    width: 720; height: 440
+    width: 720; height: 620
     color: "#202831"
     property string previewState: "playing"
     DemoMedia { id: demoMedia; objectName: "demoMedia" }

@@ -179,11 +179,11 @@ for edge in ['top','bottom','left','right']:
     visual_eval('notch.edgeRequested("'+edge+'")')
     visual_eval('previewState="compact"')
     assert visual_eval('notch.sideTab') is (edge in ['left','right'])
-    assert visual_eval('notch.implicitWidth') == (28 if edge in ['left','right'] else 96)
-    assert visual_eval('notch.implicitHeight') == (80 if edge in ['left','right'] else 30)
+    assert visual_eval('notch.implicitWidth') == (52 if edge in ['left','right'] else 238)
+    assert visual_eval('notch.implicitHeight') == (238 if edge in ['left','right'] else 52)
     visual_eval('previewState="playing"')
     assert visual_eval('notch.implicitWidth') == 344
-    assert visual_eval('notch.implicitHeight') == 212
+    assert visual_eval('notch.implicitHeight') == 468
     assert visual_eval('notch.rotation') == 0
 visual_eval('notch.settingsOpen=true')
 assert visual_eval('notch.implicitHeight') == 468
@@ -193,7 +193,7 @@ QTest.keyClick(view, Qt.Key_Escape); QTest.qWait(30)
 assert visual_eval('notch.settingsOpen') is False
 assert visual_eval('notch.expanded') is True
 visual_eval('demoMedia.setState("playing")')
-assert visual_eval('notch.implicitHeight') == 310
+assert visual_eval('notch.implicitHeight') == 468
 assert visual_eval('notch.hasPlayer') is True
 playback = visual.findChild(QQuickItem, 'playback')
 assert playback is not None
@@ -211,15 +211,15 @@ assert visual_eval('notch.surface.r < notch.ink.r') is True
 visual_eval('Color.lightTheme=false')
 assert visual_eval('notch.surface.r < notch.ink.r') is True
 # Navigate each real view using pointer clicks, then verify timer/activities.
-visual_eval('notch.settingsOpen=false; demoMedia.setState("playing")')
+visual_eval('notch.settingsOpen=false; notch.displaySettings={modules:["timer","system","activity","music"]}; demoMedia.setState("playing")')
 def visual_item(item,name):
-    if item.objectName() == name: return item
+    if item.objectName() == name and item.isVisible(): return item
     for child in item.childItems():
         found=visual_item(child,name)
         if found is not None: return found
     return None
 for page in ['timer','system','activity','music']:
-    tab=visual_item(visual,'tab-'+page)
+    tab=visual_item(visual,'module-tile-'+page)
     assert tab is not None, page
     point=tab.mapToScene(QPointF(tab.width()/2,tab.height()/2)).toPoint()
     QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point)
@@ -230,8 +230,17 @@ assert visual_eval('demoMedia.live.timerActive') is True
 visual_eval('demoMedia.live.activity(JSON.stringify({id:"test",state:"waiting",title:"Build needs input",detail:"Plain text",progress:0.5})); notch.page="activity"')
 QTest.qWait(60)
 assert visual_eval('notch.liveAttention') is True
-assert visual_eval('notch.compactText') == 'Build needs input'
+assert visual_eval('notch.live.focused.title') == 'Build needs input'
 visual_eval('demoMedia.live.dismiss("test"); demoMedia.live.cancel()')
+# Load every migrated card, including secondary pages, through the shared host.
+for page in ['music','timer','system','activity','players','lyrics','hub','shelf','calendar','desktop','inbox','setup']:
+    visual_eval('notch.page='+repr(page)); QTest.qWait(30)
+    card = visual_item(visual, 'module-card')
+    assert card is not None and card.property('definition') is not None, page
+visual_eval('demoMedia.live.start(30,"Preserved"); notch.page="timer"')
+visual_eval('notch.page="music"; notch.page="timer"')
+assert visual_eval('demoMedia.live.timerActive') is True
+visual_eval('demoMedia.live.cancel()')
 # Header controls expose the two rc2 pages; notification actions use the owning row.
 visual_eval('demoMedia.setState("inbox")')
 for button,page in [('open-inbox','inbox'),('open-desktop','hub')]:
@@ -279,7 +288,7 @@ QTest.qWait(50)
 assert visual_eval('demoMedia.modules.statsVisible') is True
 assert visual_eval('demoMedia.modules.weatherVisible') is True
 assert visual_eval('demoMedia.modules.clipboardVisible') is False
-assert visual_eval('notch.bodyTop') == 132
+assert visual_eval('notch.bodyTop') == 116
 for module_id in ['clipboard','weather','stats']:
     # Locate the visible strip's actual button and click through to its native card.
     def visible_named(item, name):

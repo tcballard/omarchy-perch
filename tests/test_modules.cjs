@@ -10,3 +10,7 @@ assert.deepEqual(m.toggle(['stats'],'stats'), ['stats']);
 assert.deepEqual(m.toggle(['stats'],'weather'), ['stats','weather']);
 assert.equal(m.get('file:///tmp/bad.qml'), null);
 console.log('Native module registry bounds, allowlist, reorder and last-item preservation passed.');
+
+const prefs = require("../PreferencesPolicy.js");
+assert.equal(prefs.clean({layoutMode:"pill"}).layoutMode,"strip");
+assert.equal(prefs.clean({}).layoutMode,"strip");

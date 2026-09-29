@@ -1,8 +1,8 @@
 # Native Perch modules
 
-The optional **Module strip** layout puts up to eight chosen tools at the screen
-edge. The default **Context pill** remains available. Choose the layout and
-modules in Perch Settings. Drag tiles to reorder them, use Ctrl+arrow keys on a
+The **Module strip** puts up to eight chosen tools at the screen edge and is
+Perch’s only layout. Saved pill configurations automatically use the strip.
+Choose modules in Perch Settings. Drag tiles to reorder them, use Ctrl+arrow keys on a
 focused tile, or use the earlier/later buttons in Settings. At least one module
 stays selected. Unknown/duplicate saved IDs are discarded; an empty/invalid
 selection restores the defaults.
@@ -10,7 +10,7 @@ selection restores the defaults.
 Hover a tile for 150 ms (when Open on hover is enabled), or click it to open its
 card. Expanded cards retain a horizontal strip for switching tools. The compact
 strip follows the chosen screen edge, with upright labels on left/right edges.
-Hide-idle applies to the contextual pill; a configured strip remains a launcher.
+The strip remains a launcher; old hide-idle and idle-clock settings are ignored.
 Fullscreen and monitor policies still apply.
 
 ## Contract
@@ -25,10 +25,11 @@ Fullscreen and monitor policies still apply.
 
 `ModuleCard.qml` supplies consistent chrome, card/settings switching, themed
 `ink`/`surface` bindings and action dispatch. `ModuleRegistry.qml` wires the
-Clipboard, Stats and Weather modules through this contract. Existing music,
-timer, device, file, calendar, activity, inbox and app pages are selectable strip
-entries through `ModulePolicy.js`; their existing full views remain in place.
-They can move behind the same card contract incrementally.
+all tools through this contract. `BuiltinCards.qml` supplies the existing music,
+timer, device, file, calendar, activity, inbox and app views plus the player,
+lyrics, setup and All tools subpages. Only the selected card is instantiated;
+shared state stays in the service when cards unload. All tools remain reachable
+through the hub even when omitted from the strip.
 
 To add a built-in module: add its ID/label to ModulePolicy, a PerchModule descriptor
 and Components to ModuleRegistry, and service-owned state if needed. Register

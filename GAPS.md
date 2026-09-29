@@ -23,10 +23,9 @@ Portable suite and fixture render pass. `TESTING.md` records the live checks sti
 
 ## Unreleased Sidekick/Sidedoor comparison work
 
-Implemented: optional reorderable module strip, native card/settings/actions
+Implemented: single reorderable module strip, native card/settings/actions
 contract, clipboard history browser/copy, compact CPU/RAM/root-disk stats, and
-opt-in weather. Existing fixed pages are selectable strip entries; only the three
-new cards currently use the shared card host. No external widget loader or new
+opt-in weather. All existing tools and secondary pages use the shared card host. No external widget loader or new
 runtime. Remaining: image clipboard thumbnails, in-Perch history deletion,
 first-class URL pins, per-item shortcut recorder, AI usage/quota integrations,
 and hardware/compositor acceptance. See MODULES.md for exact supported limits.

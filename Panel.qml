@@ -97,7 +97,7 @@ Item {
     readonly property bool fullscreen: !!(monitor && monitor.activeWorkspace && monitor.activeWorkspace.hasFullscreen)
     readonly property bool shown: effectiveScreen !== null && (!fullscreen || fullscreenPolicy === "show" || fullscreenPolicy === "alerts" && media && media.live.timers && media.live.timers.some(function (t) {
             return t.status === "done";
-        })) && (expanded || view.stripMode || !hideIdle || (media && (media.state !== "empty" || media.live.hasActivity || (media.notifications && media.notifications.preview !== "") || (media.workspace && media.workspace.meetingSummary !== "") || eventBanners && media.system.banner !== "")))
+        }))
     // Compact surface is present on startup; expanded state is host-managed.
     function open(encoded) {
         var p = Policy.payload(encoded || "{}");
@@ -135,7 +135,6 @@ Item {
         }
         if (next === edge)
             return;
-        hoverTimer.stop();
         leaveTimer.stop();
         focusPrimeTimer.stop();
         edgeRemapping = true;
@@ -149,7 +148,6 @@ Item {
         keyboardMode = false;
         demo = false;
         leaveTimer.stop();
-        hoverTimer.stop();
         focusPrimeTimer.stop();
         focusPrimed = false;
     }
@@ -212,12 +210,6 @@ Item {
     }
     DemoMedia {
         id: fixture
-    }
-    Timer {
-        id: hoverTimer
-        interval: 90
-        onTriggered: if (root.hoverOpen && !root.expanded && hover.hovered)
-            root.reveal(true)
     }
     Timer {
         id: leaveTimer
@@ -299,10 +291,7 @@ Item {
                 onHoveredChanged: {
                     if (hovered) {
                         leaveTimer.stop();
-                        if (root.hoverOpen && !root.expanded && !view.stripMode)
-                            hoverTimer.restart();
                     } else {
-                        hoverTimer.stop();
                         if (!root.keyboardMode && !root.edgeRemapping)
                             leaveTimer.restart();
                     }

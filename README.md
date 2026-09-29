@@ -2,19 +2,19 @@
 
 [![Built for Omarchy: Plugin](https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-plugin.svg)](https://github.com/tcballard/omarchy-badges)
 
-Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A small pill opens into the controls you need, then gets out of the way.
+Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A compact strip of your chosen tools opens into native cards.
 
-**Unreleased: native modules.** Settings now offers a configurable module strip alongside the context pill, with drag/keyboard ordering and native Clipboard, Stats and Weather cards. Existing tools are selectable too. Weather is opt-in; clipboard reuses Omarchy's existing history. [Module contract and exact boundaries](MODULES.md).
+**Unreleased: native modules.** The configurable module strip replaces the context pill, with drag/keyboard ordering. Every tool uses the shared native card host, including Clipboard, Stats and Weather. Weather is opt-in; clipboard reuses Omarchy's existing history. [Module contract and exact boundaries](MODULES.md).
 
 ![Native Perch module cards, rendered with fictional data](modules-preview.png)
 
 **v0.1.0-rc.5 — release candidate.** rc.3 added contextual controls, files, calendars, multiple timers, richer system controls and guided setup; rc.4 fixed dropdown input/hover handling, serialized helper jobs, detected outdated companion copies and reported failing setup steps; rc.5 adds a Hyprland global shortcut, page and context transitions, compact artwork, whole-card drag and deferred timer alerts. Portable tests and actual QML fixture rendering pass. The hardware/compositor integrations still need the XPS checks in [TESTING.md](TESTING.md); this is not a stable release or a claim of macOS feature parity. [Scope and boundaries](GAPS.md).
 
-![Perch’s actual QML views with fictional media, timer and activity fixtures](preview.png)
+![Unreleased native cards rendered from production QML with fictional fixtures](preview.png)
 
 ## What you get
 
-- **Context at the edge:** direct play/pause or timer actions, wheel cycling between concurrent activities and header swipe navigation. Four edges, monitor pinning, per-display width/offset/edge/fullscreen preferences, reduced motion.
+- **Tools at the edge:** configurable tiles open their native cards; live labels show music, timer countdowns and module status. Header swipes cycle selected tools. Four edges, monitor pinning, per-display width/offset/edge/fullscreen preferences, reduced motion.
 - **Music:** native MPRIS controls, seeking, player selection, local artwork, optional bounded HTTPS artwork, local `.lrc` synchronized lyrics and a full lyrics reader.
 - **File shelf:** up to 32 persistent file/folder references, drag in/out, small text/image previews, open, reveal and LocalSend handoff. Removing a reference never deletes its original.
 - **Meetings:** agenda, imminent meeting countdown and explicit Join from up to eight local `.ics` files, including files maintained by a calendar sync tool. The compact countdown covers the 15 minutes before a timed meeting and its first 10 minutes; all-day entries stay in the agenda only.
@@ -66,11 +66,11 @@ omarchy-shell shell summon io.github.tcballard.perch '{"page":"timer"}'
 
 ## Controls
 
-Hover for 90 ms or click the pill to open. Expansion animates the visible item for 140 ms inside a stable compositor surface. A 220 ms leave grace lets you move between controls, and dropdown menus keep Perch open while they are showing. Page changes and compact context changes use the same 140 ms fade and slide; reduced motion disables all of it. When music is playing with local or fetched artwork, the compact pill shows the cover instead of the music icon.
+Hover a tile for 150 ms or click it to open its card. Expansion and page transitions animate for 140 ms inside a stable compositor surface; reduced motion disables them. A 220 ms leave grace lets you move between controls, and dropdown menus keep Perch open while showing.
 
-Use the tabs for Music, Timer, System and Activity. The bell opens Notifications, the monitor opens the hub for Files, Calendar, Applications and Setup, and the sliders icon opens Settings. Escape returns from Settings or another tab to Music, then closes; × always closes. Keyboard summons support Tab navigation and outside-click dismissal.
+Choose and reorder up to eight modules in Settings, drag tiles, or press Ctrl+arrow on a focused tile. Use the strip to switch cards; the bell opens Notifications and the monitor opens All tools, including tools omitted from your strip. Escape returns from Settings or another card to Music, then closes; × always closes. Keyboard summons support Tab navigation and outside-click dismissal. Swipe across the left side of the header to cycle your chosen tools.
 
-Hide-idle hides the pill only when there is no player, timer, activity, notification preview or enabled system banner. A paused player counts as present. A hidden Perch can always be summoned outside fullscreen. Scroll the compact pill to cycle contexts; swipe horizontally across the left side of the header to change pages. The compact waveform is a static playback icon, not an audio-level visualizer.
+The strip stays visible as a launcher, subject to fullscreen and monitor policies. Saved pill layouts migrate automatically; old hide-idle and idle-clock preferences no longer affect the view. Other preferences and service-owned data remain intact.
 
 ## Send progress from a script or agent
 
