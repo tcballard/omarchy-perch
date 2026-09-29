@@ -134,3 +134,17 @@ Additional live checks for rc.4 on the XPS, in addition to the rc.3 list:
 5. Add an ICS containing an all-day entry and a timed meeting: the compact pill shows only the timed countdown; the agenda lists both.
 
 Live results for rc.4: **not run in the build environment**. Stable tagging remains gated.
+
+## 0.1.0-rc.5 evidence and live gate
+
+Polish on the confirmed base: Hyprland global shortcut (`perch:toggle`), page/context enter transitions, compact artwork, whole-card shelf drag and deferred timer alerts. Native Qt tests assert that a page change animates and settles to exactly zero offset, that a page set while collapsed leaves no offset (a static render exposed that case), that reduced motion settles instantly, and that a timer which ran out within the last 15 minutes alerts once on restore while an older one does not. The lifecycle test executes the production `toggle` through the host summon/hide path. Nothing here changes the compositor surface, mask or the 140/90/220 ms timings.
+
+Live checks for rc.5 on the XPS:
+
+1. Add `bind = SUPER, N, global, perch:toggle` to Hyprland, reload, press it: Perch opens on the focused display with keyboard focus; pressing again closes it; Escape and outside click still work. Check `hyprctl globalshortcuts` lists it once.
+2. Switch tabs and open Settings with reduced motion off, then on: the 140 ms slide/fade must not stutter or leave content offset; the compact pill transition must not fire on countdown ticks.
+3. Play a track with local artwork, then one without: the compact pill shows the cover, then the icon.
+4. Drag a shelf card into a file manager and a browser; click each card button; both must work.
+5. Start a one-minute timer, run `omarchy restart shell` after it ends but within 15 minutes with sound/notification enabled: one alert; repeat after 15 minutes: none.
+
+Live results for rc.5: **not run in the build environment**.

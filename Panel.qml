@@ -157,6 +157,12 @@ Item {
         if (shell)
             shell.hide("io.github.tcballard.perch");
     }
+    function toggle() {
+        if (expanded)
+            collapse();
+        else
+            reveal(false);
+    }
     function reveal(pointer) {
         var payload = JSON.stringify({
             pointer: pointer,
@@ -174,6 +180,13 @@ Item {
             collapse();
         if (service && service.preferences.ready)
             Qt.callLater(root.applyPreferences);
+    }
+    // Hyprland: bind = SUPER, N, global, perch:toggle
+    GlobalShortcut {
+        appid: "perch"
+        name: "toggle"
+        description: "Open or close Perch"
+        onPressed: root.toggle()
     }
     HyprlandFocusGrab {
         active: root.shown && root.expanded && root.keyboardMode && root.focusPrimed && !view.interactionActive

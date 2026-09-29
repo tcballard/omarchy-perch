@@ -114,6 +114,12 @@ evaluate('service.preferences.accept(JSON.stringify({plugins:[{id:"io.github.tcb
 assert evaluate('service.live.timerStatus') == 'running'
 assert evaluate('service.live.timerState.label') == 'Restored'
 assert evaluate('service.live.cancel()') is True
+# A timer that finished while the shell was down alerts once on restore; a stale one does not.
+evaluate('service.preferences.accept(JSON.stringify({plugins:[{id:"io.github.tcballard.perch",timerSound:true,timers:[{id:"late",status:"running",deadline:Date.now()-5000,total:60,remaining:60,label:"Late"},{id:"stale",status:"running",deadline:Date.now()-3600000,total:60,remaining:60,label:"Stale"}]}]})); service.alarmQueue=[]; service.live.restored=false; service.live.restore()')
+assert evaluate('service.live.timers.length') == 2
+assert evaluate('service.alarmQueue.length') == 1
+assert evaluate('service.alarmQueue[0].label') == 'Late'
+evaluate('service.alarmQueue=[]; service.live.saveTimers([], "")')
 # Concurrent timers preserve independent deadlines and route completion correctly.
 assert evaluate('service.live.add(30,"First")') is True
 first_timer=evaluate('service.live.selectedTimer')
@@ -245,6 +251,16 @@ action=action_by_text(visual,'Open event');assert action is not None
 point=action.mapToScene(QPointF(action.width()/2,action.height()/2)).toPoint()
 QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)
 assert visual_eval('demoMedia.notifications.items.length')==1
+# Page changes fade and slide in, then settle exactly; a page set while collapsed leaves no offset.
+visual_eval('notch.reducedMotion=true; notch.page="timer"')
+assert visual_eval('notch.pageOffset') == 0 and visual_eval('notch.pageOpacity') == 1
+visual_eval('notch.reducedMotion=false; notch.page="activity"')
+assert visual_eval('notch.pageOpacity') < 1
+QTest.qWait(400)
+assert visual_eval('notch.pageOffset') == 0 and visual_eval('notch.pageOpacity') == 1
+visual_eval('notch.expanded=false; notch.page="system"')
+assert visual_eval('notch.pageOffset') == 0 and visual_eval('notch.pageOpacity') == 1
+visual_eval('notch.expanded=true; notch.page="music"'); QTest.qWait(400)
 # Dropdown popups live outside the masked item: the view reports them so the
 # panel can extend its input region and hold the hover grace.
 visual_eval('demoMedia.setState("playing"); notch.page="music"; notch.settingsOpen=true')

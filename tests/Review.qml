@@ -7,7 +7,7 @@ Rectangle {
     DemoMedia { id: timerDemo }
     DemoMedia { id: activityDemo }
     DemoMedia { id: inboxDemo }
-    Text { x: 40; y: 26; text: "PERCH / 0.1.0-rc.4"; color: "#e9edf4"; font.pixelSize: 23; font.letterSpacing: 2 }
+    Text { x: 40; y: 26; text: "PERCH / 0.1.0-rc.5"; color: "#e9edf4"; font.pixelSize: 23; font.letterSpacing: 2 }
     Text { x: 40; y: 65; text: "Music, files, meetings and tasks. Right at the edge."; color: "#9aa6b2"; font.pixelSize: 14 }
     NotchView { x: 40; y: 106; width: implicitWidth; height: implicitHeight; media: music }
     NotchView { x: 272; y: 106; width: implicitWidth; height: implicitHeight; media: timerDemo }

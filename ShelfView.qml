@@ -30,7 +30,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Drop files here. Drag a name out to another app. Originals stay where they are."
+        text: "Drop files here. Drag a card out to another app. Originals stay where they are."
         color: Qt.alpha(root.ink, 0.55)
         font.pixelSize: Style.space(10)
         wrapMode: Text.WordWrap
@@ -61,28 +61,48 @@ ColumnLayout {
                     implicitHeight: Style.space(94)
                     radius: Style.space(10)
                     color: Qt.alpha(root.ink, 0.06)
+                    // The whole card is the drag source; buttons still click normally
+                    // because the handler only takes over past the drag threshold.
+                    Drag.active: dragHandler.active
+                    Drag.dragType: Drag.Automatic
+                    Drag.supportedActions: Qt.CopyAction
+                    Drag.mimeData: ({
+                            "text/uri-list": card.modelData.url
+                        })
+                    DragHandler {
+                        id: dragHandler
+                        target: null
+                        enabled: card.modelData.exists
+                        onActiveChanged: root.interactionChanged(active)
+                    }
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: Style.space(8)
-                        Text {
-                            id: filename
+                        RowLayout {
                             Layout.fillWidth: true
-                            text: card.modelData.name + (card.modelData.exists ? "" : " · missing")
-                            textFormat: Text.PlainText
-                            color: root.ink
-                            font.pixelSize: Style.space(12)
-                            elide: Text.ElideMiddle
-                            Drag.active: dragHandler.active
-                            Drag.dragType: Drag.Automatic
-                            Drag.supportedActions: Qt.CopyAction
-                            Drag.mimeData: ({
-                                    "text/uri-list": card.modelData.url
-                                })
-                            DragHandler {
-                                id: dragHandler
-                                target: null
-                                enabled: card.modelData.exists
-                                onActiveChanged: root.interactionChanged(active)
+                            spacing: Style.space(8)
+                            Grid {
+                                columns: 2
+                                spacing: Style.space(2)
+                                opacity: card.modelData.exists ? 0.45 : 0.15
+                                Repeater {
+                                    model: 6
+                                    delegate: Rectangle {
+                                        width: Style.space(2)
+                                        height: width
+                                        radius: width / 2
+                                        color: root.ink
+                                    }
+                                }
+                            }
+                            Text {
+                                id: filename
+                                Layout.fillWidth: true
+                                text: card.modelData.name + (card.modelData.exists ? "" : " · missing")
+                                textFormat: Text.PlainText
+                                color: root.ink
+                                font.pixelSize: Style.space(12)
+                                elide: Text.ElideMiddle
                             }
                         }
                         RowLayout {

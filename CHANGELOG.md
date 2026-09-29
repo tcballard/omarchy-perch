@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-rc.5 — 2026-09-29
+
+- Hyprland global shortcut `perch:toggle` opens Perch with keyboard focus on the focused display or closes it. Bind it with `bind = SUPER, N, global, perch:toggle`; nothing is written to Hyprland configuration.
+- Page changes, Settings and compact context changes fade and slide in over 140 ms, matching the expansion timing. Reduced motion disables them. Countdown ticks do not animate.
+- The compact pill shows the current cover instead of the music icon when artwork is available.
+- The whole shelf card is now the drag source, with a grip mark; buttons still click normally.
+- Timers that ran out while the shell was down alert once on restore if they finished within the last 15 minutes; older ones are shown as finished without ringing.
+- Tests cover shortcut toggling, transition settling, no stale offset when a page is set while collapsed, and deferred alerts with the age cutoff.
+
 ## 0.1.0-rc.4 — 2026-09-29
 
 - Dropdown popups (audio devices, timers, apps, notification filter, display and fullscreen settings) now extend the compositor input region and hold the hover grace while open. Previously a pointer-opened Perch collapsed 220 ms after the pointer moved onto a dropdown, which also closed it.

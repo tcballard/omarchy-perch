@@ -5,7 +5,7 @@ const clock=()=>({running:false,restart(){this.running=true},stop(){this.running
 const screen={name:'eDP-1'};
 const c={Policy:policy,Edges:require("../EdgePolicy.js"),edge:"top",monitorName:"",fullscreenPolicy:"hide",edgeRemapping:false,edgeRemapTimer:clock(),Qt:{callLater:f=>f()},Hyprland:{focusedMonitor:{name:'eDP-1'}},fixture:{state:'',setState(s){this.state=s}},view:{focused:0,forceActiveFocus(){this.focused++}},screens:[screen],fullscreen:false,targetScreen:null,opened:false,expanded:false,keyboardMode:false,demo:false,focusPrimed:false,hoverTimer:clock(),leaveTimer:clock(),focusPrimeTimer:clock(),shell:null,service:null};
 vm.createContext(c);
-for(const name of ['open','close','collapse','reveal','setEdge']) {
+for(const name of ['open','close','collapse','reveal','setEdge','toggle']) {
  const match=source.match(new RegExp('    function '+name+'\\([^]*?\\n    }'));
  assert.ok(match,name+' missing');vm.runInContext(match[0],c);
 }
@@ -37,3 +37,6 @@ c.open("{}"); assert.equal(c.targetScreen.name,"HDMI-A-1");
 
 c.monitorName="eDP-1";c.targetScreen=screen;c.open("{}");assert.equal(c.targetScreen,screen);
 c.fullscreen=true;c.fullscreenPolicy="show";c.open("{}");assert.equal(c.expanded,true);
+// The global shortcut toggles through the host summon/hide path in keyboard mode.
+c.fullscreen=false;c.close();c.toggle();assert.equal(c.expanded,true);assert.equal(c.keyboardMode,true);
+c.shell={hide(){c.close()},summon(id,payload){c.open(payload)}};c.toggle();assert.equal(c.expanded,false);c.toggle();assert.equal(c.expanded,true);assert.equal(c.keyboardMode,true);c.shell=null;

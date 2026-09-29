@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.tcballard.perch",
   "name": "Perch",
-  "version": "0.1.0-rc.4",
+  "version": "0.1.0-rc.5",
   "author": "Tom Ballard",
   "license": "MIT",
   "description": "Music, files, meetings, timers and live activities at any screen edge.",

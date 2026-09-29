@@ -26,12 +26,18 @@ Item {
             return;
         restored = true;
         now = Date.now();
+        var late = [];
         timers = Array.isArray(preferences.record.timers) ? preferences.record.timers.slice(0, 8).filter(function (t) {
             return t && typeof t === "object";
         }).map(function (t) {
-            return Object.assign(Activities.timer(t, root.now), {
+            var state = Object.assign(Activities.timer(t, root.now), {
                 id: String(t.id || "").slice(0, 80)
             });
+            // A timer that ran out while the shell was down still deserves its alert,
+            // unless so much time has passed that ringing now would only confuse.
+            if (t.status === "running" && state.status === "done" && root.now - state.deadline <= 900000)
+                late.push(state.label);
+            return state;
         }).filter(function (t) {
             return t.id && t.status !== "idle";
         }) : [];
@@ -44,6 +50,9 @@ Item {
         }
         selectedTimer = timers.length ? timers[0].id : "";
         timerState = timers.length ? timers[0] : Activities.timer(null, now);
+        late.forEach(function (label) {
+            root.timerFinished(label);
+        });
     }
     onPreferencesChanged: restore()
     Connections {

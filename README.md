@@ -4,7 +4,7 @@
 
 Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A small pill opens into the controls you need, then gets out of the way.
 
-**v0.1.0-rc.4 — release candidate.** rc.3 added contextual controls, files, calendars, multiple timers, richer system controls and guided setup; rc.4 fixes dropdown input/hover handling, serializes helper jobs, detects outdated companion copies and reports which setup step failed. Portable tests and actual QML fixture rendering pass. The hardware/compositor integrations still need the XPS checks in [TESTING.md](TESTING.md); this is not a stable release or a claim of macOS feature parity. [Scope and boundaries](GAPS.md).
+**v0.1.0-rc.5 — release candidate.** rc.3 added contextual controls, files, calendars, multiple timers, richer system controls and guided setup; rc.4 fixed dropdown input/hover handling, serialized helper jobs, detected outdated companion copies and reported failing setup steps; rc.5 adds a Hyprland global shortcut, page and context transitions, compact artwork, whole-card drag and deferred timer alerts. Portable tests and actual QML fixture rendering pass. The hardware/compositor integrations still need the XPS checks in [TESTING.md](TESTING.md); this is not a stable release or a claim of macOS feature parity. [Scope and boundaries](GAPS.md).
 
 ![Perch’s actual QML views with fictional media, timer and activity fixtures](preview.png)
 
@@ -44,6 +44,14 @@ Open on the focused monitor:
 omarchy-shell shell summon io.github.tcballard.perch
 ```
 
+Keyboard shortcut: Perch registers the Hyprland global shortcut `perch:toggle`. Add one line to your Hyprland bindings (for example `~/.config/hypr/bindings.conf`) and reload Hyprland:
+
+```ini
+bind = SUPER, N, global, perch:toggle
+```
+
+The shortcut opens Perch on the focused display with keyboard focus and closes it if it is open. No binding is written for you.
+
 Open a particular view:
 
 ```bash
@@ -54,7 +62,7 @@ omarchy-shell shell summon io.github.tcballard.perch '{"page":"timer"}'
 
 ## Controls
 
-Hover for 90 ms or click the pill to open. Expansion animates the visible item for 140 ms inside a stable compositor surface. A 220 ms leave grace lets you move between controls. Disable hover opening to require a click; reduced motion disables expansion/fade animation.
+Hover for 90 ms or click the pill to open. Expansion animates the visible item for 140 ms inside a stable compositor surface. A 220 ms leave grace lets you move between controls, and dropdown menus keep Perch open while they are showing. Page changes and compact context changes use the same 140 ms fade and slide; reduced motion disables all of it. When music is playing with local or fetched artwork, the compact pill shows the cover instead of the music icon.
 
 Use the tabs for Music, Timer, System and Activity. The bell opens Notifications, the monitor opens the hub for Files, Calendar, Applications and Setup, and the sliders icon opens Settings. Escape returns from Settings or another tab to Music, then closes; × always closes. Keyboard summons support Tab navigation and outside-click dismissal.
 
@@ -103,7 +111,7 @@ Shelf references, calendar source paths and notification history/DND/mutes live 
 
 Remote artwork is off by default. When enabled, Perch fetches HTTPS URLs supplied by your media player: public addresses only, validated redirects, seven-second deadline, 2 MiB image limit and bounded dimensions. At most 32 covers are cached under `$XDG_CACHE_HOME/omarchy-perch`. Local previews and artwork still use Qt's decoders; this is not a hostile-image sandbox. Lyrics are explicitly chosen local UTF-8 `.lrc` or `.txt` files; no lyrics service/account is contacted.
 
-Calendar support is read-only ICS, not Google/Microsoft/iCloud account login. Daily/weekly recurrence, timezone IDs, exclusions and moved/cancelled instances are supported. More complex recurrence is reported as partial rather than guessed. Agenda files are limited to 1 MiB each, 2,000 source events, 60 displayed occurrences and a 30-day window. Join opens an HTTP(S) link from the current agenda after a click.
+Calendar support is read-only ICS, not Google/Microsoft/iCloud account login. For an account calendar, point a sync tool at a local file and add that file: for example `vdirsyncer` with a `filesystem` storage writes one `.ics` per event into a directory, while Google Calendar's secret iCal address or a Nextcloud/Radicale export can be fetched on a timer with `curl -fsSL "$URL" -o ~/.local/share/calendars/work.ics`. Perch re-reads configured files every five minutes, so a `systemd --user` timer around that command gives a synced agenda without any credentials in Perch. Daily/weekly recurrence, timezone IDs, exclusions and moved/cancelled instances are supported. More complex recurrence is reported as partial rather than guessed. Agenda files are limited to 1 MiB each, 2,000 source events, 60 displayed occurrences and a 30-day window. Join opens an HTTP(S) link from the current agenda after a click.
 
 ## Guided setup and task adapters
 
