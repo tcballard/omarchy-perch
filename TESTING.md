@@ -173,3 +173,14 @@ into another app; missing wl-copy/history; real weather request and failure;
 compact-to-card hover travel and drag on all edges; font/DPI changes; monitor
 switch/unplug; fullscreen sampling suspension and focus return. The development
 branch has not been tagged or validated as a stable release.
+
+## Plugin-pin live checks
+
+Pin two enabled visual plugins in Settings, reorder alongside Music and restart
+the shell. Verify names/order persist. Hover must not open them; click/Enter must
+open their panel with usable keyboard and pointer focus, then Perch must collapse.
+Test both a panel plugin and a bar widget with a panel. Disable/remove a pinned
+plugin in Omarchy, then click its stale tile: expect a visible error, no auto-enable,
+and a removable pin. Refresh settings and confirm disabled/missing status. Check
+all edges, fullscreen policy and a pinned-plugin-only strip. Embedded cards are
+not part of this slice. These live checks have not yet been performed.

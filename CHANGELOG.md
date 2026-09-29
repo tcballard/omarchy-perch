@@ -2,6 +2,8 @@
 
 ## Unreleased — native modules
 
+- Pin installed visual plugins in the strip and open their panels on explicit click, with bounded public IPC, launch-time validation, disabled/missing states and fixture coverage.
+
 - Single compact module strip with up to eight chosen tools, drag/keyboard ordering, settings controls and a persistent switcher above expanded cards. Replaces the original context pill; saved layouts migrate automatically.
 - Native QML module descriptors, card/settings host and shared state; all existing pages and Clipboard, Stats and Weather use the same contract. Cards load on demand and retain service-owned state.
 - Integrated search/type-filtered clipboard previews from Omarchy's history with race-safe explicit copy; no second capture service or history writes.

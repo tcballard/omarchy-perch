@@ -5,7 +5,7 @@ const clock=()=>({running:false,restart(){this.running=true},stop(){this.running
 const screen={name:'eDP-1'};
 const c={Policy:policy,Edges:require("../EdgePolicy.js"),edge:"top",monitorName:"",fullscreenPolicy:"hide",edgeRemapping:false,edgeRemapTimer:clock(),Qt:{callLater:f=>f()},Hyprland:{focusedMonitor:{name:'eDP-1'}},fixture:{state:'',setState(s){this.state=s}},view:{focused:0,forceActiveFocus(){this.focused++}},screens:[screen],fullscreen:false,targetScreen:null,opened:false,expanded:false,keyboardMode:false,demo:false,focusPrimed:false,hoverTimer:clock(),leaveTimer:clock(),focusPrimeTimer:clock(),shell:null,service:null};
 vm.createContext(c);
-for(const name of ['open','close','collapse','reveal','setEdge','toggle']) {
+for(const name of ['open','close','collapse','reveal','setEdge','toggle','launchPlugin']) {
  const match=source.match(new RegExp('    function '+name+'\\([^]*?\\n    }'));
  assert.ok(match,name+' missing');vm.runInContext(match[0],c);
 }
@@ -40,3 +40,10 @@ c.fullscreen=true;c.fullscreenPolicy="show";c.open("{}");assert.equal(c.expanded
 // The global shortcut toggles through the host summon/hide path in keyboard mode.
 c.fullscreen=false;c.close();c.toggle();assert.equal(c.expanded,true);assert.equal(c.keyboardMode,true);
 c.shell={hide(){c.close()},summon(id,payload){c.open(payload)}};c.toggle();assert.equal(c.expanded,false);c.toggle();assert.equal(c.expanded,true);assert.equal(c.keyboardMode,true);c.shell=null;
+
+// Launch drops exclusive focus and holds leave-grace only while a job runs.
+c.media={pluginPins:{busy:false,openPlugin(id){assert.equal(id,'example.notes');return true;}}};
+c.keyboardMode=true;c.focusPrimed=true;c.launchPlugin('example.notes');
+assert.equal(c.keyboardMode,false);assert.equal(c.focusPrimed,false);assert.equal(c.view.interactionActive,true);
+c.view.interactionActive=false;c.media.pluginPins.openPlugin=()=>false;c.launchPlugin('example.notes');
+assert.equal(c.view.interactionActive,false);

@@ -105,3 +105,19 @@ Still requires a live Omarchy session: Wayland clipboard ownership after helper
 exit, typing-focus return, hover switching/dragging on each edge, display scaling,
 fullscreen suppression, and actual weather connectivity. No stable release or
 performance claim follows from portable tests alone.
+
+## Installed plugin pins
+
+In Settings, choose **Pin installed plugins**, then Pin beside an enabled plugin.
+Pins share the eight strip slots and the same drag, keyboard and Settings ordering.
+Click to open the plugin's own panel; hover never opens external plugins. Refresh
+the list after installing, enabling or removing plugins. Disabled/missing pins
+remain removable. Perch never installs, enables or loads another plugin's QML.
+
+Discovery uses the public `omarchy-shell shell listPlugins` command. Only third-party
+panels, overlays, menus and bar widgets are offered. Headless services and replacement
+bars are excluded. Bar widgets without a summonable panel may be rejected by Omarchy;
+Perch reports that error. Each explicit launch rechecks installation and enablement
+before calling `omarchy-shell shell summon ID '{}'` using separate argv arguments.
+Discovery and summon each have a three-second deadline and bounded output.
+No new polling or dependencies are added. Embedded plugin cards are not implemented.

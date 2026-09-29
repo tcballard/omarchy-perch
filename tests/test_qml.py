@@ -350,5 +350,20 @@ assert evaluate('service.modules.cpu') == 25
 assert evaluate('service.modules.saveWeather("Test", "", "0", true)') is False
 assert evaluate('service.modules.saveWeather("Test", "51", "-1", true)') is True
 assert evaluate('fakeShell.saved.moduleWeather.latitude') == 51
+# Pinned plugins share the strip but launch only on click, never hover.
+visual_eval('notch.surfaceVisible=true; notch.edge="top"; notch.expanded=true; notch.settingsOpen=false; notch.hoverOpen=true; notch.displaySettings={modules:["music","plugin:example.notes"]}')
+QTest.qWait(60)
+tile=visible_named(visual,'module-tile-plugin:example.notes'); assert tile is not None
+point=tile.mapToScene(QPointF(tile.width()/2,tile.height()/2)).toPoint()
+QTest.mouseMove(view,point); QTest.qWait(220)
+assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
+QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point); QTest.qWait(60)
+assert visual_eval('demoMedia.pluginPins.lastOpened') == 'example.notes'
+assert visual_eval('notch.settingsOpen') is True
+# Missing/disabled pins survive cleanup and can be removed; no silent launch.
+visual_eval('demoMedia.pluginPins.plugins=[]; notch.settingsOpen=false; demoMedia.pluginPins.lastOpened=""; notch.activateModule("plugin:example.notes",false)')
+assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
+assert visual_eval('demoMedia.pluginPins.error') == 'Demo plugin unavailable'
+assert visual_eval('notch.moduleItems.length') == 2
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

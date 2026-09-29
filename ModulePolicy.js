@@ -1,4 +1,4 @@
-// Built-in registry only. A saved id can never load a QML path or execute code.
+// Built-in cards and validated plugin launch IDs; never executable paths.
 var catalog = [
     {id:"music", title:"Music", glyph:"♫", page:"music"},
     {id:"timer", title:"Timers", glyph:"◷", page:"timer"},
@@ -13,7 +13,16 @@ var catalog = [
     {id:"desktop", title:"Apps", glyph:"⊞", page:"desktop"}
 ];
 var defaults = ["music", "timer", "clipboard", "stats", "weather"];
-function get(id) { return catalog.find(function(m) { return m.id === id; }) || null; }
+function pluginId(id) {
+    if (typeof id !== "string" || id.indexOf("plugin:") !== 0) return "";
+    var value = id.slice(7);
+    return value.length <= 160 && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) && value !== "io.github.tcballard.perch" && value.indexOf("omarchy.") !== 0 ? value : "";
+}
+function get(id) {
+    var target = pluginId(id);
+    if (target) return {id:id, title:target, glyph:"◇", page:"plugins", pluginId:target};
+    return catalog.find(function(m) { return m.id === id; }) || null;
+}
 function clean(value) {
     if (!Array.isArray(value)) return defaults.slice();
     var result = [];
@@ -34,4 +43,4 @@ function toggle(value, id) {
     else if (result.length < 8) result.push(id);
     return result;
 }
-if (typeof module !== "undefined") module.exports = {catalog,defaults,get,clean,move,toggle};
+if (typeof module !== "undefined") module.exports = {catalog,defaults,get,clean,move,toggle,pluginId};

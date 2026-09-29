@@ -6,6 +6,7 @@ import "ModulePolicy.js" as Modules
 Item {
     id: root
     property var items: Modules.defaults
+    property var pluginState: null
     property var registry: null
     property bool vertical: false
     property bool hoverOpen: true
@@ -42,16 +43,17 @@ Item {
             required property int index
             objectName: "module-tile-" + modelData
             readonly property var descriptor: Modules.get(modelData)
+            readonly property var pinnedPlugin: descriptor && descriptor.pluginId && root.pluginState ? root.pluginState.get(descriptor.pluginId) : null
             readonly property var definition: root.registry ? root.registry.get(modelData) : null
             x: root.vertical ? Style.space(4) : Style.space(4) + index * root.slot
             y: root.vertical ? Style.space(4) + index * root.slot : Style.space(4)
             width: root.vertical ? root.width - Style.space(8) : root.slot
             height: root.vertical ? root.slot : root.height - Style.space(8)
             focusPolicy: Qt.StrongFocus
-            Accessible.name: descriptor ? descriptor.title : modelData
+            Accessible.name: pinnedPlugin ? pinnedPlugin.name : descriptor ? descriptor.title : modelData
             Controls.ToolTip.visible: hovered && root.draggingIndex < 0
             Controls.ToolTip.delay: 600
-            Controls.ToolTip.text: Accessible.name + " · drag to reorder"
+            Controls.ToolTip.text: Accessible.name + (Modules.pluginId(modelData) ? (!tile.pinnedPlugin ? " · unavailable" : !tile.pinnedPlugin.enabled ? " · disabled" : " · click to open") : "") + " · drag to reorder"
             background: Rectangle {
                 radius: Style.space(8)
                 color: Qt.alpha(root.ink, root.dropIndex === tile.index ? 0.23 : tile.hovered || root.selectedId === tile.modelData ? 0.13 : 0)
@@ -70,7 +72,7 @@ Item {
                 Text {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
-                    text: tile.definition ? tile.definition.compactText : tile.descriptor ? tile.descriptor.title : ""
+                    text: tile.pinnedPlugin ? tile.pinnedPlugin.name : tile.definition ? tile.definition.compactText : tile.descriptor ? tile.descriptor.title : ""
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     color: Qt.alpha(root.ink, 0.75)
@@ -78,7 +80,7 @@ Item {
                 }
             }
             onHoveredChanged: {
-                if (hovered && root.hoverOpen) {
+                if (hovered && root.hoverOpen && !Modules.pluginId(modelData)) {
                     root.pendingId = modelData;
                     intent.restart();
                 } else if (root.pendingId === modelData) {

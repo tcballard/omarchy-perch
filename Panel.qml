@@ -156,6 +156,23 @@ Item {
         if (shell)
             shell.hide("io.github.tcballard.perch");
     }
+    function launchPlugin(id) {
+        if (!media || !media.pluginPins || media.pluginPins.busy)
+            return;
+        keyboardMode = false;
+        focusPrimed = false;
+        view.interactionActive = true;
+        if (!media.pluginPins.openPlugin(id))
+            view.interactionActive = false;
+    }
+    Connections {
+        target: root.media && root.media.pluginPins !== undefined ? root.media.pluginPins : null
+        function onLaunchFinished(success) {
+            view.interactionActive = false;
+            if (success)
+                root.collapse();
+        }
+    }
     function toggle() {
         if (expanded)
             collapse();
@@ -323,6 +340,7 @@ Item {
                 root.setEdge(value);
             }
             demo: root.demo
+            onPluginLaunchRequested: id => root.launchPlugin(id)
             onExpandRequested: root.reveal(true)
             onCollapseRequested: root.collapse()
             onSettingsChanged: function (hideIdle, reducedMotion, edgeAttached) {

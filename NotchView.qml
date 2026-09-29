@@ -10,6 +10,8 @@ import "ModulePolicy.js" as Modules
 FocusScope {
     id: root
     property var media: null
+    readonly property var pluginState: media && media.pluginPins !== undefined ? media.pluginPins : null
+    signal pluginLaunchRequested(string id)
     property bool surfaceVisible: true
     readonly property var moduleState: media && media.modules !== undefined ? media.modules : null
     readonly property var moduleItems: Modules.clean(displaySettings.modules)
@@ -22,6 +24,15 @@ FocusScope {
         var descriptor = Modules.get(id);
         if (!descriptor)
             return;
+        if (descriptor.pluginId) {
+            if (pointer)
+                return;
+            settingsOpen = true;
+            if (!expanded)
+                expandRequested();
+            pluginLaunchRequested(descriptor.pluginId);
+            return;
+        }
         settingsOpen = false;
         page = descriptor.page;
         if (!expanded)
@@ -128,7 +139,9 @@ FocusScope {
     signal expandRequested
     signal collapseRequested
     signal settingsChanged(bool hideIdle, bool reducedMotion, bool edgeAttached)
-    onSettingsOpenChanged: enterPage(settingsOpen)
+    onSettingsOpenChanged: {
+        enterPage(settingsOpen);
+    }
     onExpandedChanged: {
         if (!expanded) {
             settingsOpen = false;
@@ -189,7 +202,11 @@ FocusScope {
         onReleased: mouse => {
             root.interactionActive = false;
             if (Math.abs(mouse.x - startX) > 35) {
-                var pages = root.moduleItems;
+                var pages = root.moduleItems.filter(function (id) {
+                    return !Modules.pluginId(id);
+                });
+                if (!pages.length)
+                    return;
                 var i = pages.indexOf(root.page);
                 root.page = pages[(i + (mouse.x < startX ? 1 : pages.length - 1) + pages.length) % pages.length];
             }
@@ -217,6 +234,7 @@ FocusScope {
         visible: !root.expanded
         items: root.moduleItems
         registry: moduleRegistry
+        pluginState: root.pluginState
         vertical: root.stripVertical
         hoverOpen: root.hoverOpen
         ink: root.ink
@@ -305,6 +323,7 @@ FocusScope {
             slot: (width - Style.space(8)) / root.moduleItems.length
             items: root.moduleItems
             registry: moduleRegistry
+            pluginState: root.pluginState
             selectedId: root.page
             ink: root.ink
             surface: root.surface
@@ -360,6 +379,15 @@ FocusScope {
                 ColumnLayout {
                     width: parent.width
                     spacing: Style.space(14)
+                    Text {
+                        Layout.fillWidth: true
+                        visible: text !== ""
+                        text: root.pluginState ? (root.pluginState.error || (root.pluginState.busy ? "Checking plugins…" : root.pluginState.message)) : ""
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WordWrap
+                        color: root.ink
+                        font.pixelSize: Style.space(11)
+                    }
                     Text {
                         text: "Display"
                         color: root.ink
@@ -531,6 +559,7 @@ FocusScope {
                         }
                     }
                     ModuleSettings {
+                        pluginState: root.pluginState
                         Layout.fillWidth: true
                         items: root.moduleItems
                         ink: root.ink

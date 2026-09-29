@@ -8,6 +8,10 @@ Item {
     property string omarchyPath: ""
     property var shell: null
     property var manifest: null
+    property alias pluginPins: pluginState
+    PluginState {
+        id: pluginState
+    }
     property alias modules: moduleState
     ModuleState {
         id: moduleState
