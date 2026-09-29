@@ -10,6 +10,18 @@ ColumnLayout {
     property color ink: Color.foreground
     property color surface: Color.background
     property string appFilter: ""
+    // Snapshots rebuild the rows; keep what the user typed, keyed by notification.
+    property var drafts: ({})
+    function draft(key, text) {
+        var next = Object.assign({}, drafts);
+        if (text)
+            next[key] = text;
+        else
+            delete next[key];
+        drafts = next;
+    }
+    onAppsChanged: if (appFilter && apps.indexOf(appFilter) < 0)
+        appFilter = ""
     signal popupToggled(bool open)
     readonly property var apps: inbox ? Array.from(new Set(inbox.items.map(function (r) {
         return r.app;
@@ -78,6 +90,7 @@ ColumnLayout {
             onPopupToggled: open => root.popupToggled(open)
             Layout.fillWidth: true
             model: ["All applications"].concat(root.apps)
+            currentIndex: root.apps.indexOf(root.appFilter) + 1
             onActivated: index => root.appFilter = index === 0 ? "" : root.apps[index - 1]
             Accessible.name: "Filter notifications by app"
         }
@@ -151,7 +164,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             text: (modelData.unread ? "• " : "") + modelData.title
                             textFormat: Text.PlainText
-                            wrapMode: Text.WordWrap
+                            wrapMode: Text.Wrap
                             color: root.ink
                             font.pixelSize: Style.space(12)
                             font.weight: Font.DemiBold
@@ -161,7 +174,7 @@ ColumnLayout {
                             visible: text !== ""
                             text: modelData.body
                             textFormat: Text.PlainText
-                            wrapMode: Text.WordWrap
+                            wrapMode: Text.Wrap
                             color: Qt.alpha(root.ink, 0.65)
                             font.pixelSize: Style.space(11)
                         }
@@ -173,6 +186,8 @@ ColumnLayout {
                                 Layout.fillWidth: true
                                 maximumLength: 1000
                                 placeholderText: "Reply to this notification"
+                                text: root.drafts[notificationCard.modelData.key] || ""
+                                onTextEdited: root.draft(notificationCard.modelData.key, text)
                                 color: root.ink
                                 palette.base: root.surface
                                 Accessible.name: "Notification reply"
@@ -182,7 +197,10 @@ ColumnLayout {
                                 ink: root.ink
                                 surface: root.surface
                                 enabled: reply.text.trim() !== "" && !!root.inbox && !root.inbox.busy
-                                onClicked: root.inbox.replyTo(notificationCard.modelData.key, reply.text)
+                                onClicked: {
+                                    root.inbox.replyTo(notificationCard.modelData.key, reply.text);
+                                    root.draft(notificationCard.modelData.key, "");
+                                }
                             }
                         }
                         Flow {

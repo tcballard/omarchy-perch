@@ -24,9 +24,10 @@ try:
   data=json.loads(raw)
  else:raise ValueError('Unknown history operation')
  if not isinstance(data,dict) or not isinstance(data.get('rows'),list) or len(data['rows'])>20:raise ValueError('Invalid history')
- rows=[]
+ rows=[];seen=set()
  for row in data['rows']:
-  if not isinstance(row,dict) or not re.fullmatch(r'[A-Za-z0-9._:-]{1,100}',str(row.get('key',''))):continue
+  if not isinstance(row,dict) or not re.fullmatch(r'[A-Za-z0-9.-]{1,100}',str(row.get('key',''))) or row.get('key') in seen:continue
+  seen.add(row['key'])
   rows.append({k:str(row.get(k,''))[:limit] for k,limit in [('key',100),('app',64),('title',120),('body',400),('icon',100)]}|{'actions':[],'reply':False,'unread':row.get('unread') is True})
  data={'rows':rows,'dnd':data.get('dnd') is True,'blocked':[str(x)[:64] for x in (data.get('blocked',[]) if isinstance(data.get('blocked',[]),list) else [])[:64]]}
  if sys.argv[1]=='write':

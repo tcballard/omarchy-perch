@@ -2,7 +2,7 @@ function text(value, limit) {
     return typeof value === "string" ? value.slice(0, limit).replace(/[\x00-\x1f\x7f]/g, " ") : "";
 }
 function parse(payload) {
-    if (typeof payload !== "string" || payload.length > 48000) return null;
+    if (typeof payload !== "string" || payload.length > 64000) return null;
     try {
         var p = JSON.parse(payload);
         if (!p || p.version !== 1 || !Array.isArray(p.items) || p.items.length > 20 || typeof p.session !== "string" || !/^[a-zA-Z0-9.-]{1,80}$/.test(p.session)) return null;

@@ -11,18 +11,20 @@ Item {
         if (busy || process.running)
             return false;
         busy = true;
+        timedOut = false;
         reply = "";
         deadline.restart();
         process.command = argv;
         process.running = true;
         return true;
     }
+    property bool timedOut: false
     function complete(ok) {
         if (!busy)
             return;
         busy = false;
         deadline.stop();
-        finished(ok, reply.trim());
+        finished(ok && !timedOut, reply.trim());
     }
     Process {
         id: process
@@ -34,9 +36,11 @@ Item {
     Timer {
         id: deadline
         interval: 3000
+        // Completion follows the actual exit so the next run() is never refused
+        // while the killed process is still being reaped.
         onTriggered: {
+            root.timedOut = true;
             process.signal(9);
-            root.complete(false);
         }
     }
 }

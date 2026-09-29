@@ -94,7 +94,7 @@ Item {
         if (!dirty || bridge.busy)
             return;
         dirty = false;
-        bridge.run(["omarchy-shell", "io.github.tcballard.perch", "inbox", JSON.stringify({
+        if (!bridge.run(["omarchy-shell", "io.github.tcballard.perch", "inbox", JSON.stringify({
                 version: 1,
                 session: session,
                 dnd: dnd,
@@ -102,7 +102,10 @@ Item {
                 error: history.error,
                 preview: preview,
                 items: rows
-            })]);
+            })])) {
+            dirty = true;
+            debounce.restart();
+        }
     }
     function snapshot(n, key) {
         var actions = [];

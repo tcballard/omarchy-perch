@@ -83,7 +83,7 @@ ColumnLayout {
                             textFormat: Text.PlainText
                             color: Qt.alpha(root.ink, 0.65)
                             font.pixelSize: Style.space(11)
-                            wrapMode: Text.WordWrap
+                            wrapMode: Text.Wrap
                         }
                         Rectangle {
                             Layout.fillWidth: true

@@ -7,7 +7,8 @@
 - The compact pill shows the current cover instead of the music icon when artwork is available.
 - The whole shelf card is now the drag source, with a grip mark; buttons still click normally.
 - Timers that ran out while the shell was down alert once on restore if they finished within the last 15 minutes; older ones are shown as finished without ringing.
-- Tests cover shortcut toggling, transition settling, no stale offset when a page is set while collapsed, and deferred alerts with the age cutoff.
+- Notification review fixes: reply drafts survive snapshot refreshes; a helper command that hits its deadline no longer leaves the job marked running, which had also blocked the inbox resync; the companion retries a slow or failed history read at startup instead of silently dropping persistence for the session; snapshots are never dropped when the bridge is momentarily busy; long unbroken titles, bodies and activity details wrap instead of being clipped; the app filter resets when its app disappears; persisted keys follow the core's rules. The notification companion is at rc.5, so Setup will offer Update now.
+- Tests cover shortcut toggling, transition settling, no stale offset when a page is set while collapsed, and deferred alerts with the age cutoff. The Process test stub now emits an exit after a kill, as the real one does.
 
 ## 0.1.0-rc.4 — 2026-09-29
 

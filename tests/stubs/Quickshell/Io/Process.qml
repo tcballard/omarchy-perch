@@ -8,5 +8,5 @@ QtObject {
     property QtObject stderr: null
     signal exited(int exitCode, int exitStatus)
     signal started()
-    function signal(number) { running = false; }
+    function signal(number) { running = false; exited(137, 1); }
 }

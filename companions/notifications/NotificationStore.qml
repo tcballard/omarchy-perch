@@ -52,6 +52,8 @@ Item {
         }
         onExited: {
             stdinEnabled = true;
+            if (root.reading && !root.ready)
+                readRetry.restart();
             if (root.pending)
                 debounce.restart();
         }
@@ -69,9 +71,21 @@ Item {
             root.error = "History operation timed out";
         }
     }
-    Component.onCompleted: {
+    property int readAttempts: 0
+    function read() {
+        if (ready || io.running || readAttempts >= 4)
+            return;
+        readAttempts++;
+        reading = true;
         io.command = ["/usr/bin/python3", "-I", decodeURIComponent(Qt.resolvedUrl("store.py").toString().replace(/^file:\/\//, "")), "read"];
         io.running = true;
         deadline.restart();
     }
+    Timer {
+        // A cold python start at login can miss the first deadline; try again.
+        id: readRetry
+        interval: 2000
+        onTriggered: root.read()
+    }
+    Component.onCompleted: read()
 }
