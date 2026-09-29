@@ -365,5 +365,31 @@ visual_eval('demoMedia.pluginPins.plugins=[]; notch.settingsOpen=false; demoMedi
 assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
 assert visual_eval('demoMedia.pluginPins.error') == 'Demo plugin unavailable'
 assert visual_eval('notch.moduleItems.length') == 2
+# Sectioned settings use the same controls in wide and constrained panels.
+visual_eval('notch.settingsOpen=true; notch.expanded=true; notch.reducedMotion=true')
+QTest.qWait(50)
+settings=visible_named(visual,'perch-settings'); assert settings is not None
+assert settings.property('wide') is True
+for section in ['display','behavior','alerts','modules','plugins']:
+    button=visible_named(visual,'settings-nav-'+section); assert button is not None
+    button.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+    assert settings.property('section') == section
+settings.setProperty('section','behavior'); QTest.qWait(30)
+toggle=visible_named(visual,'settings-reducedMotion'); assert toggle is not None
+toggle.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+assert visual_eval('notch.displaySettings.reducedMotion') is False
+# Keep the compositor envelope constant while switching cards/settings.
+assert visual_eval('notch.maximumWidth') == 600
+visual_eval('notch.width=344')
+QTest.qWait(30)
+assert settings.property('wide') is False
+for section in ['display','behavior','alerts','modules','plugins']:
+    button=visible_named(visual,'settings-compact-'+section); assert button is not None
+    button.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+    assert settings.property('section') == section
+    assert settings.width() <= 344
+visual_eval('notch.forceActiveFocus()'); QTest.keyClick(view,Qt.Key_Escape)
+assert visual_eval('notch.settingsOpen') is False
+assert visual_eval('notch.maximumWidth') == 600
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

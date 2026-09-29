@@ -32,10 +32,7 @@ ColumnLayout {
     spacing: Style.space(8)
     RowLayout {
         Layout.fillWidth: true
-        Text {
-            text: "Notifications"
-            color: root.ink
-            font.pixelSize: Style.space(14)
+        Item {
             Layout.fillWidth: true
         }
         PerchAction {

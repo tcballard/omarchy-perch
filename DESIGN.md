@@ -134,3 +134,22 @@ Portable evidence covers catalog filtering, stale enable/removal, malformed IDs,
 real Qt tile clicks/hover and persisted strip rules. Live cross-panel focus and
 plugin-specific summon behavior require XPS verification. Embedded cards and
 a first partner integration are deferred until this launcher path is proven.
+
+## Sectioned panels — 29 September 2026
+
+Tom requested the treatment used in Omarchy Spaces Settings. Reviewed upstream
+SpacesSettings.qml and its 1.1.0 changelog (PR #8): named sections, keyboard
+controls and a stable header/footer. Perch now separates Placement, Behaviour,
+Media & alerts, Your strip and Plugin pins. Reuses Perch theme-bound controls;
+introduces a consistent labelled toggle with explanatory text. Settings requests
+600 logical pixels; below 480 pixels of content width the sidebar becomes wrapped
+section buttons. Each section scrolls independently of the persistent footer.
+No reset-all action is added, so unrelated timer/plugin state cannot be reset.
+
+The compositor envelope uses maximumWidth even on compact/cards; only the masked
+view resizes. Content is bounded to the actual screen-constrained view, preserving
+the responsive path on small/high-scale displays. Shared card titles replace
+duplicated headings in Files, Inbox, Apps and Activity. No new processes/polling.
+Portable Qt checks cover every section at normal/constrained widths, Space-key
+activation and toggle updates, Escape, and existing interactions. Live Wayland
+masking, theme scaling and popup focus still require the XPS.

@@ -27,6 +27,7 @@ FocusScope {
         if (descriptor.pluginId) {
             if (pointer)
                 return;
+            settingsView.section = "plugins";
             settingsOpen = true;
             if (!expanded)
                 expandRequested();
@@ -129,7 +130,8 @@ FocusScope {
     readonly property bool lightTheme: (Color.background.r + Color.background.g + Color.background.b) > (Color.foreground.r + Color.foreground.g + Color.foreground.b)
     readonly property color surface: lightTheme ? Color.foreground : Color.background
     readonly property color ink: lightTheme ? Color.background : Color.foreground
-    readonly property real expandedWidth: Math.max(preferredWidth, stripLength)
+    readonly property real maximumWidth: Math.max(preferredWidth, stripLength, Style.space(600))
+    readonly property real expandedWidth: settingsOpen ? maximumWidth : Math.max(preferredWidth, stripLength)
     readonly property real expandedHeight: Style.space(468)
     readonly property real maximumHeight: Style.space(468)
     implicitWidth: expanded ? expandedWidth : compactWidth
@@ -193,7 +195,7 @@ FocusScope {
         y: Style.space(4)
         width: parent.width - Style.space(160)
         height: Style.space(34)
-        enabled: root.expanded
+        enabled: root.expanded && !root.settingsOpen
         property real startX: 0
         onPressed: mouse => {
             startX = mouse.x;
@@ -245,8 +247,8 @@ FocusScope {
     }
     Item {
         id: content
-        width: root.expandedWidth
-        height: root.expandedHeight
+        width: Math.min(root.expandedWidth, root.width)
+        height: Math.min(root.expandedHeight, root.height)
         x: root.edge === "right" ? root.width - width : root.edge === "left" ? 0 : (root.width - width) / 2
         y: root.edge === "bottom" ? root.height - height : 0
         opacity: root.expanded ? 1 : 0
@@ -275,7 +277,8 @@ FocusScope {
                 elide: Text.ElideRight
                 color: Qt.alpha(root.ink, 0.55)
                 font.family: Style.font.family
-                font.pixelSize: Style.space(10)
+                font.pixelSize: Style.space(root.settingsOpen ? 16 : 10)
+                font.bold: root.settingsOpen
             }
             NotchButton {
                 objectName: "open-inbox"
@@ -301,7 +304,7 @@ FocusScope {
             }
             NotchButton {
                 glyph: "settings"
-                label: root.settingsOpen ? "Back to player" : "Settings"
+                label: root.settingsOpen ? "Back to card" : "Settings"
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.settingsOpen = !root.settingsOpen
@@ -368,212 +371,15 @@ FocusScope {
                 surface: root.surface
                 onActionRequested: id => moduleRegistry.action(root.page, id)
             }
-            Controls.ScrollView {
+            SettingsView {
+                id: settingsView
+                objectName: "perch-settings"
                 visible: root.settingsOpen
                 x: Style.space(18)
-                y: Style.space(54)
+                y: Style.space(50)
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(70)
-                clip: true
-                contentWidth: availableWidth
-                ColumnLayout {
-                    width: parent.width
-                    spacing: Style.space(14)
-                    Text {
-                        Layout.fillWidth: true
-                        visible: text !== ""
-                        text: root.pluginState ? (root.pluginState.error || (root.pluginState.busy ? "Checking plugins…" : root.pluginState.message)) : ""
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WordWrap
-                        color: root.ink
-                        font.pixelSize: Style.space(11)
-                    }
-                    Text {
-                        text: "Display"
-                        color: root.ink
-                        font.pixelSize: Style.space(12)
-                    }
-                    PerchCombo {
-                        objectName: "monitor-choice"
-                        ink: root.ink
-                        surface: root.surface
-                        onPopupToggled: open => root.popupOpen = open
-                        Layout.fillWidth: true
-                        model: ["Follow focused display"].concat(root.displayNames)
-                        currentIndex: Math.max(0, root.displayNames.indexOf(root.displaySettings.monitor || "") + 1)
-                        onActivated: index => root.preferenceChanged("monitor", index === 0 ? "" : root.displayNames[index - 1])
-                    }
-                    Controls.CheckBox {
-                        Layout.fillWidth: true
-                        text: "Save placement separately for each display"
-                        checked: root.displaySettings.perDisplay === true
-                        palette.windowText: root.ink
-                        onToggled: root.preferenceChanged("perDisplay", checked)
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Panel width"
-                            color: root.ink
-                            font.pixelSize: Style.space(11)
-                        }
-                        Controls.SpinBox {
-                            from: 304
-                            to: 544
-                            stepSize: 40
-                            value: root.displaySettings.panelWidth || 344
-                            palette.text: root.ink
-                            palette.buttonText: root.ink
-                            palette.base: root.surface
-                            palette.button: root.surface
-                            onValueModified: root.preferenceChanged("panelWidth", value)
-                        }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Extra edge spacing"
-                            color: root.ink
-                            font.pixelSize: Style.space(11)
-                        }
-                        Controls.SpinBox {
-                            from: 0
-                            to: 64
-                            stepSize: 4
-                            value: root.displaySettings.edgeOffset || 0
-                            palette.text: root.ink
-                            palette.buttonText: root.ink
-                            palette.base: root.surface
-                            palette.button: root.surface
-                            onValueModified: root.preferenceChanged("edgeOffset", value)
-                        }
-                    }
-                    Text {
-                        text: "During fullscreen"
-                        color: root.ink
-                        font.pixelSize: Style.space(11)
-                    }
-                    PerchCombo {
-                        ink: root.ink
-                        surface: root.surface
-                        onPopupToggled: open => root.popupOpen = open
-                        Layout.fillWidth: true
-                        model: ["Hide Perch", "Show completed timers only", "Keep Perch visible"]
-                        currentIndex: Math.max(0, ["hide", "alerts", "show"].indexOf(root.displaySettings.fullscreenPolicy || "hide"))
-                        onActivated: index => root.preferenceChanged("fullscreenPolicy", ["hide", "alerts", "show"][index])
-                    }
-                    Controls.CheckBox {
-                        Layout.fillWidth: true
-                        text: "Timer completion sound"
-                        checked: root.displaySettings.timerSound === true
-                        palette.windowText: root.ink
-                        onToggled: root.preferenceChanged("timerSound", checked)
-                    }
-                    Controls.CheckBox {
-                        Layout.fillWidth: true
-                        text: "Timer desktop notifications"
-                        checked: root.displaySettings.timerNotifications === true
-                        palette.windowText: root.ink
-                        onToggled: root.preferenceChanged("timerNotifications", checked)
-                    }
-                    Controls.CheckBox {
-                        Layout.fillWidth: true
-                        text: "Fetch remote cover artwork"
-                        checked: root.displaySettings.remoteArtwork === true
-                        palette.windowText: root.ink
-                        onToggled: root.preferenceChanged("remoteArtwork", checked)
-                    }
-                    Text {
-                        text: "Screen edge"
-                        color: root.ink
-                        font.family: Style.font.family
-                        font.pixelSize: Style.space(12)
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Style.space(4)
-                        Repeater {
-                            model: ["top", "bottom", "left", "right"]
-                            delegate: Controls.Button {
-                                required property string modelData
-                                objectName: "edge-" + modelData
-                                Layout.fillWidth: true
-                                implicitHeight: Style.space(34)
-                                text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                                Accessible.name: "Use " + modelData + " screen edge"
-                                background: Rectangle {
-                                    radius: Style.space(7)
-                                    color: root.edge === modelData ? root.ink : Qt.alpha(root.ink, parent.hovered ? 0.14 : 0.06)
-                                    border.width: parent.visualFocus ? 1 : 0
-                                    border.color: root.ink
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    color: root.edge === modelData ? root.surface : root.ink
-                                    font.pixelSize: Style.space(11)
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                onClicked: root.edgeRequested(modelData)
-                            }
-                        }
-                    }
-                    Repeater {
-                        model: ["Reduce motion", "Attach flush to screen edge", "Open on hover", "Volume and power banners"]
-                        delegate: Controls.CheckBox {
-                            required property int index
-                            required property string modelData
-                            Layout.fillWidth: true
-                            implicitHeight: Style.space(30)
-                            text: modelData
-                            checked: index === 0 ? root.reducedMotion : index === 1 ? root.edgeAttached : index === 2 ? root.hoverOpen : root.eventBanners
-                            indicator: Rectangle {
-                                x: parent.width - width
-                                y: (parent.height - height) / 2
-                                width: Style.space(28)
-                                height: Style.space(16)
-                                radius: height / 2
-                                color: parent.checked ? root.ink : Qt.alpha(root.ink, 0.18)
-                                border.width: parent.visualFocus ? 1 : 0
-                                border.color: root.ink
-                                Rectangle {
-                                    x: parent.parent.checked ? parent.width - width - 3 : 3
-                                    y: 3
-                                    width: parent.height - 6
-                                    height: width
-                                    radius: width / 2
-                                    color: parent.parent.checked ? root.surface : root.ink
-                                }
-                            }
-                            contentItem: Text {
-                                text: parent.text
-                                color: root.ink
-                                font.family: Style.font.family
-                                font.pixelSize: Style.space(11)
-                                verticalAlignment: Text.AlignVCenter
-                                rightPadding: Style.space(36)
-                            }
-                            onToggled: root.preferenceChanged(["reducedMotion", "edgeAttached", "hoverOpen", "eventBanners"][index], checked)
-                        }
-                    }
-                    ModuleSettings {
-                        pluginState: root.pluginState
-                        Layout.fillWidth: true
-                        items: root.moduleItems
-                        ink: root.ink
-                        surface: root.surface
-                        onChanged: order => root.preferenceChanged("modules", order)
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        text: root.settingsError || (root.demo ? "Preferences apply to Perch, including demo." : "Saved automatically in Omarchy settings.")
-                        color: Qt.alpha(root.ink, 0.4)
-                        font.pixelSize: Style.space(10)
-                    }
-                }
+                height: parent.height - Style.space(66)
+                host: root
             }
         }
     }

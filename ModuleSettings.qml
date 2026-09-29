@@ -5,18 +5,21 @@ import "ModulePolicy.js" as Modules
 
 ColumnLayout {
     id: root
+    property bool showModules: true
+    property bool showPlugins: true
     property var pluginState: null
     property var items: Modules.defaults
     property color ink: Color.foreground
     property color surface: Color.background
     signal changed(var order)
     Text {
+        visible: root.showModules
         text: "Strip modules · up to eight"
         color: root.ink
         font.pixelSize: Style.space(13)
     }
     Repeater {
-        model: root.items
+        model: root.showModules ? root.items : []
         delegate: RowLayout {
             required property string modelData
             required property int index
@@ -60,6 +63,7 @@ ColumnLayout {
         }
     }
     Flow {
+        visible: root.showModules
         Layout.fillWidth: true
         Layout.preferredHeight: childrenRect.height
         spacing: Style.space(5)
@@ -78,6 +82,7 @@ ColumnLayout {
         }
     }
     RowLayout {
+        visible: root.showPlugins
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true
@@ -98,10 +103,11 @@ ColumnLayout {
         wrapMode: Text.WordWrap
         color: Qt.alpha(root.ink, 0.65)
         font.pixelSize: Style.space(10)
+        visible: root.showPlugins
         text: !root.pluginState ? "Plugin discovery unavailable" : root.pluginState.error || root.pluginState.message || (root.pluginState.busy ? "Checking installed plugins…" : !root.pluginState.plugins.length ? "No installed plugins with a supported panel. Install and enable plugins through Omarchy." : "Click a pinned plugin to open its own panel. Disabled plugins must first be enabled in Omarchy.")
     }
     Repeater {
-        model: root.pluginState ? root.pluginState.plugins : []
+        model: root.showPlugins && root.pluginState ? root.pluginState.plugins : []
         delegate: RowLayout {
             required property var modelData
             Layout.fillWidth: true
@@ -126,6 +132,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
+        visible: root.showModules
         text: "Drag tiles to reorder, or focus one and use Ctrl + arrow keys. Cards keep the strip visible for switching."
         color: Qt.alpha(root.ink, 0.65)
         font.pixelSize: Style.space(10)

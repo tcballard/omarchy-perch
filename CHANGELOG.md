@@ -2,6 +2,8 @@
 
 ## Unreleased — native modules
 
+- Sectioned settings with responsive navigation, labelled toggles, keyboard controls and persistent save/error feedback. Remove duplicate card headings and bound content to available panel space.
+
 - Pin installed visual plugins in the strip and open their panels on explicit click, with bounded public IPC, launch-time validation, disabled/missing states and fixture coverage.
 
 - Single compact module strip with up to eight chosen tools, drag/keyboard ordering, settings controls and a persistent switcher above expanded cards. Replaces the original context pill; saved layouts migrate automatically.

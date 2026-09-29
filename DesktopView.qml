@@ -16,12 +16,7 @@ Controls.ScrollView {
     ColumnLayout {
         width: root.availableWidth
         spacing: Style.space(8)
-        Text {
-            text: "Your desktop"
-            color: root.ink
-            font.pixelSize: Style.space(14)
-            font.weight: Font.DemiBold
-        }
+
         Text {
             text: "Quick access to Omarchy"
             color: Qt.alpha(root.ink, 0.55)

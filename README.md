@@ -69,6 +69,8 @@ omarchy-shell shell summon io.github.tcballard.perch '{"page":"timer"}'
 
 Hover a tile for 150 ms or click it to open its card. Expansion and page transitions animate for 140 ms inside a stable compositor surface; reduced motion disables them. A 220 ms leave grace lets you move between controls, and dropdown menus keep Perch open while showing.
 
+Settings is organised into Placement, Behaviour, Media & alerts, Your strip and Plugin pins, with a sidebar on wide panels and compact navigation on narrow displays. Changes save automatically. [Wide and narrow settings preview](settings-preview.png).
+
 Choose and reorder up to eight modules in Settings, drag tiles, or press Ctrl+arrow on a focused tile. Use the strip to switch cards; the bell opens Notifications and the monitor opens All tools, including tools omitted from your strip. Escape returns from Settings or another card to Music, then closes; × always closes. Keyboard summons support Tab navigation and outside-click dismissal. Swipe across the left side of the header to cycle your chosen tools.
 
 The strip stays visible as a launcher, subject to fullscreen and monitor policies. Saved pill layouts migrate automatically; old hide-idle and idle-clock preferences no longer affect the view. Other preferences and service-owned data remain intact.

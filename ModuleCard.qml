@@ -19,6 +19,9 @@ ColumnLayout {
             color: root.ink
             font.pixelSize: Style.space(14)
             font.bold: true
+            font.family: Style.font.family
+            textFormat: Text.PlainText
+            elide: Text.ElideRight
         }
         Repeater {
             model: root.definition && !root.configuring ? root.definition.actions : []

@@ -13,12 +13,8 @@ ColumnLayout {
     spacing: Style.space(8)
     RowLayout {
         Layout.fillWidth: true
-        Text {
+        Item {
             Layout.fillWidth: true
-            text: "File shelf"
-            color: root.ink
-            font.pixelSize: Style.space(14)
-            font.bold: true
         }
         PerchAction {
             text: "Add files"

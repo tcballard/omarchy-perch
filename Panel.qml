@@ -271,7 +271,7 @@ Item {
             right: root.edge === "right" ? root.edgeInset : 0
         }
         // Fixed compositor surface: animate only the masked item inside it.
-        implicitWidth: Math.min(view.expandedWidth, root.effectiveScreen ? root.effectiveScreen.width - Style.space(24) : view.expandedWidth)
+        implicitWidth: Math.min(view.maximumWidth, root.effectiveScreen ? root.effectiveScreen.width - Style.space(24) : view.maximumWidth)
         implicitHeight: Math.min(Math.max(view.maximumHeight, view.compactHeight), root.effectiveScreen ? root.effectiveScreen.height - Style.space(24) : view.maximumHeight)
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore

@@ -184,3 +184,12 @@ plugin in Omarchy, then click its stale tile: expect a visible error, no auto-en
 and a removable pin. Refresh settings and confirm disabled/missing status. Check
 all edges, fullscreen policy and a pinned-plugin-only strip. Embedded cards are
 not part of this slice. These live checks have not yet been performed.
+
+## Sectioned panel checks
+
+Production Qt fixtures cover section navigation and keyboard toggles at 600 and
+344 logical pixels, existing dropdown behavior and Escape. SettingsReview.qml
+renders both widths with fictional state. On the XPS, check all sections at your
+normal scale and an increased font/scale: every control must scroll into view,
+section navigation/footer stay accessible, dropdowns remain interactive, and
+the transparent margin still passes clicks through. These live checks are pending.

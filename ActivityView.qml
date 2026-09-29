@@ -9,12 +9,7 @@ ColumnLayout {
     property color ink: Color.foreground
     property color surface: Color.background
     spacing: Style.space(12)
-    Text {
-        text: "Live activities"
-        color: root.ink
-        font.pixelSize: Style.space(14)
-        font.weight: Font.DemiBold
-    }
+
     Text {
         Layout.fillWidth: true
         visible: !root.live || !root.live.items.length
