@@ -282,3 +282,42 @@ User-authored labels, agent questions/tool inputs, notification content, plugin
 provider text and diagnostic messages retain their original language. A font
 with Chinese glyph coverage is needed on the desktop. This preference belongs
 to Perch and does not change the rest of Omarchy’s language.
+
+### Remote agent status over SSH
+
+Enable **Receive remote agent status** in Setup to start a private Unix-socket
+receiver owned by the Perch service. Setup shows its local socket path. Disabling
+it stops the receiver; Prepare removal also disables it. No TCP port is opened,
+SSH session is started, or SSH configuration is edited by Perch.
+
+On the remote host, create a private directory such as `~/.cache/perch` with mode
+700. From your desktop, use OpenSSH’s Unix-socket forwarding, substituting your
+actual remote path and the **local socket path shown in Setup**:
+
+```sh
+ssh -o ExitOnForwardFailure=yes -o StreamLocalBindMask=0177 \
+  -R /home/REMOTE_USER/.cache/perch/status.sock:/run/user/LOCAL_UID/perch-relay-LOCAL_UID/status.sock \
+  REMOTE_USER@HOST
+```
+
+Inside that remote session, set these before starting a supported agent with
+Perch’s status hook installed on the remote host:
+
+```sh
+export PERCH_RELAY_SOCKET="$HOME/.cache/perch/status.sock"
+export PERCH_REMOTE_NAME="buildbox"
+```
+
+The remote name accepts up to 40 letters, digits, dots, hyphens and underscores.
+Events are namespaced by source and shown with a remote label. The receiver
+strips local window targets, request identities, tool inputs and arbitrary
+messages. It handles **status only**: answer permissions in the remote terminal.
+SSH disconnects are not inferred as completion; unrefreshed activities expire.
+Use a different remote socket/source name for each connection. The local receiver uses an exclusive lock and recovers only an owned,
+unconnectable stale socket after a crash. An active receiver is never replaced.
+For a stale socket on the remote side, stop the old SSH forward and remove it
+only after confirming that connection has exited.
+
+Reference: [OpenSSH Unix-socket forwarding](https://man.openbsd.org/ssh#R).
+The portable tests exercise the socket protocol in CI. A real SSH/Omarchy session
+is still required to verify forwarding and service teardown on your desktop.

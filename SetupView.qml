@@ -6,6 +6,7 @@ import qs.Commons
 ColumnLayout {
     id: root
     property var work: null
+    property var relay: null
     property color ink: Color.foreground
     property color surface: Color.background
     property bool confirmRemove: false
@@ -140,6 +141,25 @@ ColumnLayout {
                 font.pixelSize: Style.space(10)
                 wrapMode: Text.WordWrap
             }
+            PerchToggle {
+                Layout.fillWidth: true
+                text: PerchStrings.t("Receive remote agent status")
+                description: PerchStrings.t("Optional SSH socket forwarding. Status only; permissions stay in the remote session.")
+                checked: !!root.relay && root.relay.optedIn
+                enabled: !!root.relay
+                ink: root.ink
+                surface: root.surface
+                onToggled: root.relay.setEnabled(checked)
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: !!root.relay && root.relay.optedIn
+                text: root.relay ? root.relay.error || root.relay.endpoint || PerchStrings.t("Starting receiver…") : ""
+                textFormat: Text.PlainText
+                wrapMode: Text.WrapAnywhere
+                color: Qt.alpha(root.ink, 0.6)
+                font.pixelSize: Style.space(10)
+            }
             PerchAction {
                 Layout.fillWidth: true
                 text: root.confirmRemove ? PerchStrings.t("Confirm: restore defaults and remove hooks") : PerchStrings.t("Prepare Perch for removal")
@@ -148,6 +168,8 @@ ColumnLayout {
                 enabled: !!root.work && !root.work.busy
                 onClicked: {
                     if (root.confirmRemove) {
+                        if (root.relay)
+                            root.relay.setEnabled(false);
                         root.work.removeIntegrations();
                         root.confirmRemove = false;
                     } else

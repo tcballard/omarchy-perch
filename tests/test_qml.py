@@ -43,6 +43,13 @@ assert allow.isEnabled()
 request_state.setProperty('now',time.time()+120)
 assert not allow.isEnabled()
 request_card.deleteLater()
+# Remote receiver is off by default and follows the explicit saved preference.
+assert evaluate('service.relay.optedIn') is False
+evaluate('service.preferences.update({remoteStatus:true})')
+assert evaluate('service.relay.optedIn') is True
+evaluate('service.preferences.update({remoteStatus:false})')
+assert evaluate('service.relay.optedIn') is False
+
 # Quiet/DND suppress sound dispatch; bursts are coalesced and settings remain distinct.
 evaluate('service.preferences.update({activitySound:true,timerSound:true,soundPreset:"bell",quietMode:true}); service.queueAlert("Tea",true)')
 assert evaluate('service.alarmQueue.length') == 0

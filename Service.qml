@@ -16,6 +16,12 @@ Item {
     PluginState {
         id: pluginState
     }
+    property alias relay: relayState
+    RelayState {
+        id: relayState
+        preferences: prefsStore
+        live: activityState
+    }
     property alias usage: usageState
     UsageState {
         id: usageState

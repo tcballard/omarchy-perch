@@ -182,6 +182,7 @@ Object.assign(chinese,{
   "Plugin cards are unavailable": "插件卡片不可用",
   "Open the plugin’s full panel, or retry its native card.": "打开插件完整面板，或重试原生卡片。"
 });
+Object.assign(chinese,{"Receive remote agent status":"接收远程智能体状态","Optional SSH socket forwarding. Status only; permissions stay in the remote session.":"可选的 SSH 套接字转发。仅接收状态；授权仍在远程会话中进行。","Starting receiver…":"正在启动接收器…"});
 function translate(text, language) {
     return language === "zh-CN" && Object.prototype.hasOwnProperty.call(chinese,text) ? chinese[text] : text;
 }
