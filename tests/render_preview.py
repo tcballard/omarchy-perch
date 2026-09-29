@@ -18,7 +18,7 @@ qInstallMessageHandler(handler)
 app=QGuiApplication(sys.argv)
 view=QQuickView()
 view.engine().addImportPath(str(root/'stubs'))
-view.setSource(QUrl.fromLocalFile(str(root/'Preview.qml')))
+view.setSource(QUrl.fromLocalFile(str(root/(sys.argv[2] if len(sys.argv)>2 else 'Preview.qml'))))
 if view.status()==QQuickView.Error: raise SystemExit(1)
 view.show()
 def save():

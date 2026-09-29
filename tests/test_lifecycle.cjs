@@ -26,6 +26,11 @@ console.log('Panel production lifecycle methods: open/reopen, focus prime, point
 
 c.fullscreen=false;c.shell=null;
 for (const edge of ['bottom','left','right','top']) {
- c.open('{}');c.setEdge(edge);assert.equal(c.edge,edge);assert.equal(c.expanded,false);assert.equal(c.edgeRemapping,true);assert.equal(c.edgeRemapTimer.running,true);assert.equal(c.keyboardMode,false);
+ c.open('{"demo":true}');c.setEdge(edge);assert.equal(c.demo,true);assert.equal(c.edge,edge);assert.equal(c.expanded,true);assert.equal(c.edgeRemapping,true);assert.equal(c.edgeRemapTimer.running,true);assert.equal(c.keyboardMode,true);assert.equal(c.focusPrimed,false);assert.equal(c.leaveTimer.running,false);
 }
 c.setEdge('invalid');assert.equal(c.edge,'top');
+
+// A pointer reveal stays on its current display even if another has keyboard focus.
+c.close(); c.targetScreen=screen; c.screens=[screen,{name:"HDMI-A-1"}]; c.Hyprland.focusedMonitor={name:"HDMI-A-1"};
+c.open('{"pointer":true}'); assert.equal(c.targetScreen.name,"eDP-1");
+c.open("{}"); assert.equal(c.targetScreen.name,"HDMI-A-1");

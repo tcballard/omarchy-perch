@@ -5,10 +5,10 @@ os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
 os.environ.setdefault('QT_QUICK_BACKEND','software')
 os.environ.setdefault('QT_QUICK_CONTROLS_STYLE','Basic')
 from pathlib import Path
-from PySide6.QtCore import QUrl, qInstallMessageHandler, Qt
+from PySide6.QtCore import QUrl, qInstallMessageHandler, Qt, QPointF
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlEngine, QQmlComponent, QQmlExpression
-from PySide6.QtQuick import QQuickView
+from PySide6.QtQuick import QQuickView, QQuickItem
 from PySide6.QtTest import QTest
 root=Path(__file__).resolve().parent
 messages=[]
@@ -75,13 +75,36 @@ for edge in ['top','bottom','left','right']:
     visual_eval('notch.edgeRequested("'+edge+'")')
     visual_eval('previewState="compact"')
     assert visual_eval('notch.sideTab') is (edge in ['left','right'])
-    assert visual_eval('notch.implicitWidth') == (36 if edge in ['left','right'] else 140)
-    assert visual_eval('notch.implicitHeight') == (108 if edge in ['left','right'] else 36)
+    assert visual_eval('notch.implicitWidth') == (28 if edge in ['left','right'] else 96)
+    assert visual_eval('notch.implicitHeight') == (80 if edge in ['left','right'] else 30)
     visual_eval('previewState="playing"')
-    assert visual_eval('notch.implicitWidth') == 380
-    assert visual_eval('notch.implicitHeight') == 250
+    assert visual_eval('notch.implicitWidth') == 344
+    assert visual_eval('notch.implicitHeight') == 148
     assert visual_eval('notch.rotation') == 0
 visual_eval('notch.settingsOpen=true')
-assert visual_eval('notch.implicitHeight') == 376
+assert visual_eval('notch.implicitHeight') == 336
+# Settings are a separate view; Escape returns to media before dismissing.
+visual_eval('notch.forceActiveFocus()')
+QTest.keyClick(view, Qt.Key_Escape); QTest.qWait(30)
+assert visual_eval('notch.settingsOpen') is False
+assert visual_eval('notch.expanded') is True
+visual_eval('demoMedia.setState("playing")')
+assert visual_eval('notch.implicitHeight') == 208
+assert visual_eval('notch.hasPlayer') is True
+playback = visual.findChild(QQuickItem, 'playback')
+assert playback is not None
+QTest.qWait(120)
+point = playback.mapToScene(QPointF(playback.width()/2, playback.height()/2)).toPoint()
+QTest.mouseClick(view, Qt.LeftButton, Qt.NoModifier, point)
+assert visual_eval('notch.playing') is False
+visual_eval('demoMedia.setState("empty")')
+transport = visual.findChild(QQuickItem, 'transport')
+assert transport is not None and not transport.isVisible()
+assert not playback.isEnabled()
+visual_eval('Color.lightTheme=true')
+assert visual_eval('notch.lightTheme') is True
+assert visual_eval('notch.surface.r < notch.ink.r') is True
+visual_eval('Color.lightTheme=false')
+assert visual_eval('notch.surface.r < notch.ink.r') is True
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

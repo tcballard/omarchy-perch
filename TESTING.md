@@ -32,3 +32,9 @@ Portable geometry tests cover all 16 edge/bar combinations, hidden bars and flus
 ## Startup fix — explicit Qt Controls imports
 
 The XPS shell log reported `NotchView.qml: Cannot assign to non-existent property "checked"`. The unqualified settings Button resolved to `qs.Ui.Button`, whose API uses `selected`, rather than Qt Quick Controls Button. Qualifying the view's Qt controls removes the collision. The test host now includes a competing `qs.Ui.Button` without `checked` or `checkable`; the original view fails to load against it, while the corrected view passes. Live shell startup must still be confirmed on the XPS.
+
+## Interaction rework — 29 September 2026
+
+User confirmed the import fix made Perch visible, then reported poor appearance and responsiveness. The rework passes native Qt service/view tests (including an actual pointer click on playback, hidden transport in empty state, Settings/Escape, all four edge dimensions, and light/dark theme contrast), lifecycle and geometry tests, and QML formatting. Actual production view renders were reviewed in playing, empty, compact and settings states; `tests/Review.qml` produces the overview in `preview.png`.
+
+The fixed compositor envelope and view-only animation remove per-frame window-size requests by construction. This is not a measured FPS/latency improvement: real Wayland input masking, hover transitions, outside-click focus, edge remapping and smoothness still require the XPS. Specifically verify that clicking the transparent area around a compact pill reaches the underlying app and that all four expansions remain anchored. No live performance claim is made.

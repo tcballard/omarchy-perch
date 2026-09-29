@@ -4,22 +4,22 @@
 
 A quiet, expanding music notch for Omarchy. See what's playing, open the controls, and get back to your work.
 
-**0.1.0-dev — development preview.** Implemented and tested with portable checks and Qt host stubs. Not yet verified in a live Omarchy session or submitted to the marketplace.
+**0.1.0-dev — development preview.** Implemented and tested with portable checks and Qt host stubs. Startup confirmed on the XPS after an import fix; this interaction rework still needs live compositor verification. Not submitted to the marketplace.
 
 ![Production QML rendered with fictional media and theme stubs](preview.png)
 
 ## What it does
 
-- Choose **top, bottom, left or right** in the gear menu. Hover briefly or click to expand inward.
+- Choose **top, bottom, left or right** in Settings. Hover briefly or click to expand inward.
 - Top/bottom use a horizontal pill; left/right use a slim upright tab. Expanded controls stay upright.
 - Native MPRIS play/pause, previous/next and player switching, gated by each player's capabilities.
 - Track and artist, player identity and progress when the player supplies timing.
-- Local album artwork with a music-glyph fallback. Remote artwork is not fetched in this preview.
-- Escape or × to collapse. Pointer-opened panels collapse after the pointer leaves; keyboard-opened panels use an outside-click focus grab.
+- Local album artwork with a drawn music-icon fallback. Remote artwork is not fetched in this preview.
+- Escape returns from Settings; Escape again or × collapses. Pointer-opened panels collapse after the pointer leaves; keyboard-opened panels use an outside-click focus grab.
 - Hide-idle, reduced-motion and screen-edge preferences for the current shell session.
 - Fullscreen suppression, theme colours and scaled typography.
 
-The original bar stays active. Nothing changes your shortcuts, notification service or media-key configuration. The compact activity dot indicates playback; it is not an audio visualizer.
+The original bar stays active. Nothing changes your shortcuts, notification service or media-key configuration. The compact waveform icon indicates playback; it is not an audio visualizer.
 
 ## Upgrading the earlier Omarchy Notch preview
 
@@ -67,13 +67,13 @@ Git-managed removal deletes the installed checkout; symlink removal leaves its s
 
 ## Controls and preferences
 
-Click ↻ to cycle available players. A manually chosen player stays selected even if another starts playing; when it disappears, selection returns to an available playing player. Unsupported actions are disabled.
+The player-switch button appears when more than one player is available. Click it to cycle players. A manually chosen player stays selected even if another starts playing; when it disappears, selection returns to an available playing player. Unsupported actions are disabled.
 
-The gear opens the four-edge selector and three session preferences. Selecting a new edge collapses and remaps the surface. **Screen edge** attaches the surface flush to the selected edge and may overlap a bar on that edge; the default clears a visible bar on the same edge. **Hide idle** hides the compact surface when no player is available. **Reduce motion** disables expansion animations. Fullscreen remains unobstructed.
+The sliders button opens the four-edge selector and three session preferences. Selecting a new edge remaps the surface while keeping Settings open. **Attach flush to screen edge** attaches the surface flush to the selected edge and may overlap a bar on that edge; the default clears a visible bar on the same edge. **Hide idle** hides the compact surface when no player is available. **Reduce motion** disables expansion animations. Fullscreen remains unobstructed.
 
 ## Honest demos
 
-With the plugin enabled, run `./demo/run playing`, `./demo/run paused`, or `./demo/run empty`. The header says **DEMO** and all controls act on fictional local state. Closing returns to real media. Demo controls never change a real player.
+With the plugin enabled, run `./demo/run playing`, `./demo/run paused`, or `./demo/run empty`. The header says **demo** and all controls act on fictional local state. Closing returns to real media. Demo controls never change a real player.
 
 ## Compatibility and checks
 
@@ -86,6 +86,12 @@ Target contract: Omarchy `quattro`, inspected at `d3cfd53b997f8bdcf776b8db68bf0d
 Portable checks require Python 3 and Node. Installing `PySide6-Essentials==6.11.2` enables production QML service/view tests with explicit host stubs. CI installs it; local runs clearly report its absence. Those tests do not verify Wayland placement or actual DBus/compositor behaviour.
 
 See [TESTING.md](TESTING.md) for exact evidence and live acceptance, and [DESIGN.md](DESIGN.md) for scope and implementation boundaries. Root `preview.png` renders the actual NotchView using fictional media and theme stubs, not a desktop screenshot.
+
+## Interaction preview
+
+The visible surface expands inside a fixed-size Wayland window, with an input mask confined to the card. Expansion no longer animates the compositor window dimensions. Hover opens after 90 ms; the item animation takes 140 ms and pointer leave has a 220 ms grace period. Reduced motion disables size/fade animation. These are configured durations, not measured desktop latency.
+
+The notch uses the darker of the theme's foreground/background colours. Empty mode has no disabled playback controls. Settings occupy their own view, and the media layout remains fixed during expansion rather than reflowing every frame.
 
 ## Next
 

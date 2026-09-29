@@ -31,3 +31,11 @@ Deferred: persistent shell.json preferences, bounded remote artwork downloads, s
 Tom chose the Perch name and requested all four screen edges. The plugin ID is now `io.github.tcballard.perch`; the README includes migration from the earlier local preview. Edge selection remaps the layer surface after collapsing, with one selected anchor at a time. Top/bottom expand vertically; left/right use 36×108 compact tabs and expand horizontally into upright controls. Bar clearance is applied only when the visible bar shares the selected edge. Edge choice remains session-only.
 
 Added tests exercise every edge, all edge/bar combinations, runtime view dimensions and rotation, plus production setEdge lifecycle and focus release. Live compositor verification remains outstanding on all four edges.
+
+## Interaction rework after XPS feedback
+
+The first version appeared as a generic light popup and felt sluggish. Replace that view with theme-derived dark notch chrome, drawn transport icons, 96×30 idle / 208×30 playing horizontal pills, 28×80 vertical tabs, 344×148 empty / 344×208 player / 344×336 settings views. Earlier dimensions above describe the original implementation. No visualizer animation runs at idle.
+
+Keep one 344×336 compositor surface (width bounded to screen), and animate only the masked view's dimensions over 140 ms. Anchor the view inside that surface to the selected edge; top/bottom stay horizontally centered and side tabs stay vertically centered. HoverHandler follows the masked view, not the transparent envelope. Content layout has fixed expanded dimensions while clipping and fading. Hover is 90 ms; leave grace 220 ms. Pointer opens retain the hovered monitor. Edge selection preserves the open view and demo state while remapping, releases focus priming and resumes it after the remap. The compositor still receives input-region updates during animation; no claim of zero compositor work.
+
+The darker of theme foreground/background drives chrome and the lighter drives ink, including light themes. Settings replace the player view; Escape backs out of Settings first. No player means no dead transport row or empty progress line. Preferences remain session-only.

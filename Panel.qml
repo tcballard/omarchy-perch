@@ -35,7 +35,7 @@ Item {
     function open(encoded) {
         var p = Policy.payload(encoded || "{}");
         var focused = Hyprland.focusedMonitor;
-        for (var i = 0; focused && i < screens.length; i++) {
+        for (var i = 0; p.pointer !== true && focused && i < screens.length; i++) {
             if (screens[i].name === focused.name) {
                 targetScreen = screens[i];
                 break;
@@ -62,8 +62,11 @@ Item {
         var next = Edges.edge(value);
         if (next === edge)
             return;
-        collapse();
+        hoverTimer.stop();
+        leaveTimer.stop();
+        focusPrimeTimer.stop();
         edgeRemapping = true;
+        focusPrimed = false;
         edge = next;
         edgeRemapTimer.restart();
     }
@@ -99,7 +102,8 @@ Item {
     HyprlandFocusGrab {
         active: root.shown && root.expanded && root.keyboardMode && root.focusPrimed
         windows: [notchWindow]
-        onCleared: root.collapse()
+        onCleared: if (!root.edgeRemapping && !remapGuard.remapping)
+            root.collapse()
     }
     Timer {
         id: focusPrimeTimer
@@ -110,21 +114,25 @@ Item {
     Timer {
         id: edgeRemapTimer
         interval: 75
-        onTriggered: root.edgeRemapping = false
+        onTriggered: {
+            root.edgeRemapping = false;
+            if (root.expanded && root.keyboardMode)
+                focusPrimeTimer.restart();
+        }
     }
     DemoMedia {
         id: fixture
     }
     Timer {
         id: hoverTimer
-        interval: 300
+        interval: 90
         onTriggered: if (!root.expanded && hover.hovered)
             root.reveal(true)
     }
     Timer {
         id: leaveTimer
-        interval: 500
-        onTriggered: if (!root.keyboardMode && !hover.hovered)
+        interval: 220
+        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered)
             root.collapse()
     }
     Timer {
@@ -154,8 +162,9 @@ Item {
             left: root.edge === "left" ? root.edgeInset : 0
             right: root.edge === "right" ? root.edgeInset : 0
         }
-        implicitWidth: Math.min(view.implicitWidth, root.effectiveScreen ? root.effectiveScreen.width - Style.space(24) : view.implicitWidth)
-        implicitHeight: view.implicitHeight
+        // Fixed compositor surface: animate only the masked item inside it.
+        implicitWidth: Math.min(view.expandedWidth, root.effectiveScreen ? root.effectiveScreen.width - Style.space(24) : view.expandedWidth)
+        implicitHeight: view.maximumHeight
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "io-github-tcballard-perch"
@@ -164,35 +173,38 @@ Item {
         mask: Region {
             item: view
         }
-        Behavior on implicitWidth {
-            NumberAnimation {
-                duration: root.reducedMotion ? 0 : 220
-                easing.type: Easing.OutCubic
-            }
-        }
-        Behavior on implicitHeight {
-            NumberAnimation {
-                duration: root.reducedMotion ? 0 : 220
-                easing.type: Easing.OutCubic
-            }
-        }
-        HoverHandler {
-            id: hover
-            onHoveredChanged: {
-                if (hovered) {
-                    leaveTimer.stop();
-                    if (!root.expanded)
-                        hoverTimer.restart();
-                } else {
-                    hoverTimer.stop();
-                    if (!root.keyboardMode)
-                        leaveTimer.restart();
-                }
-            }
-        }
         NotchView {
             id: view
-            anchors.fill: parent
+            width: Math.min(implicitWidth, notchWindow.width)
+            height: implicitHeight
+            x: root.edge === "left" ? 0 : root.edge === "right" ? notchWindow.width - width : (notchWindow.width - width) / 2
+            y: root.edge === "bottom" ? notchWindow.height - height : Edges.vertical(root.edge) ? (notchWindow.height - height) / 2 : 0
+            Behavior on width {
+                NumberAnimation {
+                    duration: root.reducedMotion ? 0 : 140
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on height {
+                NumberAnimation {
+                    duration: root.reducedMotion ? 0 : 140
+                    easing.type: Easing.OutCubic
+                }
+            }
+            HoverHandler {
+                id: hover
+                onHoveredChanged: {
+                    if (hovered) {
+                        leaveTimer.stop();
+                        if (!root.expanded)
+                            hoverTimer.restart();
+                    } else {
+                        hoverTimer.stop();
+                        if (!root.keyboardMode && !root.edgeRemapping)
+                            leaveTimer.restart();
+                    }
+                }
+            }
             media: root.media
             expanded: root.expanded
             reducedMotion: root.reducedMotion
