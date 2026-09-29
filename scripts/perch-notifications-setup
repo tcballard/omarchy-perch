@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import time
 
 ID = 'io.github.tcballard.perch-notifications'
 MARKER = '.perch-companion.json'
@@ -17,6 +18,23 @@ def run(argv):
     result = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
     if result.returncode or (argv[0] == 'omarchy-shell' and result.stdout.strip() not in ('', 'ok')):
         raise ValueError('Command failed: ' + ' '.join(argv) + '. Check omarchy-shell; setup did not complete.')
+
+
+def wait_discovered():
+    # rescanPlugins queues work; match Omarchy's installer discovery gate.
+    for attempt in range(40):
+        result = subprocess.run(['omarchy', 'plugin', 'list', '--json'],
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                text=True, timeout=2)
+        if result.returncode == 0 and len(result.stdout) <= 1024 * 1024:
+            try:
+                entries = json.loads(result.stdout)
+                if isinstance(entries, list) and any(isinstance(e, dict) and e.get('id') == ID for e in entries):
+                    return
+            except ValueError:
+                pass
+        time.sleep(0.05)
+    raise ValueError('Companion discovery timed out; it was installed but not enabled. Restart the shell, then rerun setup.')
 
 
 def main():
@@ -86,6 +104,7 @@ def main():
         if stage.exists():
             shutil.rmtree(stage)
     run(['omarchy-shell', 'shell', 'rescanPlugins'])
+    wait_discovered()
     run(['omarchy', 'plugin', 'enable', ID])
     print('Companion enabled. Open Perch → Notifications → Refresh. After updates, run: omarchy restart shell')
     print('To restore built-in notifications: omarchy plugin disable ' + ID)
