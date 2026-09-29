@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -25,20 +26,23 @@ def parent_pids(pid):
 
 def hyprland_target():
     if not os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
-        return ''
+        return {}
     try:
         completed = subprocess.run(['hyprctl', '-j', 'clients'], stdin=subprocess.DEVNULL,
             capture_output=True, timeout=.75, check=False)
         if completed.returncode or len(completed.stdout) > 262144:
-            return ''
+            return {}
         ancestors = set(parent_pids(os.getpid()))
         matches = [c for c in json.loads(completed.stdout) if isinstance(c, dict) and c.get('pid') in ancestors]
         if not matches:
-            return ''
+            return {}
         address = matches[0].get('address', '')
-        return address if isinstance(address, str) and address.startswith('0x') else ''
+        if not isinstance(address, str) or not re.fullmatch(r'0x[0-9a-fA-F]{1,16}', address):
+            return {}
+        return {'target': address, 'targetPid': matches[0]['pid'],
+                'targetBoot': Path('/proc/sys/kernel/random/boot_id').read_text().strip()}
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):
-        return ''
+        return {}
 
 def project_name(data):
     cwd = data.get('cwd') if isinstance(data, dict) else None
@@ -80,7 +84,7 @@ def report(agent, data):
     return {'id': agent + '.' + key, 'title': project_name(data) or ('Codex' if agent == 'codex' else 'Claude Code'),
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
             'kind': 'agent', 'agent': 'Codex' if agent == 'codex' else 'Claude',
-            'project': project_name(data), 'target': hyprland_target(), 'attention': attention,
+            'project': project_name(data), **hyprland_target(), 'attention': attention,
             'eventKey': hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:32]}
 
 

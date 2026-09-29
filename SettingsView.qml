@@ -324,6 +324,11 @@ ColumnLayout {
                     Repeater {
                         model: [
                             {
+                                key: "rememberSessions",
+                                title: "Remember agent sessions",
+                                detail: "Keep up to eight last-seen sessions for one day across shell restarts. Pending requests are never saved."
+                            },
+                            {
                                 key: "quietMode",
                                 title: "Quiet mode",
                                 detail: "Pause automatic cards, previews, sounds and timer notifications. Timers and the inbox keep working."

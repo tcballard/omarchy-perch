@@ -40,7 +40,7 @@ for event, state in [('UserPromptSubmit','running'),('Stop','done'),('PostToolUs
     assert result['state'] == state
     assert 'secret' not in json.dumps(result)
 original_target=hook.hyprland_target
-hook.hyprland_target=lambda: '0xabc123'
+hook.hyprland_target=lambda: {'target':'0xabc123'}
 session=hook.report('claude',{'session_id':'session','hook_event_name':'UserPromptSubmit','cwd':'/home/tom/code/perch'})
 assert session['title']=='perch' and session['project']=='perch' and session['target']=='0xabc123' and session['kind']=='agent'
 hook.hyprland_target=original_target

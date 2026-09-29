@@ -235,3 +235,15 @@ Target shell contract: Omarchy quattro `d3cfd53b997f8bdcf776b8db68bf0d735e7a065d
 [Report a bug](https://github.com/tcballard/omarchy-perch/issues). Include the Perch commit, Omarchy revision and relevant Perch log lines. For sensitive security findings, open a minimal issue requesting a private contact channel; do not post credentials or exploit details publicly.
 
 MIT. Original implementation by Tom Ballard. [Island](https://github.com/Guilhermerisu/island) and [Dynamic Island Pro](https://github.com/harshithnadig/omarchy-dynamic-island) informed the feature comparison; their code is not included. A full replacement bar/tray, proprietary Apple continuity, account calendar sync and automatic browser-download detection remain outside this candidate; Linux alternatives and exact limits are listed in GAPS.md. Desktop menus are accessed through supported Omarchy commands; the inbox and supported agent hooks are included as optional integrations.
+
+### Remembering sessions
+
+Enable **Remember agent sessions** in Alerts & sound to retain up to eight
+last-seen agent entries for 24 hours across shell restarts. This stores the
+project label and terminal identity in Perch’s settings, never the prompt,
+tool input, or pending permission request. Recovered entries are idle until
+another hook event arrives. They do not create notifications or claim the
+agent is still working. Turning the setting off clears saved entries.
+Newly installed status hooks capture the terminal process and boot identity;
+returning to a recovered session rejects a changed target. Reinstall hooks
+from Setup to update an older adapter.

@@ -37,7 +37,9 @@ Item {
         error = "";
         actionMessage = "";
         if (!jumpJob.run("agent-jump", {
-            address: item.target
+            address: item.target,
+            targetPid: item.targetPid || 0,
+            targetBoot: item.targetBoot || ""
         }))
             return false;
         jumpBusy = true;
@@ -61,6 +63,7 @@ Item {
             return;
         restored = true;
         now = Date.now();
+        items = preferences.values.rememberSessions ? Activities.recover(preferences.record.recentSessions, now) : [];
         var late = [];
         timers = Array.isArray(preferences.record.timers) ? preferences.record.timers.slice(0, 8).filter(function (t) {
             return t && typeof t === "object";
@@ -262,6 +265,29 @@ Item {
         if (["done", "waiting", "error"].indexOf(item.state) >= 0 && (!previous || previous.state !== item.state || previous.attention !== item.attention || (item.eventKey && item.eventKey !== previous.eventKey)))
             activityEvent(item);
         return "ok";
+    }
+    onItemsChanged: sessionSave.restart()
+    Timer {
+        id: sessionSave
+        interval: 1500
+        onTriggered: {
+            if (root.preferences && root.preferences.ready)
+                root.preferences.update({
+                    recentSessions: root.preferences.values.rememberSessions ? Activities.snapshot(root.items) : []
+                });
+        }
+    }
+    Connections {
+        target: root.preferences
+        function onValuesChanged() {
+            if (!root.preferences.values.rememberSessions) {
+                root.items = root.items.filter(function (p) {
+                    return p.state !== "idle";
+                });
+                if (root.preferences.record.recentSessions && root.preferences.record.recentSessions.length)
+                    sessionSave.restart();
+            }
+        }
     }
     function dismiss(id) {
         items = items.filter(function (p) {

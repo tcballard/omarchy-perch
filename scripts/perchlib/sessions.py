@@ -1,6 +1,7 @@
 import json
 import re
 import shutil
+from pathlib import Path
 
 from .process import run
 
@@ -20,6 +21,13 @@ def handle(op, payload):
         isinstance(client, dict) and client.get('address') == address for client in clients
     ):
         raise ValueError('That session window is no longer open')
+    if payload.get('targetPid') or payload.get('targetBoot'):
+        boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+        if payload.get('targetBoot') != boot or not any(
+            isinstance(c, dict) and c.get('address') == address
+            and c.get('pid') == payload.get('targetPid') for c in clients
+        ):
+            raise ValueError('That session target has changed; open it from your terminal')
     reply = run(['hyprctl', 'dispatch', 'focuswindow', 'address:' + address], timeout=1, limit=4096)
     if reply.strip() != 'ok':
         raise ValueError('Hyprland could not focus that session window')

@@ -151,7 +151,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             Text {
                                 Layout.fillWidth: true
-                                text: (modelData.state === "waiting" ? "Needs attention" : modelData.state === "error" ? "Failed" : modelData.state === "done" ? "Complete" : "In progress") + " · " + root.age(modelData.updatedAt)
+                                text: (modelData.state === "idle" ? "Last seen" : modelData.state === "waiting" ? "Needs attention" : modelData.state === "error" ? "Failed" : modelData.state === "done" ? "Complete" : "In progress") + " · " + root.age(modelData.updatedAt)
                                 color: Qt.alpha(root.ink, 0.5)
                                 font.pixelSize: Style.space(10)
                             }
