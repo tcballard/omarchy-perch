@@ -2,6 +2,8 @@
 
 ## Unreleased — native modules
 
+- Content-sized music, timer, activity and plugin cards; dedicated completion, permission, input and error surfaces. New events open only from collapsed Perch, without keyboard focus; duplicate status updates stay quiet. Completion dismisses after eight seconds, with hover protection. Approval/input actions return to the agent session.
+
 - Native Plugin Perch drawer: bounded provider snapshots render inside Perch with explicit actions, late-response protection and a full-panel fallback. RSS Feed is the first paired provider; it requires its Perch-card integration change.
 
 - Turn agent activity into project-labelled session rows with attention-first ordering, count-sized panels and explicit return to the originating Hyprland window.

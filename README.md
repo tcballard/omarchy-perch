@@ -26,7 +26,7 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 - **Live activities:** bounded IPC, real build/download/copy adapters, Claude Code status hooks and Codex completion hooks. Agent sessions show their project, group attention first and can return to the originating Hyprland window when it can be identified.
 - **Setup:** integration status, explicit enable/disable, optional system-feedback companion to replace stock OSD, dependency reporting and coordinated integration removal.
 
-The compact view prioritizes completion/attention, notification previews, system feedback, timers, imminent meetings, other activities, music and the clock. It does not automatically expand or take keyboard focus. Fullscreen defaults to hidden; Settings also offers completed-timer alerts or always show.
+The compact view prioritizes completion/attention, notification previews, system feedback, timers, imminent meetings, other activities, music and the clock. When event banners are enabled, new activity completion or attention events open a dedicated card only while Perch is collapsed, without taking keyboard focus. Open tools and settings stay in place. Completion cards close after eight seconds (extended while hovered); attention cards remain until dismissed, resolved or expired. Fullscreen defaults to hidden; Settings also offers timer/activity alerts or always show.
 
 ## Install or update
 
@@ -86,6 +86,8 @@ omarchy-shell io.github.tcballard.perch dismiss build
 ```
 
 Updating the same `id` replaces that card. Up to eight cards are kept. IDs are 1–64 letters/digits/dots/underscores/hyphens and must start with a letter or digit. Titles are limited to 120 characters, details to 240, and each JSON payload to 4096 characters. All text renders as plain text.
+
+Optional `attention` is `approval` or `question` for a more specific waiting-card heading. Optional `eventKey` (up to 80 characters) identifies a distinct event when the state stays the same; repeating it updates the activity without opening another banner. Agent hooks generate this key from a hash of the bounded event.
 
 `state` is `running`, `waiting`, `done` or `error`; `waiting` displays “Needs attention”. `progress` is 0–1, or omitted/−1 when unknown. `ttl` is 5–86400 seconds; the default is 300 seconds, or 30 for a completed card. Producers should refresh long-running cards before expiry. Activities are transient and clear on shell restart. They cannot execute commands, open links or grant agent permissions.
 

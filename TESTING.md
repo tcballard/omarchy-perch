@@ -214,3 +214,9 @@ priority, dimensions, keyboard opening, hidden sampling and mode changes.
 - Enable the Claude or Codex integration from Setup, start an agent inside a terminal, and confirm Activity shows the project folder. Move to another window, choose **Go to session**, and verify Hyprland returns to the originating terminal and Perch collapses. Repeat from a tmux pane and the terminal used most often; an unmatched client should omit the action rather than guessing.
 - Trigger two attention activities and confirm the compact notch reads “2 need you”, Activity sorts both above running/completed work, and the panel grows without exceeding its normal maximum height.
 - Close a target terminal before clicking Go to session: leave Perch open with a useful error. Repeat after keyboard summon and pointer opening; the keyboard grab must release before a successful window switch. A Hyprland window target does not select a tmux pane or terminal tab.
+
+## Event surfaces and content sizing
+
+Portable tests cover event deduplication and new-turn keys, approval/question mapping, occupied-panel preservation, fullscreen alert policy, event timer cleanup, native card actions and content-dependent height. `tests/EventReview.qml` renders production completion and approval cards with fictional data. Music, timer, activity and provider cards use their content height within the fixed compositor envelope; virtualized utility pages retain a roomy viewport.
+
+Live acceptance: receive an agent event while typing elsewhere, while a plugin drawer is open, with event banners off, and under each fullscreen policy. Verify no automatic keyboard grab, completion timeout/hover extension, attention persistence, resolution/expiry close, and return to the real agent window. Direct approval and text replies remain in the originating agent; the hooks are status-only.

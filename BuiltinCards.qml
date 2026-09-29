@@ -10,6 +10,7 @@ Item {
     required property var host
     property Component hubCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {
@@ -88,6 +89,7 @@ Item {
     }
     property Component shelfCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             ShelfView {
@@ -122,6 +124,7 @@ Item {
     }
     property Component calendarCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             CalendarView {
@@ -156,6 +159,7 @@ Item {
     }
     property Component setupCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             SetupView {
@@ -189,6 +193,7 @@ Item {
     }
     property Component inboxCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             InboxView {
@@ -202,6 +207,7 @@ Item {
     }
     property Component lyricsCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {
@@ -223,6 +229,7 @@ Item {
     }
     property Component desktopCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             DesktopView {
@@ -238,6 +245,7 @@ Item {
     }
     property Component timerCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             TimerView {
@@ -251,6 +259,7 @@ Item {
     }
     property Component systemCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             SystemView {
@@ -265,6 +274,7 @@ Item {
     }
     property Component activityCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {
@@ -282,6 +292,7 @@ Item {
     }
     property Component playersCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {
@@ -300,6 +311,7 @@ Item {
     }
     property Component musicCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {

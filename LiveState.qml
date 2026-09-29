@@ -16,6 +16,7 @@ Item {
     property string actionMessage: ""
     property bool jumpBusy: false
     signal sessionOpened
+    signal activityEvent(var item)
     readonly property string timerStatus: timerState.status
     readonly property int remaining: timerStatus === "running" ? Math.max(0, Math.ceil((timerState.deadline - now) / 1000)) : timerStatus === "paused" ? timerState.remaining : 0
     readonly property bool timerActive: timerStatus !== "idle"
@@ -35,7 +36,9 @@ Item {
             return false;
         error = "";
         actionMessage = "";
-        if (!jumpJob.run("agent-jump", {address:item.target}))
+        if (!jumpJob.run("agent-jump", {
+            address: item.target
+        }))
             return false;
         jumpBusy = true;
         return true;
@@ -249,10 +252,15 @@ Item {
         var item = Activities.normalize(encoded, now);
         if (!item)
             return "error: invalid activity";
+        var previous = items.find(function (p) {
+            return p.id === item.id && p.expiresAt > now;
+        });
         var next = Activities.upsert(items, item, now);
         if (!next)
             return "error: eight activities already active";
         items = next;
+        if (["done", "waiting", "error"].indexOf(item.state) >= 0 && (!previous || previous.state !== item.state || previous.attention !== item.attention || (item.eventKey && item.eventKey !== previous.eventKey)))
+            activityEvent(item);
         return "ok";
     }
     function dismiss(id) {

@@ -56,11 +56,12 @@ ColumnLayout {
     }
     Controls.ScrollView {
         Layout.fillWidth: true
-        Layout.preferredHeight: Style.space(232)
+        Layout.preferredHeight: Math.min(Style.space(280), activityRows.implicitHeight)
         visible: !!root.live && root.live.items.length > 0
         clip: true
         contentWidth: availableWidth
         ColumnLayout {
+            id: activityRows
             width: parent.width
             spacing: Style.space(8)
             Repeater {

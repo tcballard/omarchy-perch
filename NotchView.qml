@@ -23,7 +23,14 @@ FocusScope {
     readonly property var notchContext: NotchPolicy.context(media)
     readonly property real compactWidth: perchMode ? (stripVertical ? Style.space(52) : stripLength) : Style.space(stripVertical ? 48 : notchContext.id === "idle" ? 100 : 210)
     readonly property real compactHeight: perchMode ? (stripVertical ? stripLength : Style.space(52)) : Style.space(stripVertical ? 76 : 36)
-    readonly property real bodyTop: Style.space(116)
+    readonly property real bodyTop: Style.space(page === "event" ? 58 : 116)
+    property string eventId: ""
+    readonly property var selectedEvent: live && eventId ? live.items.find(function (item) {
+        return item.id === root.eventId && item.state !== "running";
+    }) || null : null
+    signal eventEnded
+    onSelectedEventChanged: if (page === "event" && expanded && !selectedEvent)
+        eventEnded()
     function activateModule(id, pointer) {
         var descriptor = Modules.get(id);
         if (!descriptor)
@@ -60,8 +67,50 @@ FocusScope {
         id: pluginCardDefinition
         moduleId: root.page
         title: root.cardState && root.cardState.card ? root.cardState.card.title : root.pluginState && root.pluginState.get(Modules.pluginId(root.page)) ? root.pluginState.get(Modules.pluginId(root.page)).name : "Plugin drawer"
-        actions: [{id: "refresh", title: "Refresh", enabled: !!root.cardState && !root.cardState.busy}, {id: "open", title: "Open", enabled: !root.cardState || !root.cardState.busy}]
-        card: Component { PluginDrawerCard { state: root.cardState } }
+        actions: [
+            {
+                id: "refresh",
+                title: "Refresh",
+                enabled: !!root.cardState && !root.cardState.busy
+            },
+            {
+                id: "open",
+                title: "Open",
+                enabled: !root.cardState || !root.cardState.busy
+            }
+        ]
+        card: Component {
+            PluginDrawerCard {
+                state: root.cardState
+            }
+        }
+    }
+    PerchModule {
+        id: eventDefinition
+        moduleId: "event"
+        title: !root.selectedEvent ? "Activity" : root.selectedEvent.state === "done" ? "Complete" : root.selectedEvent.state === "error" ? "Something needs attention" : root.selectedEvent.attention === "approval" ? "Permission needed" : root.selectedEvent.attention === "question" ? "Input needed" : "Needs your attention"
+        card: Component {
+            Item {
+                property color ink
+                property color surface
+                implicitHeight: eventBody.implicitHeight
+                Controls.ScrollView {
+                    anchors.fill: parent
+                    clip: true
+                    contentWidth: availableWidth
+                    ActivityEventCard {
+                        id: eventBody
+                        width: parent.width
+                        item: root.selectedEvent
+                        live: root.live
+                        ink: root.ink
+                        surface: root.surface
+                        onBrowseRequested: root.page = "activity"
+                        onDismissRequested: root.collapseRequested()
+                    }
+                }
+            }
+        }
     }
     Binding {
         target: root.moduleState
@@ -153,8 +202,7 @@ FocusScope {
     readonly property color ink: lightTheme ? Color.background : Color.foreground
     readonly property real maximumWidth: Math.max(preferredWidth, stripLength, Style.space(600))
     readonly property real expandedWidth: settingsOpen ? maximumWidth : Math.max(preferredWidth, stripLength)
-    readonly property real activityHeight: Style.space(Math.min(468, 380 + Math.max(0, live && live.items ? live.items.length - 1 : 0) * 72))
-    readonly property real expandedHeight: settingsOpen ? Style.space(468) : page === "activity" ? activityHeight : Style.space(468)
+    readonly property real expandedHeight: settingsOpen ? maximumHeight : Math.min(maximumHeight, Math.max(Style.space(220), bodyTop + Style.space(16) + displayedCard.contentHeight))
     readonly property real maximumHeight: Style.space(468)
     implicitWidth: expanded ? expandedWidth : compactWidth
     implicitHeight: expanded ? expandedHeight : compactHeight
@@ -180,11 +228,15 @@ FocusScope {
         cardState.clear()
     Connections {
         target: root.live
-        function onSessionOpened() { root.collapseRequested(); }
+        function onSessionOpened() {
+            root.collapseRequested();
+        }
     }
     Keys.onEscapePressed: {
         if (settingsOpen)
             settingsOpen = false;
+        else if (page === "event")
+            collapseRequested();
         else if (page !== "music")
             page = "music";
         else
@@ -366,7 +418,7 @@ FocusScope {
             }
         }
         ModuleStrip {
-            visible: !root.settingsOpen
+            visible: !root.settingsOpen && root.page !== "event"
             x: Style.space(4)
             y: Style.space(45)
             width: parent.width - Style.space(8)
@@ -408,20 +460,24 @@ FocusScope {
                 }
             }
             ModuleCard {
+                id: displayedCard
                 objectName: "module-card"
                 visible: !root.settingsOpen
                 x: Style.space(18)
                 y: root.bodyTop
                 width: parent.width - Style.space(36)
                 height: parent.height - root.bodyTop - Style.space(16)
-                definition: visible ? (Modules.pluginId(root.page) ? pluginCardDefinition : moduleRegistry.get(root.page)) : null
+                definition: visible ? (root.page === "event" ? eventDefinition : Modules.pluginId(root.page) ? pluginCardDefinition : moduleRegistry.get(root.page)) : null
                 ink: root.ink
                 surface: root.surface
-                onActionRequested: function(id) {
+                onActionRequested: function (id) {
                     if (Modules.pluginId(root.page)) {
-                        if (id === "open") root.pluginLaunchRequested(Modules.pluginId(root.page));
-                        else if (root.cardState) root.cardState.refresh();
-                    } else moduleRegistry.action(root.page, id);
+                        if (id === "open")
+                            root.pluginLaunchRequested(Modules.pluginId(root.page));
+                        else if (root.cardState)
+                            root.cardState.refresh();
+                    } else
+                        moduleRegistry.action(root.page, id);
                 }
             }
             SettingsView {

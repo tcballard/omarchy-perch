@@ -9,9 +9,11 @@ ColumnLayout {
     property color ink: Color.foreground
     property color surface: Color.background
     signal actionRequested(string id)
+    readonly property real contentHeight: heading.implicitHeight + spacing + (body.item ? body.item.implicitHeight : 0)
     onDefinitionChanged: configuring = false
     spacing: Style.space(8)
     RowLayout {
+        id: heading
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true

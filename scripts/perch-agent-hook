@@ -50,6 +50,7 @@ def project_name(data):
 def report(agent, data):
     if not isinstance(data, dict):
         return None
+    attention = 'attention'
     if agent == 'codex':
         if data.get('type') != 'agent-turn-complete':
             return None
@@ -65,6 +66,7 @@ def report(agent, data):
         if event == 'Notification':
             if data.get('notification_type') not in ('permission_prompt', 'idle_prompt', 'elicitation_dialog'):
                 return None
+            attention = 'approval' if data.get('notification_type') == 'permission_prompt' else 'question'
             state, detail = 'waiting', 'Needs your attention in Claude Code'
         elif event in states:
             state, detail = states[event]
@@ -78,7 +80,9 @@ def report(agent, data):
     return {'id': agent + '.' + key, 'title': project_name(data) or ('Codex' if agent == 'codex' else 'Claude Code'),
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
             'kind': 'agent', 'agent': 'Codex' if agent == 'codex' else 'Claude',
-            'project': project_name(data), 'target': hyprland_target()}
+            'project': project_name(data), 'target': hyprland_target(), 'attention': attention,
+            'eventKey': hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:32]}
+
 
 def main():
     # A stable marker makes setup/removal ownership exact, not substring based.

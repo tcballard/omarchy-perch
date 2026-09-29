@@ -27,7 +27,8 @@ ColumnLayout {
                 required property var modelData
                 text: modelData.label
                 enabled: !!root.state && !root.state.busy
-                ink: root.ink; surface: root.surface
+                ink: root.ink
+                surface: root.surface
                 onClicked: root.state.act(modelData.id)
             }
         }
@@ -35,9 +36,11 @@ ColumnLayout {
     Controls.ScrollView {
         Layout.fillWidth: true
         Layout.fillHeight: true
+        Layout.preferredHeight: Math.min(Style.space(280), rows.implicitHeight)
         clip: true
         contentWidth: availableWidth
         ColumnLayout {
+            id: rows
             width: parent.width
             spacing: Style.space(8)
             Repeater {
@@ -50,7 +53,12 @@ ColumnLayout {
                     color: Qt.alpha(root.ink, 0.05)
                     ColumnLayout {
                         id: rowBody
-                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Style.space(10) }
+                        anchors {
+                            left: parent.left
+                            right: parent.right
+                            top: parent.top
+                            margins: Style.space(10)
+                        }
                         Text {
                             Layout.fillWidth: true
                             text: modelData.title
@@ -74,7 +82,8 @@ ColumnLayout {
                             visible: !!modelData.action
                             text: modelData.action ? modelData.action.label : ""
                             enabled: !!root.state && !root.state.busy
-                            ink: root.ink; surface: root.surface
+                            ink: root.ink
+                            surface: root.surface
                             onClicked: root.state.act(modelData.action.id)
                         }
                     }

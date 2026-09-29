@@ -24,6 +24,14 @@ def evaluate(code):
     assert not e.hasError(), e.error().toString()
     return result[0] if isinstance(result,tuple) else result
 assert evaluate('service.playerKey')=='player.b'
+# Repeated status pulses do not reopen a dismissed event; a new turn does.
+for state, key, count in [('running','',0),('done','one',1),('done','one',1),('done','two',2),('waiting','three',3)]:
+    import json
+    payload=json.dumps({'id':'events.test','state':state,'eventKey':key})
+    evaluate('service.live.activity('+json.dumps(payload)+')')
+    assert evaluate('eventCount') == count
+evaluate('service.live.dismiss("events.test")')
+
 # Native card state ignores responses from an older selection and closed views.
 def card_job_eval(code):
     from PySide6.QtCore import QObject
@@ -208,17 +216,17 @@ for edge in ['top','bottom','left','right']:
     assert visual_eval('notch.implicitHeight') == (238 if edge in ['left','right'] else 52)
     visual_eval('previewState="playing"')
     assert visual_eval('notch.implicitWidth') == 344
-    assert visual_eval('notch.implicitHeight') == 468
+    assert 220 <= visual_eval('notch.implicitHeight') <= 468
     assert visual_eval('notch.rotation') == 0
 visual_eval('notch.settingsOpen=true')
-assert visual_eval('notch.implicitHeight') == 468
+assert 220 <= visual_eval('notch.implicitHeight') <= 468
 # Settings are a separate view; Escape returns to media before dismissing.
 visual_eval('notch.forceActiveFocus()')
 QTest.keyClick(view, Qt.Key_Escape); QTest.qWait(30)
 assert visual_eval('notch.settingsOpen') is False
 assert visual_eval('notch.expanded') is True
 visual_eval('demoMedia.setState("playing")')
-assert visual_eval('notch.implicitHeight') == 468
+assert 220 <= visual_eval('notch.implicitHeight') <= 468
 assert visual_eval('notch.hasPlayer') is True
 playback = visual.findChild(QQuickItem, 'playback')
 assert playback is not None
@@ -257,14 +265,33 @@ QTest.qWait(60)
 assert visual_eval('notch.liveAttention') is True
 assert visual_eval('notch.live.focused.title') == 'Build needs input'
 assert visual_eval('notch.live.attentionItems.length') == 1
-assert visual_eval('notch.implicitHeight') == 380
+one_activity_height = visual_eval('notch.implicitHeight')
+assert 220 <= one_activity_height < 468
 visual_eval('demoMedia.live.activity(JSON.stringify({id:"claude.1",state:"waiting",title:"Perch",detail:"Needs permission",kind:"agent",agent:"Claude",project:"perch",target:"0x123"})); notch.page="activity"')
 QTest.qWait(60)
 assert visual_eval('notch.live.attentionItems.length') == 2
-assert visual_eval('notch.implicitHeight') == 452
+assert one_activity_height < visual_eval('notch.implicitHeight') <= 468
 assert visual_item(visual,'jump-session-claude.1') is not None
 visual_eval('demoMedia.live.dismiss("claude.1")')
 visual_eval('demoMedia.live.dismiss("test"); demoMedia.live.cancel()')
+# Dedicated native event pages fit their content, retain explicit actions and navigate.
+visual_eval('demoMedia.live.activity(JSON.stringify({id:"event.test",state:"waiting",attention:"approval",title:"Perch",detail:"Review a requested tool action",kind:"agent",agent:"Claude",project:"perch",target:"0x123"})); notch.eventId="event.test"; notch.page="event"')
+QTest.qWait(60)
+assert visual_eval('notch.selectedEvent.attention') == 'approval'
+assert 220 <= visual_eval('notch.implicitHeight') < 468
+assert visual_item(visual,'module-tile-music') is None
+assert visual_item(visual,'event-return') is not None
+browse=visual_item(visual,'event-browse'); assert browse is not None
+point=browse.mapToScene(QPointF(browse.width()/2,browse.height()/2)).toPoint()
+QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)
+assert visual_eval('notch.page') == 'activity'
+visual_eval('notch.page="event"; demoMedia.live.activity(JSON.stringify({id:"event.test",state:"done",title:"Perch",detail:"Turn complete"}))')
+QTest.qWait(30)
+assert visual_eval('notch.selectedEvent.state') == 'done'
+assert visual_item(visual,'event-return') is None
+assert visual_item(visual,'event-dismiss') is not None
+visual_eval('notch.page="activity"; demoMedia.live.dismiss("event.test")')
+
 # Load every migrated card, including secondary pages, through the shared host.
 for page in ['music','timer','system','activity','players','lyrics','hub','shelf','calendar','desktop','inbox','setup']:
     visual_eval('notch.page='+repr(page)); QTest.qWait(30)

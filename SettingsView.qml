@@ -297,7 +297,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         ink: root.host.ink
                         surface: root.host.surface
-                        model: ["Hide Perch", "Show completed timers only", "Keep Perch visible"]
+                        model: ["Hide Perch", "Show timer and activity alerts", "Keep Perch visible"]
                         currentIndex: Math.max(0, ["hide", "alerts", "show"].indexOf(root.host.displaySettings.fullscreenPolicy || "hide"))
                         onActivated: index => root.host.preferenceChanged("fullscreenPolicy", ["hide", "alerts", "show"][index])
                         onPopupToggled: open => root.host.popupOpen = open
@@ -325,8 +325,8 @@ ColumnLayout {
                             },
                             {
                                 key: "eventBanners",
-                                title: "Volume and power status",
-                                detail: "Show system feedback in the Devices tile."
+                                title: "Event cards and system status",
+                                detail: "Open new activity alerts while collapsed and show volume/power feedback."
                             }
                         ]
                         delegate: PerchToggle {

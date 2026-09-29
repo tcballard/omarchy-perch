@@ -2,6 +2,11 @@ import QtQuick
 import Quickshell.Services.Mpris
 import ".."
 Item {
+    property int eventCount: 0
+    Connections {
+        target: live.live
+        function onActivityEvent(item) { eventCount++; }
+    }
     property alias service: live
     property alias first: one
     property alias second: two

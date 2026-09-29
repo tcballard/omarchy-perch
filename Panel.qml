@@ -15,6 +15,31 @@ Item {
     property var shell: null
     property var manifest: null
     property var service: null
+    property bool automaticEvent: false
+    function showActivityEvent(item) {
+        if (expanded || demo || !eventBanners || !item || !effectiveScreen || fullscreen && fullscreenPolicy === "hide")
+            return;
+        var payload = JSON.stringify({
+            pointer: true,
+            page: "event",
+            eventId: item.id,
+            automatic: true
+        });
+        if (shell)
+            shell.summon("io.github.tcballard.perch", payload);
+        else
+            open(payload);
+    }
+    function stopAutomaticEvent() {
+        automaticEvent = false;
+        eventTimer.stop();
+    }
+    Connections {
+        target: root.service ? root.service.live : null
+        function onActivityEvent(item) {
+            root.showActivityEvent(item);
+        }
+    }
     property bool opened: false
     property bool expanded: false
     property bool keyboardMode: false
@@ -104,9 +129,11 @@ Item {
     readonly property var effectiveScreen: targetScreen && screens.indexOf(targetScreen) !== -1 ? targetScreen : screens.length ? screens[0] : null
     readonly property var monitor: effectiveScreen ? Hyprland.monitorFor(effectiveScreen) : null
     readonly property bool fullscreen: !!(monitor && monitor.activeWorkspace && monitor.activeWorkspace.hasFullscreen)
-    readonly property bool shown: effectiveScreen !== null && (!fullscreen || fullscreenPolicy === "show" || fullscreenPolicy === "alerts" && media && media.live.timers && media.live.timers.some(function (t) {
-            return t.status === "done";
-        }))
+    readonly property bool shown: effectiveScreen !== null && (!fullscreen || fullscreenPolicy === "show" || fullscreenPolicy === "alerts" && (automaticEvent || media && media.live.timers && media.live.timers.some(function (t) {
+                return t.status === "done";
+            })))
+    onShownChanged: if (!shown && expanded)
+        collapse()
     // Compact surface is present on startup; expanded state is host-managed.
     function open(encoded) {
         var p = Policy.payload(encoded || "{}");
@@ -117,10 +144,19 @@ Item {
                 break;
             }
         }
-        if (fullscreen && fullscreenPolicy !== "show") {
+        var event = p.page === "event" && service && service.live ? service.live.items.find(function (item) {
+            return item.id === p.eventId && item.state !== "running";
+        }) : null;
+        var automatic = !!event && p.automatic === true && p.pointer === true && p.demo !== true;
+        if (automatic && (expanded || !eventBanners))
+            return;
+        if (fullscreen && fullscreenPolicy !== "show" && !(automatic && fullscreenPolicy === "alerts")) {
             collapse();
             return;
         }
+        stopAutomaticEvent();
+        if (view.page === "event")
+            view.page = "activity";
         demo = p.demo === true;
         fixture.setState(p.state);
         keyboardMode = p.pointer !== true;
@@ -128,6 +164,14 @@ Item {
         expanded = true;
         if (["music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup", "clipboard", "stats", "weather"].indexOf(p.page) >= 0)
             view.page = p.page;
+        if (event && !demo) {
+            view.settingsOpen = false;
+            view.eventId = event.id;
+            view.page = "event";
+            automaticEvent = automatic;
+            if (automatic && event.state === "done")
+                eventTimer.restart();
+        }
         focusPrimed = false;
         if (keyboardMode)
             focusPrimeTimer.restart();
@@ -152,6 +196,7 @@ Item {
         edgeRemapTimer.restart();
     }
     function close() {
+        stopAutomaticEvent();
         opened = false;
         expanded = false;
         keyboardMode = false;
@@ -198,7 +243,7 @@ Item {
         else
             open(payload);
     }
-    onFullscreenChanged: if (fullscreen && fullscreenPolicy !== "show")
+    onFullscreenChanged: if (fullscreen && fullscreenPolicy !== "show" && !(automaticEvent && fullscreenPolicy === "alerts"))
         collapse()
     onEffectiveScreenChanged: {
         if (expanded)
@@ -238,15 +283,43 @@ Item {
         id: fixture
     }
     Timer {
+        id: eventTimer
+        interval: 8000
+        onTriggered: {
+            if (!root.automaticEvent)
+                return;
+            if (hover.hovered || view.interactionActive || root.sessionJumpPending)
+                restart();
+            else
+                root.collapse();
+        }
+    }
+    Timer {
         id: leaveTimer
         interval: 220
-        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive && !view.popupOpen && !root.sessionJumpPending)
+        onTriggered: if (!root.automaticEvent && !root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive && !view.popupOpen && !root.sessionJumpPending)
             root.collapse()
     }
     // Dropdown popups sit outside the masked item; a closed popup with the
     // pointer already outside must still start the leave grace.
     Connections {
         target: view
+        function onSelectedEventChanged() {
+            if (!root.automaticEvent)
+                return;
+            if (!view.selectedEvent || view.selectedEvent.state !== "done")
+                eventTimer.stop();
+            else if (!eventTimer.running)
+                eventTimer.restart();
+        }
+        function onPageChanged() {
+            if (view.page !== "event")
+                root.stopAutomaticEvent();
+        }
+        function onSettingsOpenChanged() {
+            if (view.settingsOpen)
+                root.stopAutomaticEvent();
+        }
         function onPopupOpenChanged() {
             if (!view.popupOpen && !hover.hovered && root.expanded && !root.keyboardMode)
                 leaveTimer.restart();
@@ -352,6 +425,12 @@ Item {
             onPluginLaunchRequested: id => root.launchPlugin(id)
             onExpandRequested: root.reveal(true)
             onCollapseRequested: root.collapse()
+            onEventEnded: {
+                if (root.automaticEvent)
+                    root.collapse();
+                else
+                    view.page = "activity";
+            }
             onSettingsChanged: function (hideIdle, reducedMotion, edgeAttached) {
                 if (root.service && root.service.preferences.update({
                     hideIdle: hideIdle,
