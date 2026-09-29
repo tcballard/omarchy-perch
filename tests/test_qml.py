@@ -594,5 +594,24 @@ assert visible_named(visual,'settings-compact-behavior').property('text')=='è¡Œä
 visual_eval('PerchStrings.language="en"')
 assert visible_named(visual,'settings-compact-behavior').property('text')=='Behaviour'
 
+# Long question sets scroll independently while decision controls remain visible.
+request_view=QQuickView();request_view.engine().addImportPath(str(root/'stubs'))
+request_view.setSource(QUrl.fromLocalFile(str(root/'NewCardsReview.qml')))
+assert request_view.status()!=QQuickView.Error,request_view.errors()
+request_view.show();QTest.qWait(60)
+question_card=request_view.rootObject().findChild(QQuickItem,'question-review')
+assert question_card is not None
+for name in ('request-allow','request-deny','request-session'):
+    button=question_card.findChild(QQuickItem,name);assert button is not None and button.isVisible()
+    point=button.mapToItem(question_card,QPointF(0,0))
+    assert 0 <= point.y() and point.y()+button.height() <= question_card.height()+1,(name,point.y(),question_card.height())
+scroll=question_card.findChild(QQuickItem,'request-scroll')
+assert scroll.property('contentHeight') > scroll.height()
+send=question_card.findChild(QQuickItem,'request-allow');assert not send.isEnabled()
+question_card.setProperty('answers',{f'Which option should question {i} use?':'Recommended' for i in range(1,5)})
+assert send.isEnabled()
+question_card.setProperty('answers',{'Which option should question 1 use?':'Recommended'})
+assert not send.isEnabled()
+
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')
