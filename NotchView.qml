@@ -1,9 +1,11 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import qs.Commons
 import "MediaPolicy.js" as Policy
 import "EdgePolicy.js" as Edges
+import "ContextPolicy.js" as Contexts
 
 FocusScope {
     id: root
@@ -15,27 +17,67 @@ FocusScope {
     property string settingsError: ""
     readonly property var live: media ? media.live : null
     readonly property var system: media ? media.system : null
+    readonly property var work: media && media.workspace !== undefined ? media.workspace : null
+    property var displayNames: []
+    property var displaySettings: ({})
+    property real preferredWidth: Style.space(344)
+    property bool interactionActive: false
+    signal dropReceived(var urls)
     readonly property var inbox: media && media.notifications !== undefined ? media.notifications : null
     readonly property var desktop: media && media.desktop !== undefined ? media.desktop : null
     readonly property string notificationPreview: inbox ? inbox.preview : ""
-    onPageChanged: if (page === "inbox" && inbox)
-        inbox.sync()
+    onPageChanged: {
+        if (page === "inbox" && inbox)
+            inbox.sync();
+        if (work) {
+            if (page === "shelf")
+                work.refreshFiles();
+            else if (page === "calendar")
+                work.refreshCalendar();
+            else if (page === "desktop")
+                work.request("app-list", {});
+            else if (page === "setup")
+                work.checkHealth();
+            else if (page === "system")
+                work.request("brightness-get", {});
+        }
+    }
     readonly property bool liveAttention: !!(live && (live.timerStatus === "done" || (live.focused && (live.focused.state === "waiting" || live.focused.state === "error"))))
     readonly property string compactBanner: eventBanners && system ? system.banner : ""
-    readonly property bool busy: hasPlayer || !!(live && live.hasActivity) || compactBanner !== "" || notificationPreview !== ""
-    readonly property string compactText: liveAttention ? live.summary : notificationPreview || compactBanner || (live && live.hasActivity ? live.summary : hasPlayer ? caption : showClock && live ? live.clock : "Perch")
-    readonly property string compactIcon: liveAttention ? "activity" : notificationPreview ? "bell" : compactBanner ? "system" : live && live.timerActive ? "timer" : live && live.focused ? "activity" : playing ? "wave" : hasPlayer ? "music" : showClock ? "timer" : "music"
+    readonly property bool busy: hasPlayer || !!(live && live.hasActivity) || compactBanner !== "" || notificationPreview !== "" || !!(work && work.meetingSummary)
+    property int contextIndex: 0
+    readonly property var contexts: Contexts.contexts(media, eventBanners, showClock)
+    readonly property var context: contexts.length ? contexts[Math.min(contextIndex, contexts.length - 1)] : ({
+            id: "idle",
+            title: "Perch",
+            icon: "music",
+            page: "music",
+            action: "open"
+        })
+    readonly property string compactText: context.title
+    readonly property string compactIcon: context.icon
+    onContextsChanged: if (contextIndex >= contexts.length)
+        contextIndex = 0
     function revealPage() {
-        if (live && live.timerStatus === "done")
-            page = "timer";
-        else if (liveAttention || live && live.focused && !hasPlayer)
-            page = "activity";
-        else if (notificationPreview)
-            page = "inbox";
-        else if (compactBanner)
-            page = "system";
-        else if (live && live.timerActive && !hasPlayer)
-            page = "timer";
+        if (context.timerId && live.chooseTimer)
+            live.chooseTimer(context.timerId);
+        page = context.page;
+    }
+    function compactAction() {
+        if (context.action === "toggle")
+            media.act("toggle");
+        else if (context.action === "pause")
+            live.pause();
+        else if (context.action === "resume")
+            live.resume();
+        else if (context.action === "done") {
+            if (context.timerId && live.chooseTimer)
+                live.chooseTimer(context.timerId);
+            live.cancel();
+        } else {
+            page = context.page;
+            expandRequested();
+        }
     }
     property bool expanded: false
     property bool reducedMotion: false
@@ -53,10 +95,10 @@ FocusScope {
     readonly property bool lightTheme: (Color.background.r + Color.background.g + Color.background.b) > (Color.foreground.r + Color.foreground.g + Color.foreground.b)
     readonly property color surface: lightTheme ? Color.foreground : Color.background
     readonly property color ink: lightTheme ? Color.background : Color.foreground
-    readonly property real expandedWidth: Style.space(344)
-    readonly property real expandedHeight: Style.space(settingsOpen ? 468 : page === "music" ? (hasPlayer ? 270 : 212) : 370)
+    readonly property real expandedWidth: preferredWidth
+    readonly property real expandedHeight: Style.space(settingsOpen ? 468 : page === "music" ? (hasPlayer ? 310 : 212) : 430)
     readonly property real maximumHeight: Style.space(468)
-    implicitWidth: expanded ? expandedWidth : Style.space(sideTab ? 28 : busy ? 208 : 96)
+    implicitWidth: expanded ? expandedWidth : Style.space(sideTab ? 28 : busy ? (context.id === "system" ? 184 : 232) : 96)
     implicitHeight: expanded ? expandedHeight : Style.space(sideTab ? 80 : 30)
     signal preferenceChanged(string key, var value)
     signal edgeRequested(string value)
@@ -66,7 +108,7 @@ FocusScope {
     onExpandedChanged: {
         if (!expanded)
             settingsOpen = false;
-        else
+        else if (page === "music")
             revealPage();
     }
     Keys.onEscapePressed: {
@@ -77,8 +119,56 @@ FocusScope {
         else
             collapseRequested();
     }
+    FileDialog {
+        id: lyricsPicker
+        onVisibleChanged: root.interactionActive = visible
+        nameFilters: ["Lyrics (*.lrc *.txt)"]
+        onAccepted: if (root.media && root.media.loadLyrics)
+            root.media.loadLyrics(String(selectedFile))
+    }
     clip: true
 
+    DropArea {
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+        onEntered: function (drag) {
+            if (drag.hasUrls) {
+                root.page = "shelf";
+                root.expandRequested();
+            }
+        }
+        onDropped: function (drop) {
+            if (drop.hasUrls) {
+                root.dropReceived(drop.urls.map(function (u) {
+                    return String(u);
+                }));
+                drop.acceptProposedAction();
+            }
+        }
+    }
+    // Swipes operate only on the header; sliders and file dragging keep their own gestures.
+    MouseArea {
+        z: 10
+        x: Style.space(18)
+        y: Style.space(4)
+        width: parent.width - Style.space(160)
+        height: Style.space(34)
+        enabled: root.expanded
+        property real startX: 0
+        onPressed: mouse => {
+            startX = mouse.x;
+            root.interactionActive = true;
+        }
+        onReleased: mouse => {
+            root.interactionActive = false;
+            if (Math.abs(mouse.x - startX) > 35) {
+                var pages = ["music", "timer", "system", "activity", "shelf", "calendar", "inbox", "desktop"];
+                var i = pages.indexOf(root.page);
+                root.page = pages[(i + (mouse.x < startX ? 1 : pages.length - 1) + pages.length) % pages.length];
+            }
+        }
+        onCanceled: root.interactionActive = false
+    }
     Rectangle {
         anchors.fill: parent
         color: root.surface
@@ -100,7 +190,9 @@ FocusScope {
         visible: !root.expanded
         Row {
             visible: !root.sideTab
-            anchors.centerIn: parent
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.left: parent.left
+            anchors.leftMargin: Style.space(12)
             spacing: Style.space(10)
             PerchIcon {
                 name: root.compactIcon
@@ -109,7 +201,7 @@ FocusScope {
                 height: width
             }
             Text {
-                width: Style.space(root.busy ? 154 : 40)
+                width: Style.space(root.busy ? (root.context.id === "system" ? 100 : 138) : 40)
                 text: root.compactText
                 textFormat: Text.PlainText
                 color: root.ink
@@ -136,15 +228,37 @@ FocusScope {
                 color: Qt.alpha(root.ink, 0.3)
             }
         }
+        PerchAction {
+            z: 2
+            visible: root.busy && !root.sideTab
+            anchors.right: parent.right
+            anchors.rightMargin: Style.space(5)
+            anchors.verticalCenter: parent.verticalCenter
+            implicitWidth: Style.space(28)
+            implicitHeight: Style.space(24)
+            text: root.context.action === "toggle" ? (root.playing ? "Ⅱ" : "▶") : root.context.action === "pause" ? "Ⅱ" : root.context.action === "resume" ? "▶" : root.context.action === "done" ? "✓" : "›"
+            Accessible.name: root.context.action + " " + root.context.title
+            ink: root.ink
+            surface: root.surface
+            onClicked: root.compactAction()
+        }
         MouseArea {
             anchors.fill: parent
+            onWheel: wheel => {
+                if (root.contexts.length > 1) {
+                    root.contextIndex = (root.contextIndex + (wheel.angleDelta.y < 0 ? 1 : root.contexts.length - 1)) % root.contexts.length;
+                    wheel.accepted = true;
+                }
+            }
             cursorShape: Qt.PointingHandCursor
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton
             onClicked: function (mouse) {
                 if (mouse.button === Qt.MiddleButton && root.hasPlayer)
                     root.media.act("toggle");
-                else
+                else {
+                    root.revealPage();
                     root.expandRequested();
+                }
             }
             Accessible.role: Accessible.Button
             Accessible.name: "Open Perch"
@@ -208,12 +322,12 @@ FocusScope {
             NotchButton {
                 objectName: "open-desktop"
                 glyph: "desktop"
-                label: "Desktop shortcuts"
+                label: "Files, calendar, desktop and setup"
                 ink: root.ink
                 surface: root.surface
                 onClicked: {
                     root.settingsOpen = false;
-                    root.page = "desktop";
+                    root.page = "hub";
                 }
             }
             NotchButton {
@@ -256,6 +370,97 @@ FocusScope {
                 }
             }
         }
+        GridLayout {
+            visible: !root.settingsOpen && root.page === "hub"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            columns: 2
+            rowSpacing: Style.space(10)
+            columnSpacing: Style.space(10)
+            Repeater {
+                model: [
+                    {
+                        id: "shelf",
+                        label: "File shelf"
+                    },
+                    {
+                        id: "calendar",
+                        label: "Calendar"
+                    },
+                    {
+                        id: "desktop",
+                        label: "Desktop"
+                    },
+                    {
+                        id: "inbox",
+                        label: "Notifications"
+                    },
+                    {
+                        id: "setup",
+                        label: "Setup & health"
+                    },
+                    {
+                        id: "activity",
+                        label: "Live activities"
+                    }
+                ]
+                delegate: PerchAction {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    implicitHeight: Style.space(54)
+                    text: modelData.label
+                    ink: root.ink
+                    surface: root.surface
+                    onClicked: root.page = modelData.id
+                }
+            }
+        }
+        ShelfView {
+            onInteractionChanged: active => root.interactionActive = active
+            visible: !root.settingsOpen && root.page === "shelf"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            height: parent.height - Style.space(142)
+            work: root.work
+            ink: root.ink
+            surface: root.surface
+        }
+        CalendarView {
+            onInteractionChanged: active => root.interactionActive = active
+            visible: !root.settingsOpen && root.page === "calendar"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            height: parent.height - Style.space(142)
+            work: root.work
+            ink: root.ink
+            surface: root.surface
+        }
+        SetupView {
+            visible: !root.settingsOpen && root.page === "setup"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            height: parent.height - Style.space(142)
+            work: root.work
+            ink: root.ink
+            surface: root.surface
+        }
+        Text {
+            x: Style.space(18)
+            y: parent.height - Style.space(38)
+            width: parent.width - Style.space(36)
+            visible: !root.settingsOpen && ["shelf", "calendar", "setup"].indexOf(root.page) >= 0
+            text: root.work ? (root.work.busy ? "Working…" : root.work.error || root.work.message) : "Demo: integration unavailable"
+            textFormat: Text.PlainText
+            wrapMode: Text.WordWrap
+            maximumLineCount: 2
+            elide: Text.ElideRight
+            color: Qt.alpha(root.ink, 0.6)
+            font.pixelSize: Style.space(10)
+        }
         InboxView {
             visible: !root.settingsOpen && root.page === "inbox"
             x: Style.space(18)
@@ -266,11 +471,32 @@ FocusScope {
             ink: root.ink
             surface: root.surface
         }
+        Controls.ScrollView {
+            visible: !root.settingsOpen && root.page === "lyrics"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            height: parent.height - Style.space(110)
+            clip: true
+            contentWidth: availableWidth
+            Text {
+                width: parent.width
+                text: root.media && root.media.plainLyrics ? root.media.plainLyrics : root.media && root.media.lyrics ? root.media.lyrics.map(function (l) {
+                    return l.text;
+                }).join("\n") : "Choose a lyrics file from the music page."
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                color: root.ink
+                font.pixelSize: Style.space(13)
+            }
+        }
         DesktopView {
+            height: parent.height - Style.space(110)
             visible: !root.settingsOpen && root.page === "desktop"
             x: Style.space(18)
             y: Style.space(94)
             width: parent.width - Style.space(36)
+            work: root.work
             desktop: root.desktop
             ink: root.ink
             surface: root.surface
@@ -281,6 +507,7 @@ FocusScope {
             x: Style.space(18)
             y: Style.space(94)
             width: parent.width - Style.space(36)
+            height: parent.height - Style.space(110)
             live: root.live
             ink: root.ink
             surface: root.surface
@@ -290,6 +517,8 @@ FocusScope {
             x: Style.space(18)
             y: Style.space(94)
             width: parent.width - Style.space(36)
+            height: parent.height - Style.space(110)
+            work: root.work
             system: root.system
             ink: root.ink
             surface: root.surface
@@ -467,6 +696,42 @@ FocusScope {
                     font.pixelSize: Style.space(9)
                 }
             }
+            RowLayout {
+                Layout.fillWidth: true
+                Text {
+                    Layout.fillWidth: true
+                    text: root.media && root.media.lyricLine !== undefined ? root.media.lyricLine : ""
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    color: Qt.alpha(root.ink, 0.65)
+                    font.pixelSize: Style.space(11)
+                }
+                RowLayout {
+                    PerchAction {
+                        text: "Load lyrics"
+                        ink: root.ink
+                        surface: root.surface
+                        enabled: root.hasPlayer && !root.demo
+                        onClicked: lyricsPicker.open()
+                    }
+                    PerchAction {
+                        text: "Read lyrics"
+                        ink: root.ink
+                        surface: root.surface
+                        enabled: !!root.media && !!root.media.lyrics && root.media.lyrics.length > 0
+                        onClicked: root.page = "lyrics"
+                    }
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: text !== ""
+                text: root.media && root.media.mediaError !== undefined ? root.media.mediaError : ""
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+                color: Qt.alpha(root.ink, 0.5)
+                font.pixelSize: Style.space(10)
+            }
             Text {
                 visible: text !== ""
                 Layout.fillWidth: true
@@ -477,95 +742,195 @@ FocusScope {
                 elide: Text.ElideRight
             }
         }
-        ColumnLayout {
+        Controls.ScrollView {
             visible: root.settingsOpen
-            anchors {
-                left: parent.left
-                right: parent.right
-                top: parent.top
-                margins: Style.space(18)
-                topMargin: Style.space(54)
-            }
-            spacing: Style.space(14)
-            Text {
-                text: "Screen edge"
-                color: root.ink
-                font.family: Style.font.family
-                font.pixelSize: Style.space(12)
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Style.space(4)
-                Repeater {
-                    model: ["top", "bottom", "left", "right"]
-                    delegate: Controls.Button {
-                        required property string modelData
-                        objectName: "edge-" + modelData
+            x: Style.space(18)
+            y: Style.space(54)
+            width: parent.width - Style.space(36)
+            height: parent.height - Style.space(70)
+            clip: true
+            contentWidth: availableWidth
+            ColumnLayout {
+                width: parent.width
+                spacing: Style.space(14)
+                Text {
+                    text: "Display"
+                    color: root.ink
+                    font.pixelSize: Style.space(12)
+                }
+                Controls.ComboBox {
+                    Layout.fillWidth: true
+                    model: ["Follow focused display"].concat(root.displayNames)
+                    currentIndex: Math.max(0, root.displayNames.indexOf(root.displaySettings.monitor || "") + 1)
+                    palette.button: root.surface
+                    palette.buttonText: root.ink
+                    palette.text: root.ink
+                    palette.base: root.surface
+                    onActivated: index => root.preferenceChanged("monitor", index === 0 ? "" : root.displayNames[index - 1])
+                }
+                Controls.CheckBox {
+                    Layout.fillWidth: true
+                    text: "Save placement separately for each display"
+                    checked: root.displaySettings.perDisplay === true
+                    palette.windowText: root.ink
+                    onToggled: root.preferenceChanged("perDisplay", checked)
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
                         Layout.fillWidth: true
-                        implicitHeight: Style.space(34)
-                        text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                        Accessible.name: "Use " + modelData + " screen edge"
-                        background: Rectangle {
-                            radius: Style.space(7)
-                            color: root.edge === modelData ? root.ink : Qt.alpha(root.ink, parent.hovered ? 0.14 : 0.06)
+                        text: "Panel width"
+                        color: root.ink
+                        font.pixelSize: Style.space(11)
+                    }
+                    Controls.SpinBox {
+                        from: 304
+                        to: 544
+                        stepSize: 40
+                        value: root.displaySettings.panelWidth || 344
+                        palette.text: root.ink
+                        palette.buttonText: root.ink
+                        palette.base: root.surface
+                        palette.button: root.surface
+                        onValueModified: root.preferenceChanged("panelWidth", value)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Extra edge spacing"
+                        color: root.ink
+                        font.pixelSize: Style.space(11)
+                    }
+                    Controls.SpinBox {
+                        from: 0
+                        to: 64
+                        stepSize: 4
+                        value: root.displaySettings.edgeOffset || 0
+                        palette.text: root.ink
+                        palette.buttonText: root.ink
+                        palette.base: root.surface
+                        palette.button: root.surface
+                        onValueModified: root.preferenceChanged("edgeOffset", value)
+                    }
+                }
+                Text {
+                    text: "During fullscreen"
+                    color: root.ink
+                    font.pixelSize: Style.space(11)
+                }
+                Controls.ComboBox {
+                    Layout.fillWidth: true
+                    model: ["Hide Perch", "Show completed timers only", "Keep Perch visible"]
+                    currentIndex: Math.max(0, ["hide", "alerts", "show"].indexOf(root.displaySettings.fullscreenPolicy || "hide"))
+                    palette.button: root.surface
+                    palette.buttonText: root.ink
+                    palette.text: root.ink
+                    palette.base: root.surface
+                    onActivated: index => root.preferenceChanged("fullscreenPolicy", ["hide", "alerts", "show"][index])
+                }
+                Controls.CheckBox {
+                    Layout.fillWidth: true
+                    text: "Timer completion sound"
+                    checked: root.displaySettings.timerSound === true
+                    palette.windowText: root.ink
+                    onToggled: root.preferenceChanged("timerSound", checked)
+                }
+                Controls.CheckBox {
+                    Layout.fillWidth: true
+                    text: "Timer desktop notifications"
+                    checked: root.displaySettings.timerNotifications === true
+                    palette.windowText: root.ink
+                    onToggled: root.preferenceChanged("timerNotifications", checked)
+                }
+                Controls.CheckBox {
+                    Layout.fillWidth: true
+                    text: "Fetch remote cover artwork"
+                    checked: root.displaySettings.remoteArtwork === true
+                    palette.windowText: root.ink
+                    onToggled: root.preferenceChanged("remoteArtwork", checked)
+                }
+                Text {
+                    text: "Screen edge"
+                    color: root.ink
+                    font.family: Style.font.family
+                    font.pixelSize: Style.space(12)
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Style.space(4)
+                    Repeater {
+                        model: ["top", "bottom", "left", "right"]
+                        delegate: Controls.Button {
+                            required property string modelData
+                            objectName: "edge-" + modelData
+                            Layout.fillWidth: true
+                            implicitHeight: Style.space(34)
+                            text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                            Accessible.name: "Use " + modelData + " screen edge"
+                            background: Rectangle {
+                                radius: Style.space(7)
+                                color: root.edge === modelData ? root.ink : Qt.alpha(root.ink, parent.hovered ? 0.14 : 0.06)
+                                border.width: parent.visualFocus ? 1 : 0
+                                border.color: root.ink
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                color: root.edge === modelData ? root.surface : root.ink
+                                font.pixelSize: Style.space(11)
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            onClicked: root.edgeRequested(modelData)
+                        }
+                    }
+                }
+                Repeater {
+                    model: ["Hide when idle", "Reduce motion", "Attach flush to screen edge", "Clock when idle", "Open on hover", "Volume and power banners"]
+                    delegate: Controls.CheckBox {
+                        required property int index
+                        required property string modelData
+                        Layout.fillWidth: true
+                        implicitHeight: Style.space(30)
+                        text: modelData
+                        checked: index === 0 ? root.hideIdle : index === 1 ? root.reducedMotion : index === 2 ? root.edgeAttached : index === 3 ? root.showClock : index === 4 ? root.hoverOpen : root.eventBanners
+                        indicator: Rectangle {
+                            x: parent.width - width
+                            y: (parent.height - height) / 2
+                            width: Style.space(28)
+                            height: Style.space(16)
+                            radius: height / 2
+                            color: parent.checked ? root.ink : Qt.alpha(root.ink, 0.18)
                             border.width: parent.visualFocus ? 1 : 0
                             border.color: root.ink
+                            Rectangle {
+                                x: parent.parent.checked ? parent.width - width - 3 : 3
+                                y: 3
+                                width: parent.height - 6
+                                height: width
+                                radius: width / 2
+                                color: parent.parent.checked ? root.surface : root.ink
+                            }
                         }
                         contentItem: Text {
                             text: parent.text
-                            color: root.edge === modelData ? root.surface : root.ink
+                            color: root.ink
+                            font.family: Style.font.family
                             font.pixelSize: Style.space(11)
-                            horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
+                            rightPadding: Style.space(36)
                         }
-                        onClicked: root.edgeRequested(modelData)
+                        onToggled: root.preferenceChanged(["hideIdle", "reducedMotion", "edgeAttached", "showClock", "hoverOpen", "eventBanners"][index], checked)
                     }
                 }
-            }
-            Repeater {
-                model: ["Hide when idle", "Reduce motion", "Attach flush to screen edge", "Clock when idle", "Open on hover", "Volume and power banners"]
-                delegate: Controls.CheckBox {
-                    required property int index
-                    required property string modelData
+                Text {
                     Layout.fillWidth: true
-                    implicitHeight: Style.space(30)
-                    text: modelData
-                    checked: index === 0 ? root.hideIdle : index === 1 ? root.reducedMotion : index === 2 ? root.edgeAttached : index === 3 ? root.showClock : index === 4 ? root.hoverOpen : root.eventBanners
-                    indicator: Rectangle {
-                        x: parent.width - width
-                        y: (parent.height - height) / 2
-                        width: Style.space(28)
-                        height: Style.space(16)
-                        radius: height / 2
-                        color: parent.checked ? root.ink : Qt.alpha(root.ink, 0.18)
-                        border.width: parent.visualFocus ? 1 : 0
-                        border.color: root.ink
-                        Rectangle {
-                            x: parent.parent.checked ? parent.width - width - 3 : 3
-                            y: 3
-                            width: parent.height - 6
-                            height: width
-                            radius: width / 2
-                            color: parent.parent.checked ? root.surface : root.ink
-                        }
-                    }
-                    contentItem: Text {
-                        text: parent.text
-                        color: root.ink
-                        font.family: Style.font.family
-                        font.pixelSize: Style.space(11)
-                        verticalAlignment: Text.AlignVCenter
-                        rightPadding: Style.space(36)
-                    }
-                    onToggled: root.preferenceChanged(["hideIdle", "reducedMotion", "edgeAttached", "showClock", "hoverOpen", "eventBanners"][index], checked)
+                    wrapMode: Text.WordWrap
+                    text: root.settingsError || (root.demo ? "Preferences apply to Perch, including demo." : "Saved automatically in Omarchy settings.")
+                    color: Qt.alpha(root.ink, 0.4)
+                    font.pixelSize: Style.space(10)
                 }
-            }
-            Text {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                text: root.settingsError || (root.demo ? "Preferences apply to Perch, including demo." : "Saved automatically in Omarchy settings.")
-                color: Qt.alpha(root.ink, 0.4)
-                font.pixelSize: Style.space(10)
             }
         }
     }

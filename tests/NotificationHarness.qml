@@ -6,6 +6,10 @@ Item {
     Companion.Service { id: daemon }
     QtObject {
         id: notification
+        property string lastReply:""
+        function sendInlineReply(text){lastReply=text;}
+        property bool hasInlineReply:false
+        property string appIcon:"test-app"
         property bool tracked: false
         property string appName: "Test app"
         property string summary: "Hello"

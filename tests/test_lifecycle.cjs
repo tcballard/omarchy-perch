@@ -3,7 +3,7 @@ const source=fs.readFileSync(require('node:path').join(__dirname,'../Panel.qml')
 const policy=require('../MediaPolicy.js');
 const clock=()=>({running:false,restart(){this.running=true},stop(){this.running=false}});
 const screen={name:'eDP-1'};
-const c={Policy:policy,Edges:require("../EdgePolicy.js"),edge:"top",edgeRemapping:false,edgeRemapTimer:clock(),Qt:{callLater:f=>f()},Hyprland:{focusedMonitor:{name:'eDP-1'}},fixture:{state:'',setState(s){this.state=s}},view:{focused:0,forceActiveFocus(){this.focused++}},screens:[screen],fullscreen:false,targetScreen:null,opened:false,expanded:false,keyboardMode:false,demo:false,focusPrimed:false,hoverTimer:clock(),leaveTimer:clock(),focusPrimeTimer:clock(),shell:null,service:null};
+const c={Policy:policy,Edges:require("../EdgePolicy.js"),edge:"top",monitorName:"",fullscreenPolicy:"hide",edgeRemapping:false,edgeRemapTimer:clock(),Qt:{callLater:f=>f()},Hyprland:{focusedMonitor:{name:'eDP-1'}},fixture:{state:'',setState(s){this.state=s}},view:{focused:0,forceActiveFocus(){this.focused++}},screens:[screen],fullscreen:false,targetScreen:null,opened:false,expanded:false,keyboardMode:false,demo:false,focusPrimed:false,hoverTimer:clock(),leaveTimer:clock(),focusPrimeTimer:clock(),shell:null,service:null};
 vm.createContext(c);
 for(const name of ['open','close','collapse','reveal','setEdge']) {
  const match=source.match(new RegExp('    function '+name+'\\([^]*?\\n    }'));
@@ -34,3 +34,6 @@ c.setEdge('invalid');assert.equal(c.edge,'top');
 c.close(); c.targetScreen=screen; c.screens=[screen,{name:"HDMI-A-1"}]; c.Hyprland.focusedMonitor={name:"HDMI-A-1"};
 c.open('{"pointer":true}'); assert.equal(c.targetScreen.name,"eDP-1");
 c.open("{}"); assert.equal(c.targetScreen.name,"HDMI-A-1");
+
+c.monitorName="eDP-1";c.targetScreen=screen;c.open("{}");assert.equal(c.targetScreen,screen);
+c.fullscreen=true;c.fullscreenPolicy="show";c.open("{}");assert.equal(c.expanded,true);

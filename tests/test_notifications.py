@@ -40,4 +40,12 @@ assert evaluate('service.preview')==''
 evaluate('service.clearAll()')
 assert evaluate('service.rows.length')==0
 assert evaluate('Object.keys(service.refs).length')==0
+evaluate('notice.hasInlineReply=true;service.receive(notice)')
+key=evaluate('service.rows[0].key')
+assert evaluate('service.replyTo("stale",'+repr(key)+',"hello")')=='error: invalid reply'
+assert evaluate('service.replyTo(service.session,'+repr(key)+',"hello")')=='ok'
+assert evaluate('notice.lastReply')=='hello'
+assert evaluate('service.replyTo(service.session,'+repr(key)+',"again")')=='error: expired'
+evaluate('service.receive(notice);service.markRead()')
+assert evaluate('service.rows[0].unread') is False
 print('Notification QML: replacement, generation guards, native actions, expiry, transient cleanup and DND passed (host stubs).')

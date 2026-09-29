@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""Run an explicitly requested build, download or file copy with Perch progress."""
+import argparse
+import json
+import os
+from pathlib import Path
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+from urllib.parse import urlsplit
+
+class Reporter:
+    def __init__(self,title):
+        self.title=title[:120];self.id='task.'+str(os.getpid());self.last=0
+    def send(self,state='running',progress=-1,detail='',force=False):
+        now=time.monotonic()
+        if not force and now-self.last<1:return
+        self.last=now
+        payload={'id':self.id,'title':self.title,'state':state,'progress':progress,'detail':detail[:240],'ttl':86400 if state=='running' else 60}
+        try:subprocess.run(['omarchy-shell','io.github.tcballard.perch','activity',json.dumps(payload)],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=1)
+        except (OSError,subprocess.TimeoutExpired):pass
+
+class Redirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,req,fp,code,msg,headers,newurl):
+        check_url(newurl)
+        if urlsplit(req.full_url).scheme=='https' and urlsplit(newurl).scheme!='https':raise ValueError('HTTPS downgrade refused')
+        return super().redirect_request(req,fp,code,msg,headers,newurl)
+
+def check_url(url):
+    u=urlsplit(url)
+    if u.scheme not in ('http','https') or not u.hostname or u.username or u.password or any(ord(c)<32 for c in url):raise ValueError('Use an HTTP(S) URL without credentials')
+
+def transfer(source,destination,report,limit,download=False):
+    destination=Path(destination).expanduser().absolute()
+    if destination.exists() or destination.is_symlink():raise ValueError('Destination already exists')
+    if download:
+        check_url(source)
+        stream=urllib.request.build_opener(Redirects()).open(source,timeout=10)
+        total=int(stream.headers.get('Content-Length','0'))
+    else:
+        fd=os.open(Path(source).expanduser(),os.O_RDONLY|os.O_NONBLOCK)
+        stream=os.fdopen(fd,'rb');st=os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):stream.close();raise ValueError('Copy source must be a regular file')
+        total=st.st_size
+    temporary=None
+    try:
+        if total>limit:raise ValueError('Transfer exceeds size limit')
+        fd,temporary=tempfile.mkstemp(prefix='.perch-transfer-',dir=destination.parent)
+        count=0
+        with os.fdopen(fd,'wb') as out:
+            while True:
+                chunk=stream.read(262144)
+                if not chunk:break
+                count+=len(chunk)
+                if count>limit:raise ValueError('Transfer exceeds size limit')
+                out.write(chunk)
+                report.send(progress=min(1,count/total) if total else -1,detail=f'{count:,} bytes')
+            out.flush();os.fsync(out.fileno())
+        if total and total!=count:raise ValueError('Transfer ended before its advertised size')
+        # Atomic publication without overwriting a file created during the transfer.
+        os.link(temporary,destination)
+        return 0
+    finally:
+        stream.close()
+        if temporary:os.unlink(temporary)
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--title',default='Task')
+    parser.add_argument('--timeout',type=int,default=3600,help='Whole job deadline, 1–86400 seconds')
+    parser.add_argument('--max-bytes',type=int,default=1073741824,help='Transfer size cap (default 1 GiB)')
+    sub=parser.add_subparsers(dest='kind',required=True)
+    run=sub.add_parser('run');run.add_argument('command',nargs=argparse.REMAINDER)
+    for verb in ('copy','download'):
+        p=sub.add_parser(verb);p.add_argument('source');p.add_argument('destination')
+    args=parser.parse_args()
+    if not 1<=args.timeout<=86400 or not 1<=args.max_bytes<=1099511627776:parser.error('Invalid deadline or transfer limit')
+    report=Reporter(args.title);child=None
+    def stop(sig,frame):raise InterruptedError('Job cancelled or timed out')
+    for sig in (signal.SIGTERM,signal.SIGINT,signal.SIGALRM):signal.signal(sig,stop)
+    signal.alarm(args.timeout);report.send(force=True)
+    try:
+        if args.kind=='run':
+            command=args.command[1:] if args.command[:1]==['--'] else args.command
+            if not command:raise ValueError('Supply a command after run --')
+            child=subprocess.Popen(command,start_new_session=True)
+            result=child.wait()
+            if result<0:result=128-result
+        else:result=transfer(args.source,args.destination,report,args.max_bytes,args.kind=='download')
+        report.send('done' if result==0 else 'error',1 if result==0 else -1,'Completed' if result==0 else f'Exited {result}',True)
+        return result
+    except (OSError,ValueError) as error:
+        report.send('error',detail=str(error),force=True)
+        print(f'Perch: {error}',file=sys.stderr)
+        return 130 if isinstance(error,InterruptedError) else 1
+    finally:
+        signal.alarm(0)
+        if child:
+            try:os.killpg(child.pid,signal.SIGTERM)
+            except ProcessLookupError:pass
+            try:child.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                try:os.killpg(child.pid,signal.SIGKILL)
+                except ProcessLookupError:pass
+                child.wait()
+            try:os.killpg(child.pid,signal.SIGKILL)
+            except ProcessLookupError:pass
+
+if __name__=='__main__':sys.exit(main())

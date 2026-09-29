@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Ui
 import "MediaPolicy.js" as Policy
 import "EdgePolicy.js" as Edges
+import "PreferencesPolicy.js" as Prefs
 
 Item {
     id: root
@@ -21,8 +22,13 @@ Item {
     property bool reducedMotion: false
     property bool edgeAttached: false
     property string edge: "top"
+    property string monitorName: ""
+    property real panelWidth: 344
+    property real edgeOffset: 0
+    property string fullscreenPolicy: "hide"
+    property bool perDisplay: false
     property bool edgeRemapping: false
-    readonly property real edgeInset: Edges.inset(edge, edgeAttached, shell && shell.bar ? shell.bar.position : "top", shell && shell.bar ? shell.bar.barHidden : false, shell && shell.bar ? shell.bar.barSize : Style.bar.sizeHorizontal, Style.space(8))
+    readonly property real edgeInset: Edges.inset(edge, edgeAttached, shell && shell.bar ? shell.bar.position : "top", shell && shell.bar ? shell.bar.barHidden : false, shell && shell.bar ? shell.bar.barSize : Style.bar.sizeHorizontal, Style.space(8)) + Style.space(edgeOffset)
     property bool showClock: true
     property bool hoverOpen: true
     property bool eventBanners: true
@@ -30,6 +36,24 @@ Item {
         if (!service || !service.preferences.ready)
             return;
         var p = service.preferences.values;
+        monitorName = p.monitor;
+        if (monitorName) {
+            var pinned = screens.find(function (s) {
+                return s.name === root.monitorName;
+            });
+            if (pinned)
+                targetScreen = pinned;
+        }
+        perDisplay = p.perDisplay;
+        var profiles = service.preferences.record.displayProfiles || {};
+        var own = effectiveScreen && profiles[effectiveScreen.name];
+        if (perDisplay && own) {
+            p = Prefs.clean(Object.assign({}, p, own));
+        }
+        panelWidth = p.panelWidth;
+        edgeOffset = p.edgeOffset;
+        fullscreenPolicy = p.fullscreenPolicy;
+        view.displaySettings = Object.assign({}, service.preferences.values, p);
         if (edge !== p.edge)
             setEdge(p.edge, false);
         hideIdle = p.hideIdle;
@@ -43,7 +67,14 @@ Item {
         if (!service)
             return false;
         var patch = {};
-        patch[key] = value;
+        if (perDisplay && effectiveScreen && ["edge", "panelWidth", "edgeOffset", "fullscreenPolicy"].indexOf(key) >= 0) {
+            var profiles = Object.assign({}, service.preferences.record.displayProfiles || {});
+            var profile = Object.assign({}, profiles[effectiveScreen.name] || {});
+            profile[key] = value;
+            profiles[effectiveScreen.name] = profile;
+            patch.displayProfiles = profiles;
+        } else
+            patch[key] = value;
         if (!service.preferences.update(patch))
             return false;
         applyPreferences();
@@ -63,18 +94,20 @@ Item {
     readonly property var effectiveScreen: targetScreen && screens.indexOf(targetScreen) !== -1 ? targetScreen : screens.length ? screens[0] : null
     readonly property var monitor: effectiveScreen ? Hyprland.monitorFor(effectiveScreen) : null
     readonly property bool fullscreen: !!(monitor && monitor.activeWorkspace && monitor.activeWorkspace.hasFullscreen)
-    readonly property bool shown: effectiveScreen !== null && !fullscreen && (expanded || !hideIdle || (media && (media.state !== "empty" || media.live.hasActivity || (media.notifications && media.notifications.preview !== "") || eventBanners && media.system.banner !== "")))
+    readonly property bool shown: effectiveScreen !== null && (!fullscreen || fullscreenPolicy === "show" || fullscreenPolicy === "alerts" && media && media.live.timers && media.live.timers.some(function (t) {
+            return t.status === "done";
+        })) && (expanded || !hideIdle || (media && (media.state !== "empty" || media.live.hasActivity || (media.notifications && media.notifications.preview !== "") || (media.workspace && media.workspace.meetingSummary !== "") || eventBanners && media.system.banner !== "")))
     // Compact surface is present on startup; expanded state is host-managed.
     function open(encoded) {
         var p = Policy.payload(encoded || "{}");
         var focused = Hyprland.focusedMonitor;
-        for (var i = 0; p.pointer !== true && focused && i < screens.length; i++) {
+        for (var i = 0; p.pointer !== true && !monitorName && focused && i < screens.length; i++) {
             if (screens[i].name === focused.name) {
                 targetScreen = screens[i];
                 break;
             }
         }
-        if (fullscreen) {
+        if (fullscreen && fullscreenPolicy !== "show") {
             collapse();
             return;
         }
@@ -83,7 +116,7 @@ Item {
         keyboardMode = p.pointer !== true;
         opened = true;
         expanded = true;
-        if (["music", "timer", "system", "activity", "players", "inbox", "desktop"].indexOf(p.page) >= 0)
+        if (["music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup"].indexOf(p.page) >= 0)
             view.page = p.page;
         focusPrimed = false;
         if (keyboardMode)
@@ -95,10 +128,10 @@ Item {
     }
     function setEdge(value, persist) {
         var next = Edges.edge(value);
-        if (persist !== false && service && !service.preferences.update({
-            edge: next
-        }))
+        if (persist !== false && service) {
+            savePreference("edge", next);
             return;
+        }
         if (next === edge)
             return;
         hoverTimer.stop();
@@ -134,14 +167,18 @@ Item {
         else
             open(payload);
     }
-    onFullscreenChanged: if (fullscreen)
+    onFullscreenChanged: if (fullscreen && fullscreenPolicy !== "show")
         collapse()
-    onEffectiveScreenChanged: if (expanded)
-        collapse()
+    onEffectiveScreenChanged: {
+        if (expanded)
+            collapse();
+        if (service && service.preferences.ready)
+            Qt.callLater(root.applyPreferences);
+    }
     HyprlandFocusGrab {
-        active: root.shown && root.expanded && root.keyboardMode && root.focusPrimed
+        active: root.shown && root.expanded && root.keyboardMode && root.focusPrimed && !view.interactionActive
         windows: [notchWindow]
-        onCleared: if (!root.edgeRemapping && !remapGuard.remapping)
+        onCleared: if (!root.edgeRemapping && !remapGuard.remapping && !view.interactionActive)
             root.collapse()
     }
     Timer {
@@ -171,7 +208,7 @@ Item {
     Timer {
         id: leaveTimer
         interval: 220
-        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered)
+        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive)
             root.collapse()
     }
     Timer {
@@ -244,6 +281,15 @@ Item {
                     }
                 }
             }
+            onDropReceived: urls => {
+                if (!root.demo && root.service)
+                    root.service.workspace.addFiles(urls);
+                view.page = "shelf";
+            }
+            displayNames: root.screens.map(function (s) {
+                return s.name;
+            })
+            preferredWidth: Math.min(Style.space(root.panelWidth), root.effectiveScreen ? root.effectiveScreen.width - Style.space(24) : Style.space(root.panelWidth))
             media: root.media
             expanded: root.expanded
             reducedMotion: root.reducedMotion

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
+import Quickshell
 import qs.Commons
 
 ColumnLayout {
@@ -8,6 +9,13 @@ ColumnLayout {
     property var inbox: null
     property color ink: Color.foreground
     property color surface: Color.background
+    property string appFilter: ""
+    readonly property var apps: inbox ? Array.from(new Set(inbox.items.map(function (r) {
+        return r.app;
+    }))).sort() : []
+    readonly property var filtered: inbox ? inbox.items.filter(function (r) {
+        return !root.appFilter || r.app === root.appFilter;
+    }) : []
     spacing: Style.space(8)
     RowLayout {
         Layout.fillWidth: true
@@ -61,6 +69,35 @@ ColumnLayout {
         color: Qt.alpha(root.ink, 0.6)
         font.pixelSize: Style.space(13)
     }
+    RowLayout {
+        Layout.fillWidth: true
+        Controls.ComboBox {
+            Layout.fillWidth: true
+            model: ["All applications"].concat(root.apps)
+            palette.button: root.surface
+            palette.buttonText: root.ink
+            palette.text: root.ink
+            palette.base: root.surface
+            onActivated: index => root.appFilter = index === 0 ? "" : root.apps[index - 1]
+            Accessible.name: "Filter notifications by app"
+        }
+        PerchAction {
+            text: root.inbox && root.inbox.blocked && root.inbox.blocked.indexOf(root.appFilter) >= 0 ? "Unmute app" : "Mute app"
+            visible: root.appFilter !== ""
+            enabled: !!root.inbox && root.inbox.connected && !root.inbox.busy
+            ink: root.ink
+            surface: root.surface
+            onClicked: root.inbox.block(root.appFilter, root.inbox.blocked.indexOf(root.appFilter) < 0)
+        }
+        PerchAction {
+            text: "Read"
+            Accessible.name: "Mark all notifications read"
+            enabled: !!root.inbox && root.inbox.connected && !root.inbox.busy
+            ink: root.ink
+            surface: root.surface
+            onClicked: root.inbox.markRead()
+        }
+    }
     Controls.ScrollView {
         Layout.fillWidth: true
         Layout.fillHeight: true
@@ -70,8 +107,9 @@ ColumnLayout {
             width: parent.width
             spacing: Style.space(8)
             Repeater {
-                model: root.inbox ? root.inbox.items : []
+                model: root.filtered
                 delegate: Rectangle {
+                    id: notificationCard
                     required property var modelData
                     Layout.fillWidth: true
                     implicitHeight: card.implicitHeight + Style.space(20)
@@ -85,6 +123,14 @@ ColumnLayout {
                         spacing: Style.space(6)
                         RowLayout {
                             Layout.fillWidth: true
+                            Image {
+                                Layout.preferredWidth: Style.space(16)
+                                Layout.preferredHeight: Style.space(16)
+                                source: modelData.icon ? Quickshell.iconPath(modelData.icon) : ""
+                                sourceSize.width: 32
+                                sourceSize.height: 32
+                                visible: source.toString() !== ""
+                            }
                             Text {
                                 Layout.fillWidth: true
                                 text: modelData.app || "Notification"
@@ -103,7 +149,7 @@ ColumnLayout {
                         }
                         Text {
                             Layout.fillWidth: true
-                            text: modelData.title
+                            text: (modelData.unread ? "• " : "") + modelData.title
                             textFormat: Text.PlainText
                             wrapMode: Text.WordWrap
                             color: root.ink
@@ -118,6 +164,26 @@ ColumnLayout {
                             wrapMode: Text.WordWrap
                             color: Qt.alpha(root.ink, 0.65)
                             font.pixelSize: Style.space(11)
+                        }
+                        RowLayout {
+                            visible: notificationCard.modelData.reply === true
+                            Layout.fillWidth: true
+                            Controls.TextField {
+                                id: reply
+                                Layout.fillWidth: true
+                                maximumLength: 1000
+                                placeholderText: "Reply to this notification"
+                                color: root.ink
+                                palette.base: root.surface
+                                Accessible.name: "Notification reply"
+                            }
+                            PerchAction {
+                                text: "Send"
+                                ink: root.ink
+                                surface: root.surface
+                                enabled: reply.text.trim() !== "" && !!root.inbox && !root.inbox.busy
+                                onClicked: root.inbox.replyTo(notificationCard.modelData.key, reply.text)
+                            }
                         }
                         Flow {
                             Layout.fillWidth: true

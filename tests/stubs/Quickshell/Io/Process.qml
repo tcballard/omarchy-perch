@@ -1,5 +1,7 @@
 import QtQuick
 QtObject {
+    property bool stdinEnabled:false
+    function write(data) {}
     property bool running: false
     property var command: []
     property QtObject stdout: null

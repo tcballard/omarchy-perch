@@ -38,11 +38,15 @@ def wait_discovered():
 
 
 def main():
+    global ID
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--kind', choices=['notifications','osd'], default='notifications')
     parser.add_argument('--remove', action='store_true')
     parser.add_argument('--apply', action='store_true')
     args = parser.parse_args()
-    source = Path(__file__).resolve().parent.parent / 'companions/notifications'
+    ID = 'io.github.tcballard.perch-' + args.kind
+    source_id = 'omarchy.' + args.kind
+    source = Path(__file__).resolve().parent.parent / 'companions' / args.kind
     base = Path.home() / '.config/omarchy/plugins'
     target = base / ID
     if target.is_symlink():
@@ -64,10 +68,10 @@ def main():
             raise ValueError('Enable Perch before enabling its notification companion.')
         for manifest in base.glob('*/manifest.json'):
             m = json.loads(manifest.read_text())
-            if m.get('id') != ID and m.get('id') in enabled and m.get('omarchy', {}).get('clonedFrom') == 'omarchy.notifications':
+            if m.get('id') != ID and m.get('id') in enabled and m.get('omarchy', {}).get('clonedFrom') == source_id:
                 raise ValueError('Another notification clone is enabled. Disable it explicitly first.')
     print(('Remove' if args.remove else 'Install/update') + f' {target}')
-    print('Enabling replaces Omarchy notifications. Disabling uses Omarchy clone restoration; an originally disabled source stays disabled.')
+    print('Enabling replaces the corresponding Omarchy component. Disabling uses Omarchy clone restoration; an originally disabled source stays disabled.')
     if not args.apply:
         print('Preview only. Add --apply to make these changes.')
         return
@@ -83,7 +87,7 @@ def main():
     stage = Path(tempfile.mkdtemp(prefix='.perch-notifications-', dir=base))
     try:
         hashes = {}
-        for name in ['manifest.json', 'Service.qml', 'CommandJob.qml']:
+        for name in (['manifest.json', 'Service.qml', 'CommandJob.qml', 'store.py', 'NotificationStore.qml'] if args.kind == 'notifications' else ['manifest.json','Panel.qml','CommandJob.qml']):
             shutil.copy2(source / name, stage / name)
             hashes[name] = hashlib.sha256((stage / name).read_bytes()).hexdigest()
         (stage / MARKER).write_text(json.dumps(hashes, indent=2) + '\n')

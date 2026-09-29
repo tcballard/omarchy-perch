@@ -114,6 +114,26 @@ evaluate('service.preferences.accept(JSON.stringify({plugins:[{id:"io.github.tcb
 assert evaluate('service.live.timerStatus') == 'running'
 assert evaluate('service.live.timerState.label') == 'Restored'
 assert evaluate('service.live.cancel()') is True
+# Concurrent timers preserve independent deadlines and route completion correctly.
+assert evaluate('service.live.add(30,"First")') is True
+first_timer=evaluate('service.live.selectedTimer')
+assert evaluate('service.live.add(60,"Second")') is True
+assert evaluate('service.live.timers.length')==2
+assert evaluate('service.live.chooseTimer('+repr(first_timer)+')') is True
+evaluate('service.live.tick(service.live.timerState.deadline+1)')
+assert evaluate('service.live.timerStatus')=='done'
+assert evaluate('service.live.timers.filter(function(t){return t.status==="running";}).length')==1
+assert evaluate('service.live.snooze(300)') is True
+assert evaluate('service.live.timerProgress')<=1
+assert evaluate('service.live.cancel()') is True
+assert evaluate('service.live.cancel()') is True
+# Input capability and persisted profile validation.
+assert evaluate('service.system.toggleMicrophone()') is True
+assert evaluate('service.system.microphoneMuted') is True
+assert evaluate('service.preferences.update({panelWidth:9000,edgeOffset:-20,fullscreenPolicy:"invalid"})') is True
+assert evaluate('service.preferences.values.panelWidth')==544
+assert evaluate('service.preferences.values.edgeOffset')==0
+assert evaluate('service.preferences.values.fullscreenPolicy')=='hide'
 view=QQuickView(); view.engine().addImportPath(str(root/'stubs'))
 view.setSource(QUrl.fromLocalFile(str(root/'Preview.qml')))
 assert view.status()!=QQuickView.Error, view.errors()
@@ -152,7 +172,7 @@ QTest.keyClick(view, Qt.Key_Escape); QTest.qWait(30)
 assert visual_eval('notch.settingsOpen') is False
 assert visual_eval('notch.expanded') is True
 visual_eval('demoMedia.setState("playing")')
-assert visual_eval('notch.implicitHeight') == 270
+assert visual_eval('notch.implicitHeight') == 310
 assert visual_eval('notch.hasPlayer') is True
 playback = visual.findChild(QQuickItem, 'playback')
 assert playback is not None
@@ -193,7 +213,7 @@ assert visual_eval('notch.compactText') == 'Build needs input'
 visual_eval('demoMedia.live.dismiss("test"); demoMedia.live.cancel()')
 # Header controls expose the two rc2 pages; notification actions use the owning row.
 visual_eval('demoMedia.setState("inbox")')
-for button,page in [('open-inbox','inbox'),('open-desktop','desktop')]:
+for button,page in [('open-inbox','inbox'),('open-desktop','hub')]:
     tab=visual_item(visual,button)
     point=tab.mapToScene(QPointF(tab.width()/2,tab.height()/2)).toPoint()
     QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)

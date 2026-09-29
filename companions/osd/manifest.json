@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.tcballard.perch-osd",
+  "name": "Perch System Feedback",
+  "version": "0.1.0-rc.3",
+  "author": "Tom Ballard",
+  "license": "MIT",
+  "description": "Optional system feedback in Perch with Omarchy clone restoration.",
+  "kinds": [
+    "panel"
+  ],
+  "entryPoints": {
+    "panel": "Panel.qml"
+  },
+  "keepLoaded": true,
+  "omarchy": {
+    "clonedFrom": "omarchy.osd"
+  }
+}

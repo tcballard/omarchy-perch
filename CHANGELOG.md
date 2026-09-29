@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.0-rc.3 — 2026-09-29
+
+- Contextual compact controls, context cycling and header gestures.
+- Persistent file shelf, previews, drag-out and LocalSend handoff.
+- Local/synced ICS agenda, meeting countdowns and join links.
+- Guided integration setup, health and coordinated removal; optional replacement OSD.
+- Persistent notification history/DND/app mutes, unread filtering/icons and supported inline replies.
+- Multiple named timers with repeat, snooze and optional completion alerts.
+- Audio input/output selection, microphone mute, Bluetooth and brightness controls.
+- Display profiles, app pins, opt-in remote artwork and local lyrics.
+- Real task adapters, bounded helper regressions and live diagnostics runner.
+- Portable tests and actual QML fixture rendering pass; hardware/compositor acceptance remains open.
+
+
 ## 0.1.0-rc.2 — 29 September 2026
 
 - Add an optional notification companion, six-second compact previews, a bounded session inbox, DND, native actions, expiry and stale-action protection. Omarchy clone lifecycle restores the original notification service on companion disable/removal.

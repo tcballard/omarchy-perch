@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Bounded local operations for the hosted Perch plugin. No privileged actions."""
+import json
+from pathlib import Path
+import sys
+import subprocess
+# The isolated interpreter imports only modules from this checkout and stdlib.
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from perchlib import shelf,calendar,integrations,media,apps
+
+def main(op,p):
+    if op.startswith('shelf-'):return shelf.handle(op,p)
+    if op.startswith('calendar-'):return calendar.handle(op,p)
+    if op.startswith('app-'):return apps.handle(op,p)
+    if op=='artwork':return media.artwork(p.get('url'))
+    if op=='lyrics':return media.lyrics(p.get('path',''))
+    if op=='alarm':return integrations.alarm(p)
+    if op=='health':return integrations.health()
+    if op=='integration':return integrations.start(p)
+    if op=='integration-remove-all':return integrations.start({'all':True,'enabled':False})
+    if op=='integration-worker':return integrations.worker(p)
+    if op=='brightness-get':return integrations.brightness()
+    if op=='brightness-set':return integrations.brightness(p)
+    raise ValueError('Unsupported operation')
+
+if __name__=='__main__':
+    try:
+        if len(sys.argv)!=3 or len(sys.argv[2])>65536:raise ValueError('Invalid request')
+        payload=json.loads(sys.argv[2])
+        if not isinstance(payload,dict):raise ValueError('Invalid request object')
+        result={'ok':True,**main(sys.argv[1],payload)}
+        output=json.dumps(result,ensure_ascii=True)
+        if len(output)>131072:raise ValueError('Result exceeds limit')
+    except (OSError,ValueError,TypeError,KeyError,RecursionError,subprocess.SubprocessError) as e:
+        output=json.dumps({'ok':False,'error':str(e)[:240]})
+    print(output)

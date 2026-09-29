@@ -86,3 +86,33 @@ Before stable v0.1.0 on the XPS:
 The new integrations require these live checks; stable release remains gated.
 
 rc2 static preflight flags the reviewed CLI Process helpers and opt-in setup scripts, alongside the existing FileView read and CI-only package installation. CLI runtime call sites use fixed command/verb allowlists and bounded payloads; one running job per helper, three-second deadline, 512-character retained reply. SplitParser reads output from trusted Omarchy CLI commands, not arbitrary producer subprocesses; no general producer-side stream cap is claimed. Setup scripts are explicit user actions, not plugin startup behavior.
+
+## 0.1.0-rc.3 evidence and live gate
+
+Portable tests now exercise durable reference-only shelf operations, private history with actions stripped on restore, malformed/oversized/symlink input rejection, ICS timezone/recurrence exclusions, lyrics, remote artwork URL restrictions, subprocess output/time limits, transfer limits/cleanup, command exit status/cancellation, concurrent timer state, mic capability, inline reply generation/expiry and monitor pin/fullscreen behavior. Production view rendering includes Files, Calendar, Setup and the expanded system controls. Tests use fake host/DBus objects; they do not claim real device operation.
+
+Additional live acceptance:
+
+1. Open Setup, enable/update each desired companion; reopen after reload. Verify one notification owner and one volume/brightness OSD. Prepare removal must restore the previous source state and preserve unrelated agent config. Restart the shell during setup and check its result afterward.
+2. Drop real files, drag them into a supported app, preview text/images, reveal and hand off to LocalSend. Restart the shell: shelf persists and removing a shelf entry leaves the original intact.
+3. Add a synced ICS file, test timezone/DST, moved/cancelled meetings, partial-recurrence warning, refresh and Join. Check compact imminent meeting context after startup and after the five-minute refresh.
+4. Run eight timers, suspend/resume, trigger simultaneous completion and try sound/notifications, snooze/repeat and all fullscreen policies.
+5. Switch real audio input/output, mute microphone, change brightness, connect/disconnect paired Bluetooth devices, inspect available battery data. Missing tools/hardware must show unavailable/error, never success.
+6. Receive sender-supported inline replies/actions, close the sender, restart the companion, verify restored text has no live action. Check DND/mutes/unread and transient deletion.
+7. Pin applications; use per-monitor settings at fractional scaling; disconnect/reconnect the pinned display; check every edge and transparent input region. Fullscreen default remains hidden.
+8. Exercise local/remote art with slow and failed providers, track/player switches during requests, lyrics reader, cancelled tasks, interrupted transfers and process cleanup after shell reload.
+
+### Performance measurements
+
+Use `pgrep -af quickshell` to identify the actual hosting process, then substitute its PID:
+
+```bash
+./scripts/perch-diagnostics --pid 12345 --seconds 10
+./scripts/perch-diagnostics --pid 12345 --seconds 10 --exercise
+```
+
+Run an idle sample before/after feature use, and repeat after 100 open/close interactions. The JSON reports **whole-shell** CPU/RSS and optional summon IPC round-trip times, not Perch-only usage or frame latency. Compare the same workload and shell revision. Look for accumulating RSS, unexpected idle work, lingering helpers and unbounded retries. Assess actual animation frame pacing with a compositor profiler/recording on the XPS; no portable timing number substitutes for this. The runner does not collect notification text, paths, logs or credentials.
+
+Live results for rc3: **not run in the build environment**. Stable tagging remains gated on the above.
+
+Static rc3 release review: upstream host validator accepts core and both companions. Advisory scan flags QML processes/collectors, explicit setup scripts and CI package installation. ToolJob collects only the shipped helper's capped 128 KiB JSON with a 12-second deadline; history reads cap before collection and writes use bounded stdin. Setup commands are explicit, own-file hash checked and time-bounded. CI package installation is not plugin runtime behavior. Existing Preferences FileView's read-before-limit boundary is documented above. No advisory scan is described as a security certification.

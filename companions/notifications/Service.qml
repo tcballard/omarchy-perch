@@ -43,6 +43,35 @@ Item {
     }
     property int serial: 0
     property bool dnd: false
+    property var blocked: []
+    NotificationStore {
+        id: history
+        owner: root
+    }
+    function restoreHistory(p) {
+        dnd = p.dnd;
+        blocked = p.blocked;
+        rows = rows.concat(p.rows).slice(0, 20);
+        publish();
+    }
+    function markRead() {
+        rows = rows.map(function (r) {
+            return Object.assign({}, r, {
+                unread: false
+            });
+        });
+        publish();
+    }
+    function block(app, value) {
+        blocked = blocked.filter(function (x) {
+            return x !== app;
+        });
+        if (value && blocked.length < 64)
+            blocked = blocked.concat([clean(app, 64)]);
+        preview = "";
+        publish();
+        return "ok";
+    }
     property string preview: ""
     property string previewKey: ""
     property bool dirty: false
@@ -51,6 +80,13 @@ Item {
     }
     function publish() {
         dirty = true;
+        history.save({
+            rows: rows.filter(function (r) {
+                return !root.transientKeys[r.key];
+            }),
+            dnd: dnd,
+            blocked: blocked
+        });
         if (!debounce.running)
             debounce.start();
     }
@@ -62,6 +98,8 @@ Item {
                 version: 1,
                 session: session,
                 dnd: dnd,
+                blocked: blocked,
+                error: history.error,
                 preview: preview,
                 items: rows
             })]);
@@ -81,7 +119,10 @@ Item {
             app: clean(n.appName, 64),
             title: clean(n.summary, 120),
             body: clean(n.body, 400),
-            actions: actions
+            actions: actions,
+            reply: !!n.hasInlineReply,
+            unread: true,
+            icon: /^[a-zA-Z0-9._-]{1,100}$/.test(String(n.appIcon || "")) ? String(n.appIcon) : ""
         };
     }
     function refresh(n, key) {
@@ -89,7 +130,7 @@ Item {
             return;
         schedule(n, key);
         var next = snapshot(n, key);
-        if (previewKey === key && !dnd)
+        if (previewKey === key && !dnd && blocked.indexOf(clean(n.appName, 64)) < 0)
             preview = clean(n.summary || n.appName, 100);
         rows = rows.map(function (r) {
             return r.key === key ? next : r;
@@ -117,13 +158,10 @@ Item {
                 });
             delete root.transientKeys[key];
             root.rows = root.rows.map(function (r) {
-                return r.key === key ? {
-                    key: r.key,
-                    app: r.app,
-                    title: r.title,
-                    body: r.body,
-                    actions: []
-                } : r;
+                return r.key === key ? Object.assign({}, r, {
+                    actions: [],
+                    reply: false
+                }) : r;
             });
             root.publish();
         });
@@ -135,7 +173,7 @@ Item {
         });
         while (rows.length > 20)
             remove(rows[rows.length - 1].key);
-        if (!dnd) {
+        if (!dnd && blocked.indexOf(clean(n.appName, 64)) < 0) {
             previewKey = key;
             preview = clean(n.summary || n.appName, 100);
             previewExpiry.restart();
@@ -188,6 +226,20 @@ Item {
         } catch (_) {}
         return "error: expired";
     }
+    function replyTo(session, key, text) {
+        if (session !== root.session || text.length > 1000 || !text.trim())
+            return "error: invalid reply";
+        var n = root.refs[key];
+        if (!n || !n.hasInlineReply)
+            return "error: expired";
+        try {
+            n.sendInlineReply(text);
+            root.remove(key);
+            return "ok";
+        } catch (_) {
+            return "error: reply failed";
+        }
+    }
     IpcHandler {
         target: "io.github.tcballard.perch-notifications"
         function sync(): string {
@@ -202,6 +254,16 @@ Item {
                 return "error: expired";
             root.remove(key);
             return "ok";
+        }
+        function markRead(): string {
+            root.markRead();
+            return "ok";
+        }
+        function blockApp(app: string, value: string): string {
+            return root.block(app, value === "on");
+        }
+        function reply(session: string, key: string, text: string): string {
+            return root.replyTo(session, key, text);
         }
         function clear(): string {
             root.clearAll();
@@ -265,6 +327,7 @@ Item {
     }
     NotificationServer {
         actionsSupported: true
+        inlineReplySupported: true
         bodyMarkupSupported: false
         bodyHyperlinksSupported: false
         imageSupported: false

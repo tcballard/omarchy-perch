@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory() as directory:
     log=home/'commands'
     for command in ['omarchy','omarchy-shell']:
         executable=bins/command
-        executable.write_text('#!/usr/bin/env python3\nimport json,os,sys\nwith open(os.environ["TEST_LOG"],"a") as f:f.write(json.dumps(sys.argv[1:])+"\\n")\nprint(json.dumps([{"id":"io.github.tcballard.perch-notifications"}]) if sys.argv[1:] == ["plugin","list","--json"] else "ok" if sys.argv[1:3] != ["shell","rescanPlugins"] else "")\n')
+        executable.write_text('#!/usr/bin/env python3\nimport json,os,sys\nwith open(os.environ["TEST_LOG"],"a") as f:f.write(json.dumps(sys.argv[1:])+"\\n")\nprint(json.dumps([{"id":"io.github.tcballard.perch-notifications"},{"id":"io.github.tcballard.perch-osd"}]) if sys.argv[1:] == ["plugin","list","--json"] else "ok" if sys.argv[1:3] != ["shell","rescanPlugins"] else "")\n')
         executable.chmod(0o755)
     env=dict(os.environ,HOME=str(home),PATH=str(bins)+os.pathsep+os.environ['PATH'],TEST_LOG=str(log))
     env.pop('CODEX_HOME',None);env.pop('CLAUDE_CONFIG_DIR',None)
@@ -85,6 +85,11 @@ with tempfile.TemporaryDirectory() as directory:
     (target/'Service.qml').write_text(original)
     assert run('perch-notifications-setup','--remove','--apply').returncode==0
     assert not target.exists()
+    assert run('perch-notifications-setup','--kind','osd','--apply').returncode==0
+    osd=config/'plugins/io.github.tcballard.perch-osd'
+    assert json.loads((osd/'manifest.json').read_text())['omarchy']['clonedFrom']=='omarchy.osd'
+    assert run('perch-notifications-setup','--kind','osd','--remove','--apply').returncode==0
+    assert not osd.exists()
     commands=[json.loads(line) for line in log.read_text().splitlines()]
     assert ['plugin','disable','io.github.tcballard.perch-notifications'] in commands
 print('rc2: reversible setup, owned edits, notifier preservation, silent hooks and status-only payloads passed.')

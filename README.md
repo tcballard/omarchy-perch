@@ -2,29 +2,30 @@
 
 [![Built for Omarchy: Plugin](https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-plugin.svg)](https://github.com/tcballard/omarchy-badges)
 
-Music, timers, notifications and live progress at any edge of your Omarchy desktop. A small pill opens into the controls you need, then gets out of the way.
+Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A small pill opens into the controls you need, then gets out of the way.
 
-**v0.1.0-rc.2 — release candidate.** Adds an optional notification inbox, desktop shortcuts and opt-in Claude Code/Codex hooks. The smoother base interaction is confirmed on the XPS; rc2 passes portable/Qt fixture checks and still needs live acceptance in [TESTING.md](TESTING.md). No stable tag or marketplace claim yet.
+**v0.1.0-rc.3 — release candidate.** Adds contextual controls, files, calendars, multiple timers, richer system controls and guided setup. Portable tests and actual QML fixture rendering pass. New hardware/compositor integrations still need the XPS checks in [TESTING.md](TESTING.md); this is not a stable release or a claim of macOS feature parity. [Scope and boundaries](GAPS.md).
 
 ![Perch’s actual QML views with fictional media, timer and activity fixtures](preview.png)
 
 ## What you get
 
-- **Four edges:** top, bottom, left or right; slim upright side tabs; optional flush attachment. Choose an edge without closing Settings.
-- **Music:** title, artist, local artwork, previous/play/pause/next, seek when supported, and a named player picker with automatic selection. Click artwork to raise a player that supports it. Middle-click the compact pill to play/pause.
-- **Timers:** 5/15/25-minute presets, custom 1–1440-minute countdowns, pause/resume/cancel, compact progress and a persistent “finished” state. Real timers survive closing Perch and restarting the shell.
-- **System:** default audio output volume/mute, battery percentage and charging state. No device means an explicit unavailable state.
-- **Live activities:** builds, backups, downloads or agents can report progress through a small IPC API. Cards support running, waiting, complete and failed states, with dismissal and expiry.
-- **Notifications (opt-in):** compact previews, a 20-item session inbox, DND, dismissal and supported native actions. A separate companion takes over from Omarchy notifications only when you enable it.
-- **Desktop shortcuts:** Applications, Omarchy menu, Clipboard, Emoji, Appearance and Settings through the monitor icon. Existing Omarchy menus open after Perch collapses.
-- **Agent hooks (opt-in):** Claude Code working/attention/completion events and Codex turn completion. Reversible setup, status-only payloads and no permission decisions.
-- **Persistent preferences:** edge, hide-idle, reduced motion, flush attachment, idle clock, hover opening, and volume/power banners. Saved to Perch’s own entry in Omarchy’s `shell.json` through the host API.
+- **Context at the edge:** direct play/pause or timer actions, wheel cycling between concurrent activities and header swipe navigation. Four edges, monitor pinning, per-display width/offset/edge/fullscreen preferences, reduced motion.
+- **Music:** native MPRIS controls, seeking, player selection, local artwork, optional bounded HTTPS artwork, local `.lrc` synchronized lyrics and a full lyrics reader.
+- **File shelf:** up to 32 persistent file/folder references, drag in/out, small text/image previews, open, reveal and LocalSend handoff. Removing a reference never deletes its original.
+- **Meetings:** agenda, imminent meeting countdown and explicit Join from up to eight local `.ics` files, including files maintained by a calendar sync tool.
+- **Timers:** up to eight named timers, pause/resume/cancel, repeat, snooze, optional completion sounds/desktop notifications. Wall-clock deadlines survive suspension and shell restart.
+- **System:** output/input selection, volume/mute, microphone mute, battery, paired Bluetooth connect/disconnect and battery status, optional brightnessctl. Missing capabilities are shown explicitly.
+- **Notifications (opt-in):** persistent 20-item history, unread markers, app filtering/muting, DND, icons, native actions and sender-supported replies. A companion replaces the built-in notification owner while enabled.
+- **Applications:** six Omarchy shortcuts, installed-app picker and up to eight pins.
+- **Live activities:** bounded IPC, real build/download/copy adapters, Claude Code status hooks and Codex completion hooks.
+- **Setup:** integration status, explicit enable/disable, optional system-feedback companion to replace stock OSD, dependency reporting and coordinated integration removal.
 
-The compact view prioritizes a finished timer or activity needing attention, then notification previews, short volume/power feedback, a running timer/activity, music, and the clock. It never expands automatically or takes focus to show an update. Fullscreen workspaces suppress Perch until you leave fullscreen.
+The compact view prioritizes completion/attention, notification previews, system feedback, timers, imminent meetings, other activities, music and the clock. It does not automatically expand or take keyboard focus. Fullscreen defaults to hidden; Settings also offers completed-timer alerts or always show.
 
 ## Install or update
 
-Requires Omarchy Quattro’s plugin-capable shell with the scoped `updateEntryInline` API, QtQuick Controls/Layouts, Quickshell MPRIS, PipeWire, UPower, IO, Wayland and Hyprland modules, plus Omarchy’s `qs.Commons` and `qs.Ui` modules. These are provided by the target shell; a media player must expose MPRIS for music controls.
+Requires Omarchy Quattro’s plugin-capable shell with the scoped `updateEntryInline` API, QtQuick Controls/Layouts, Quickshell MPRIS, PipeWire, Bluetooth, UPower, IO, Wayland and Hyprland modules, plus Omarchy’s `qs.Commons` and `qs.Ui` modules. These are provided by the target shell; a media player must expose MPRIS for music controls.
 
 ```bash
 omarchy plugin add https://github.com/tcballard/omarchy-perch.git --enable
@@ -49,15 +50,15 @@ Open a particular view:
 omarchy-shell shell summon io.github.tcballard.perch '{"page":"timer"}'
 ```
 
-`page` accepts `music`, `timer`, `system`, `activity`, `players`, `inbox` or `desktop`. Hover opening stays on the hovered display. Keyboard summons select the focused display. Startup uses the first display; unplugging it falls back to an available display.
+`page` accepts `music`, `timer`, `system`, `activity`, `players`, `inbox`, `desktop`, `hub`, `shelf`, `calendar` or `setup`. Hover opening stays on the hovered display. Keyboard summons select the focused display unless a monitor is pinned in Settings. Startup uses the first display; unplugging it falls back to an available display.
 
 ## Controls
 
 Hover for 90 ms or click the pill to open. Expansion animates the visible item for 140 ms inside a stable compositor surface. A 220 ms leave grace lets you move between controls. Disable hover opening to require a click; reduced motion disables expansion/fade animation.
 
-Use the tabs for Music, Timer, System and Activity. The bell opens Notifications, the monitor opens desktop shortcuts, and the sliders icon opens Settings. Escape returns from Settings or another tab to Music, then closes; × always closes. Keyboard summons support Tab navigation and outside-click dismissal.
+Use the tabs for Music, Timer, System and Activity. The bell opens Notifications, the monitor opens the hub for Files, Calendar, Applications and Setup, and the sliders icon opens Settings. Escape returns from Settings or another tab to Music, then closes; × always closes. Keyboard summons support Tab navigation and outside-click dismissal.
 
-Hide-idle hides the pill only when there is no player, timer, activity, notification preview or enabled system banner. A paused player counts as present. A hidden Perch can always be summoned outside fullscreen. The compact waveform is a static playback icon, not an audio-level visualizer.
+Hide-idle hides the pill only when there is no player, timer, activity, notification preview or enabled system banner. A paused player counts as present. A hidden Perch can always be summoned outside fullscreen. Scroll the compact pill to cycle contexts; swipe horizontally across the left side of the header to change pages. The compact waveform is a static playback icon, not an audio-level visualizer.
 
 ## Send progress from a script or agent
 
@@ -90,17 +91,40 @@ omarchy-shell io.github.tcballard.perch cancelTimer
 omarchy-shell io.github.tcballard.perch status
 ```
 
-Starting a timer while one is running/paused is rejected. Status reports state/counts and device availability, not track metadata or activity text.
+The legacy timer IPC rejects replacement of a running/paused selected timer. Use New timer in the UI to add concurrent timers. Status reports state/counts and device availability, not track metadata or activity text.
 
 ## State, dependencies and boundaries
 
-Perch runs inside `omarchy-shell` with native MPRIS, PipeWire and UPower data. It has no external daemon or periodic subprocess polling. Short, serialized three-second CLI jobs carry notification events and explicit menu/actions; inbox synchronization runs once at startup and when opened/refreshed. Agent hooks have a one-second IPC deadline and discard output. Setup requires Python 3.11+; testing additionally requires Node and PySide6 Essentials 6.11.2.
+Perch runs inside `omarchy-shell`. Native media/device changes are event-driven. Bounded Python jobs handle file/calendar/app operations and explicit integration setup. Configured calendars refresh every five minutes; Setup polls every three seconds only while a setup job is running. No general process or browser polling runs at idle. Python 3.11+ is required; optional features use `brightnessctl`, the LocalSend GUI (`localsend` or `localsend_app`), `canberra-gtk-play`, `notify-send`, `gtk-launch` and `xdg-open`. Nothing is installed automatically.
 
-Perch reads `~/.config/omarchy/shell.json` to find its own entry. It writes only its own preferences and timer state through Omarchy’s scoped settings API; it never rewrites the file itself. Timer transitions save state, not every tick. A missing/malformed settings file produces an error and blocks writes rather than resetting the user’s configuration. Settings over 1 MiB are rejected after reading; FileView itself reads the user-owned file before that check. No credentials are read or stored.
+Settings, pins, display profiles and timer transitions use Perch's own `shell.json` entry through the scoped host API. Unknown own-entry keys are retained. Bad settings block writes. FileView reads the user-owned shell settings before applying its 1 MiB parse limit. Timers save on transitions, not every tick; changing the system clock affects their deadlines.
 
-Timers use a saved wall-clock deadline so suspension and shell restarts count toward elapsed time. Changing the system clock can change the remaining time. Completion remains in the pill until dismissed; v0.1.0 has no audible alarm or desktop notification, and fullscreen suppression also applies to finished timers.
+Shelf references, calendar source paths and notification history/DND/mutes live in private `$XDG_STATE_HOME/omarchy-perch` (default `~/.local/state/omarchy-perch`). This includes notification text and file paths; there is no telemetry. State remains after plugin removal so uninstall does not silently destroy user data. Delete that directory yourself if you want to erase retained data. Restored notifications have no executable actions or replies.
 
-Artwork is local `file:///` metadata only, decoded at a bounded requested size. No remote artwork, HTTP calls, telemetry, agent execution or clipboard monitoring. The original bar, shortcuts and media keys remain in place; notifications remain built-in unless you opt into the companion. System banners may appear alongside Omarchy’s own OSD; they can be disabled in Settings.
+Remote artwork is off by default. When enabled, Perch fetches HTTPS URLs supplied by your media player: public addresses only, validated redirects, seven-second deadline, 2 MiB image limit and bounded dimensions. At most 32 covers are cached under `$XDG_CACHE_HOME/omarchy-perch`. Local previews and artwork still use Qt's decoders; this is not a hostile-image sandbox. Lyrics are explicitly chosen local UTF-8 `.lrc` or `.txt` files; no lyrics service/account is contacted.
+
+Calendar support is read-only ICS, not Google/Microsoft/iCloud account login. Daily/weekly recurrence, timezone IDs, exclusions and moved/cancelled instances are supported. More complex recurrence is reported as partial rather than guessed. Agenda files are limited to 1 MiB each, 2,000 source events, 60 displayed occurrences and a 30-day window. Join opens an HTTP(S) link from the current agenda after a click.
+
+## Guided setup and task adapters
+
+```bash
+omarchy-shell shell summon io.github.tcballard.perch '{"page":"setup"}'
+```
+
+Enable only the integrations you want. Setup is explicit and may reload Perch while Omarchy discovers a companion. Reopen Setup to see the durable job result. After updating the core, use Update for installed companions to copy their new version; local edits are protected. **Prepare removal** removes owned agent hooks and companions before removing the core; it preserves unrelated configuration and restores source plugins according to Omarchy's clone lifecycle. If a step fails, resolve it before uninstalling Perch.
+
+The new task adapter runs only the command or transfer you supply, inherits build output, preserves command exit status, throttles progress, and cleans up partial transfers on cancellation. Downloads/copies default to a 1 GiB cap and one-hour deadline; existing destination files are never overwritten.
+
+```bash
+cd ~/.config/omarchy/plugins/io.github.tcballard.perch
+./scripts/perch-task --title 'Build' run -- make
+./scripts/perch-task --title 'Download' download https://example.org/archive.zip "$HOME/Downloads/archive.zip"
+./scripts/perch-task --title 'Copy' copy "$HOME/report.pdf" "$HOME/Backups/report.pdf"
+# Explicit Omarchy task wrapper; the command retains its normal prompts/permissions:
+./scripts/perch-task --title 'Omarchy update' run -- omarchy update
+```
+
+This does not intercept existing browser downloads or infer arbitrary application's progress. Unknown build progress is shown as indeterminate until the command exits.
 
 ## Optional notifications
 
@@ -113,17 +137,18 @@ omarchy restart shell
 
 Open the bell → Refresh. Notifications replace the built-in daemon using Omarchy's `clonedFrom` lifecycle; do not run another notification daemon alongside it. Setup refuses a competing enabled notification clone. After updating Perch, rerun this installer to update its separate companion copy, then restart the shell.
 
-The inbox keeps the last **20 notifications in memory**; history and DND reset when the companion reloads. Text is plain and truncated (app 64, title 120, body 400 characters; four actions maximum). Previews last six seconds, respect DND and fullscreen suppression, and never steal focus. Default notifications expire after eight seconds; explicit timeouts are bounded to 1–30 seconds, while no-expiry/critical notifications remain live until dismissed or evicted. Expired history keeps text but no actions. Transient notifications leave no history after expiry. Sender replacements update the existing row.
+The inbox retains the last **20 non-transient notifications** in private local state; DND and muted app names also survive companion reloads. Text is plain and truncated (app 64, title 120, body 400 characters; four actions maximum). Previews last six seconds, respect DND and fullscreen suppression, and never steal focus. Default notifications expire after eight seconds; explicit timeouts are bounded to 1–30 seconds, while no-expiry/critical notifications remain live until dismissed or evicted. Expired history keeps text but no actions. Transient notifications leave no history after expiry. Sender replacements update the existing row.
 
-Actions invoke only the live sender's native notification action. Inline replies, images, body links, executable hints and restored actions are not supported. Notification text passes through same-user shell IPC arguments, but is not written to disk. Turning on DND suppresses all previews, including critical ones. Perch's timer completion and activity attention remain separate from notification DND.
+Actions and inline replies target only the live sender and are invalidated on expiry/closure. Replies appear only when the sender advertises that capability. Theme icons are supported; arbitrary images, body links, executable hints and restored actions are not. Notification text passes through same-user IPC and is persisted locally unless transient. Turning on DND suppresses all previews, including critical ones. Perch's timer completion and activity attention remain separate from notification DND.
 
-**Disable/remove the companion before disabling/removing Perch** so notifications have a visible owner:
+**Disable/remove both companions before disabling/removing Perch** so notifications have a visible owner:
 
 ```bash
+./scripts/perch-notifications-setup --kind osd --remove --apply
 ./scripts/perch-notifications-setup --remove --apply
 ```
 
-This restores the source through Omarchy; if it was disabled before installation, it stays disabled. To disable only, preserving the installed files: `omarchy plugin disable io.github.tcballard.perch-notifications`. If setup is interrupted, that command is also the recovery path. Companion files with local edits are never overwritten by setup.
+The system-feedback companion uses the same installer with `--kind osd --apply`, replacing `omarchy.osd` instead of displaying a second overlay. This restores the source through Omarchy; if it was disabled before installation, it stays disabled. To disable only, preserving the installed files: `omarchy plugin disable io.github.tcballard.perch-notifications`. If setup is interrupted, that command is also the recovery path. Companion files with local edits are never overwritten by setup.
 
 ## Optional agent hooks
 
@@ -155,7 +180,7 @@ omarchy plugin disable io.github.tcballard.perch
 omarchy plugin remove io.github.tcballard.perch
 ```
 
-On the inspected Quattro revision, disabling a third-party plugin removes its configuration entry, so **disable/remove clears Perch preferences and its timer**. Closing the panel or restarting the shell preserves them. Removal uses Omarchy’s plugin lifecycle; the core has no external daemon or keybinding to clean up. Remove optional integrations first using the commands above. A Git-managed install’s checkout is removed. A local symlink’s source remains yours.
+On the inspected Quattro revision, disabling a third-party plugin removes its configuration entry, so **disable/remove clears Perch preferences, pins, display profiles and timers**. Closing the panel or restarting the shell preserves them. Removal uses Omarchy’s plugin lifecycle; the core has no external daemon or keybinding to clean up. Remove optional integrations first using the commands above. A Git-managed install’s checkout is removed. A local symlink’s source remains yours.
 
 If you installed the earlier unpublished `io.github.tcballard.omarchy-notch`, remove that registration before installing Perch. Its old source files remain yours.
 
@@ -174,4 +199,4 @@ Target shell contract: Omarchy quattro `d3cfd53b997f8bdcf776b8db68bf0d735e7a065d
 
 [Report a bug](https://github.com/tcballard/omarchy-perch/issues). Include the Perch commit, Omarchy revision and relevant Perch log lines. For sensitive security findings, open a minimal issue requesting a private contact channel; do not post credentials or exploit details publicly.
 
-MIT. Original implementation by Tom Ballard. [Island](https://github.com/Guilhermerisu/island) and [Dynamic Island Pro](https://github.com/harshithnadig/omarchy-dynamic-island) informed the feature comparison; their code is not included. A full replacement bar/tray, remote artwork and automatic browser-download detection remain outside v0.1.0. Desktop menus are accessed through supported Omarchy commands; the inbox and supported agent hooks are included as optional integrations.
+MIT. Original implementation by Tom Ballard. [Island](https://github.com/Guilhermerisu/island) and [Dynamic Island Pro](https://github.com/harshithnadig/omarchy-dynamic-island) informed the feature comparison; their code is not included. A full replacement bar/tray, proprietary Apple continuity, account calendar sync and automatic browser-download detection remain outside this candidate; Linux alternatives and exact limits are listed in GAPS.md. Desktop menus are accessed through supported Omarchy commands; the inbox and supported agent hooks are included as optional integrations.
