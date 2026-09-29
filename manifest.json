@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "io.github.tcballard.perch",
   "name": "Perch",
-  "version": "0.1.0-dev",
+  "version": "0.1.0-rc.1",
   "author": "Tom Ballard",
   "license": "MIT",
-  "description": "A quiet, expanding now-playing notch for Omarchy.",
+  "description": "Music, timers, system controls and live activities at any screen edge.",
   "kinds": [
     "panel",
     "service"

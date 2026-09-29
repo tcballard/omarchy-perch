@@ -8,6 +8,46 @@ Item {
     property string omarchyPath: ""
     property var shell: null
     property var manifest: null
+    property alias preferences: prefsStore
+    property alias live: activityState
+    property alias system: systemState
+    Preferences {
+        id: prefsStore
+        shell: root.shell
+    }
+    LiveState {
+        id: activityState
+        preferences: prefsStore
+    }
+    SystemState {
+        id: systemState
+    }
+    readonly property bool canSeek: !!(player && player.canControl && player.canSeek && timeline)
+    readonly property bool canRaise: !!(player && player.canRaise)
+    function seekTo(value, expectedPlayer, expectedTrack) {
+        if (!canSeek || playerKey !== expectedPlayer || String(player.uniqueId) !== String(expectedTrack) || !isFinite(value))
+            return false;
+        try {
+            player.position = Math.max(0, Math.min(duration, value));
+            actionError = "";
+            return true;
+        } catch (_) {
+            actionError = "Player did not accept seeking";
+            return false;
+        }
+    }
+    readonly property string trackKey: player ? String(player.uniqueId) : ""
+    function raisePlayer() {
+        if (!canRaise)
+            return false;
+        try {
+            player.raise();
+            return true;
+        } catch (_) {
+            actionError = "Could not open the player";
+            return false;
+        }
+    }
     property string preferred: ""
     property string actionError: ""
     readonly property var players: (Mpris.players ? Mpris.players.values : []).filter(function (p) {
@@ -68,10 +108,27 @@ Item {
     // Diagnostics contain no media metadata.
     IpcHandler {
         target: "io.github.tcballard.perch"
+        function activity(payload: string): string {
+            return activityState.activity(payload);
+        }
+        function dismiss(id: string): string {
+            activityState.dismiss(id);
+            return "ok";
+        }
+        function timer(seconds: string, label: string): string {
+            return activityState.start(Number(seconds), label) ? "ok" : "error: timer not started";
+        }
+        function cancelTimer(): string {
+            return activityState.cancel() ? "ok" : "error: timer not cancelled";
+        }
         function status(): string {
             return JSON.stringify({
                 state: root.state,
-                players: root.players.length
+                players: root.players.length,
+                timer: activityState.timerStatus,
+                activities: activityState.items.length,
+                audio: systemState.audioAvailable,
+                battery: systemState.batteryAvailable
             });
         }
     }

@@ -13,9 +13,23 @@ Controls.Button {
     implicitHeight: implicitWidth
     Accessible.name: label
     hoverEnabled: true
-    Controls.ToolTip.visible: hovered
-    Controls.ToolTip.text: label
-    Controls.ToolTip.delay: 700
+    Controls.ToolTip {
+        visible: root.hovered
+        delay: 700
+        text: root.label
+        contentItem: Text {
+            text: root.label
+            textFormat: Text.PlainText
+            color: root.ink
+            font.pixelSize: Style.space(11)
+        }
+        background: Rectangle {
+            color: root.surface
+            radius: Style.space(6)
+            border.width: 1
+            border.color: Qt.alpha(root.ink, 0.2)
+        }
+    }
     padding: Style.space(prominent ? 12 : 6)
     background: Rectangle {
         radius: width / 2

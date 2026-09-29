@@ -66,6 +66,32 @@ Canvas {
             c.beginPath();
             c.ellipse(13, 13, 6, 5);
             c.fill();
+        } else if (name === "timer") {
+            c.beginPath();
+            c.arc(12, 13, 8, 0, Math.PI * 2);
+            c.stroke();
+            line(12, 8, 12, 13);
+            line(12, 13, 16, 13);
+            line(9, 2, 15, 2);
+        } else if (name === "system") {
+            c.beginPath();
+            c.moveTo(4, 9);
+            c.lineTo(8, 9);
+            c.lineTo(13, 5);
+            c.lineTo(13, 19);
+            c.lineTo(8, 15);
+            c.lineTo(4, 15);
+            c.closePath();
+            c.stroke();
+            c.beginPath();
+            c.arc(13, 12, 7, -0.8, 0.8);
+            c.stroke();
+        } else if (name === "activity") {
+            line(3, 13, 7, 13);
+            line(7, 13, 10, 6);
+            line(10, 6, 14, 18);
+            line(14, 18, 17, 10);
+            line(17, 10, 21, 10);
         } else if (name === "wave") {
             line(5, 10, 5, 14);
             line(10, 5, 10, 19);

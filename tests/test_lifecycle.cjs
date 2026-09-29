@@ -3,7 +3,7 @@ const source=fs.readFileSync(require('node:path').join(__dirname,'../Panel.qml')
 const policy=require('../MediaPolicy.js');
 const clock=()=>({running:false,restart(){this.running=true},stop(){this.running=false}});
 const screen={name:'eDP-1'};
-const c={Policy:policy,Edges:require("../EdgePolicy.js"),edge:"top",edgeRemapping:false,edgeRemapTimer:clock(),Qt:{callLater:f=>f()},Hyprland:{focusedMonitor:{name:'eDP-1'}},fixture:{state:'',setState(s){this.state=s}},view:{focused:0,forceActiveFocus(){this.focused++}},screens:[screen],fullscreen:false,targetScreen:null,opened:false,expanded:false,keyboardMode:false,demo:false,focusPrimed:false,hoverTimer:clock(),leaveTimer:clock(),focusPrimeTimer:clock(),shell:null};
+const c={Policy:policy,Edges:require("../EdgePolicy.js"),edge:"top",edgeRemapping:false,edgeRemapTimer:clock(),Qt:{callLater:f=>f()},Hyprland:{focusedMonitor:{name:'eDP-1'}},fixture:{state:'',setState(s){this.state=s}},view:{focused:0,forceActiveFocus(){this.focused++}},screens:[screen],fullscreen:false,targetScreen:null,opened:false,expanded:false,keyboardMode:false,demo:false,focusPrimed:false,hoverTimer:clock(),leaveTimer:clock(),focusPrimeTimer:clock(),shell:null,service:null};
 vm.createContext(c);
 for(const name of ['open','close','collapse','reveal','setEdge']) {
  const match=source.match(new RegExp('    function '+name+'\\([^]*?\\n    }'));

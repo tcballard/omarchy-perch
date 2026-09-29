@@ -38,3 +38,32 @@ The XPS shell log reported `NotchView.qml: Cannot assign to non-existent propert
 User confirmed the import fix made Perch visible, then reported poor appearance and responsiveness. The rework passes native Qt service/view tests (including an actual pointer click on playback, hidden transport in empty state, Settings/Escape, all four edge dimensions, and light/dark theme contrast), lifecycle and geometry tests, and QML formatting. Actual production view renders were reviewed in playing, empty, compact and settings states; `tests/Review.qml` produces the overview in `preview.png`.
 
 The fixed compositor envelope and view-only animation remove per-frame window-size requests by construction. This is not a measured FPS/latency improvement: real Wayland input masking, hover transitions, outside-click focus, edge remapping and smoothness still require the XPS. Specifically verify that clicking the transparent area around a compact pill reaches the underlying app and that all four expansions remain anchored. No live performance claim is made.
+
+## 0.1.0-rc.1 evidence
+
+User confirmed the preceding interaction rework was much smoother on the XPS. New candidate tests pass locally using PySide6 Essentials 6.11.2, including:
+
+- production Preferences own-ID persistence, unknown-key preservation, malformed input and failed-write behaviour;
+- production timer start/pause/resume/cancel, no per-tick writes, saved-state restoration and expiry;
+- bounded activity reports, replacement, limit eight, attention priority, expiration, invalid input;
+- guarded seeking (capability, player and track changes), explicit raise, unavailable audio/battery;
+- native Qt pointer clicks through Music/Timer/System/Activity, playback, settings/Escape, light-theme contrast and demo isolation;
+- fixture-rendered overview including timer, system, activities and settings, inspected visually;
+- Node policy/lifecycle tests and shell syntax checks.
+
+The toolkit validator reports zero errors/warnings/security findings, with review-required capabilities for reading shell.json through FileView and CI-only pip installation. FileView reads before the 1 MiB parser limit; no producer-side read cap is claimed. Static checks are not a security audit. The release preflight’s packaged sibling-validator locator is absent in this environment; unchanged copies of the release and validator scripts are placed in their expected sibling layout for the preflight, without editing the installed skills.
+
+### XPS checks before a stable v0.1.0 tag
+
+1. Update from Git, validate the installed directory, and open every tab with no Perch log errors. Verify the new native service imports load.
+2. Select a new edge and toggle settings; restart the shell and confirm persistence. Ensure unrelated shell.json entries remain intact.
+3. Start a 60-second timer, pause/resume it, restart the shell while running, and confirm the original deadline finishes. Dismiss it. It is a visual timer: no audible alarm.
+4. With a real MPRIS player, seek, change tracks during a drag, switch players, and click artwork to raise supported players. Unsupported actions remain unavailable.
+5. Change volume/mute and plug/unplug power. Verify actual output/battery data and that disabling banners suppresses only Perch feedback.
+6. Send the documented activity example, update the same ID, dismiss it and let a short TTL expire. No real agent hook is needed.
+7. Repeat hover/click/Escape/outside-click and transparent-area click-through on all edges; test fullscreen and monitor removal. The fixed envelope is now taller for Settings.
+8. Disable/re-enable then remove/reinstall through Omarchy. Confirm bar, notifications and keys remain intact. On the inspected host, disable removes the third-party entry: expect preferences/timer to reset on re-enable. Closing the panel and shell restart must preserve them.
+
+No live claim is made for these new features until those results are reported. CI status and the final candidate SHA are recorded at publication.
+
+Candidate preparation also passes the inspected upstream `omarchy-plugin-validate` command (manifest validation only) and the static release preflight using the unchanged scripts in the resolved sibling layout. Its two advisory capability warnings are the reviewed FileView read and CI pip install noted above. Full host validation is still pending.

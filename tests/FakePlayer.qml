@@ -6,6 +6,11 @@ QtObject {
     property string trackArtist: "Test artist"
     property string trackArtUrl: "https://example.invalid/art"
     property bool isPlaying: false
+    property bool canSeek: true
+    property int uniqueId: 1
+    property bool canRaise: true
+    property int raiseCalls: 0
+    function raise() { raiseCalls++ }
     property bool canControl: true
     property bool canPause: true
     property bool canPlay: true

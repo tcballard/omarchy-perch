@@ -1,7 +1,44 @@
 import QtQuick
 
 // Fictional data, available only after an explicit demo summon.
-QtObject {
+Item {
+    id: root
+    property alias live: activityState
+    property alias system: systemState
+    property string preferred: ""
+    property bool canSeek: state !== "empty"
+    property bool canRaise: false
+    property string trackKey: title
+    function seekTo(value, expectedPlayer, expectedTrack) {
+        if (!canSeek || expectedPlayer !== playerKey || expectedTrack !== trackKey || !isFinite(value))
+            return false;
+        position = Math.max(0, Math.min(duration, value));
+        return true;
+    }
+    LiveState {
+        id: activityState
+    }
+    QtObject {
+        id: systemState
+        property bool audioAvailable: true
+        property real volume: 0.42
+        property bool muted: false
+        property string outputName: "Demo speakers"
+        property bool batteryAvailable: true
+        property int batteryPercent: 78
+        property bool charging: true
+        property bool onBattery: false
+        property string error: ""
+        property string banner: ""
+        function setVolume(value) {
+            volume = Math.max(0, Math.min(1, value));
+            return true;
+        }
+        function toggleMute() {
+            muted = !muted;
+            return true;
+        }
+    }
     property string state: "playing"
     property string title: "Between Stations"
     property string artist: "The Early Hours"
@@ -17,7 +54,8 @@ QtObject {
     property bool canNext: state !== "empty"
     property bool canToggle: state !== "empty"
     function choose(key) {
-        return false;
+        preferred = key;
+        return key === "" || key === "demo";
     }
     function act(action) {
         if (state === "empty")
@@ -31,6 +69,18 @@ QtObject {
         return true;
     }
     function setState(value) {
+        activityState.cancel();
+        activityState.items = [];
+        if (value === "timer")
+            activityState.start(1500, "Demo focus");
+        if (value === "activity")
+            activityState.activity(JSON.stringify({
+                id: "demo-build",
+                title: "Building Perch",
+                detail: "Fictional progress",
+                state: "running",
+                progress: 0.65
+            }));
         state = value === "empty" || value === "paused" ? value : "playing";
         title = state === "empty" ? "Nothing playing" : "Between Stations";
         artist = state === "empty" ? "Start music in your favourite player" : "The Early Hours";

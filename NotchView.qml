@@ -8,6 +8,28 @@ import "EdgePolicy.js" as Edges
 FocusScope {
     id: root
     property var media: null
+    property string page: "music"
+    property bool showClock: true
+    property bool hoverOpen: true
+    property bool eventBanners: true
+    property string settingsError: ""
+    readonly property var live: media ? media.live : null
+    readonly property var system: media ? media.system : null
+    readonly property bool liveAttention: !!(live && (live.timerStatus === "done" || (live.focused && (live.focused.state === "waiting" || live.focused.state === "error"))))
+    readonly property string compactBanner: eventBanners && system ? system.banner : ""
+    readonly property bool busy: hasPlayer || !!(live && live.hasActivity) || compactBanner !== ""
+    readonly property string compactText: liveAttention ? live.summary : compactBanner || (live && live.hasActivity ? live.summary : hasPlayer ? caption : showClock && live ? live.clock : "Perch")
+    readonly property string compactIcon: liveAttention ? "activity" : compactBanner ? "system" : live && live.timerActive ? "timer" : live && live.focused ? "activity" : playing ? "wave" : hasPlayer ? "music" : showClock ? "timer" : "music"
+    function revealPage() {
+        if (live && live.timerStatus === "done")
+            page = "timer";
+        else if (liveAttention || live && live.focused && !hasPlayer)
+            page = "activity";
+        else if (compactBanner)
+            page = "system";
+        else if (live && live.timerActive && !hasPlayer)
+            page = "timer";
+    }
     property bool expanded: false
     property bool reducedMotion: false
     property bool demo: false
@@ -25,19 +47,26 @@ FocusScope {
     readonly property color surface: lightTheme ? Color.foreground : Color.background
     readonly property color ink: lightTheme ? Color.background : Color.foreground
     readonly property real expandedWidth: Style.space(344)
-    readonly property real expandedHeight: Style.space(settingsOpen ? 336 : hasPlayer ? 208 : 148)
-    readonly property real maximumHeight: Style.space(336)
-    implicitWidth: expanded ? expandedWidth : Style.space(sideTab ? 28 : hasPlayer ? 208 : 96)
+    readonly property real expandedHeight: Style.space(settingsOpen ? 468 : page === "music" ? (hasPlayer ? 270 : 212) : 370)
+    readonly property real maximumHeight: Style.space(468)
+    implicitWidth: expanded ? expandedWidth : Style.space(sideTab ? 28 : busy ? 208 : 96)
     implicitHeight: expanded ? expandedHeight : Style.space(sideTab ? 80 : 30)
+    signal preferenceChanged(string key, var value)
     signal edgeRequested(string value)
     signal expandRequested
     signal collapseRequested
     signal settingsChanged(bool hideIdle, bool reducedMotion, bool edgeAttached)
-    onExpandedChanged: if (!expanded)
-        settingsOpen = false
+    onExpandedChanged: {
+        if (!expanded)
+            settingsOpen = false;
+        else
+            revealPage();
+    }
     Keys.onEscapePressed: {
         if (settingsOpen)
             settingsOpen = false;
+        else if (page !== "music")
+            page = "music";
         else
             collapseRequested();
     }
@@ -67,14 +96,14 @@ FocusScope {
             anchors.centerIn: parent
             spacing: Style.space(10)
             PerchIcon {
-                name: root.playing ? "wave" : "music"
+                name: root.compactIcon
                 ink: root.ink
                 width: Style.space(16)
                 height: width
             }
             Text {
-                width: Style.space(root.hasPlayer ? 154 : 40)
-                text: root.hasPlayer ? root.caption : "Perch"
+                width: Style.space(root.busy ? 154 : 40)
+                text: root.compactText
                 textFormat: Text.PlainText
                 color: root.ink
                 font.family: Style.font.family
@@ -87,7 +116,7 @@ FocusScope {
             anchors.centerIn: parent
             spacing: Style.space(12)
             PerchIcon {
-                name: root.playing ? "wave" : "music"
+                name: root.compactIcon
                 ink: root.ink
                 width: Style.space(16)
                 height: width
@@ -103,11 +132,26 @@ FocusScope {
         MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.expandRequested()
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+            onClicked: function (mouse) {
+                if (mouse.button === Qt.MiddleButton && root.hasPlayer)
+                    root.media.act("toggle");
+                else
+                    root.expandRequested();
+            }
             Accessible.role: Accessible.Button
             Accessible.name: "Open Perch"
             Accessible.onPressAction: root.expandRequested()
         }
+    }
+    Rectangle {
+        visible: !root.expanded && !!root.live && root.live.timerActive
+        x: root.sideTab ? root.width - 2 : 8
+        y: root.sideTab ? 8 : root.height - 2
+        width: root.sideTab ? 2 : (root.width - 16) * root.live.timerProgress
+        height: root.sideTab ? (root.height - 16) * root.live.timerProgress : 2
+        color: root.ink
+        opacity: 0.6
     }
     Item {
         id: content
@@ -136,7 +180,7 @@ FocusScope {
             spacing: Style.space(4)
             Text {
                 Layout.fillWidth: true
-                text: root.settingsOpen ? "Perch settings" : root.demo ? "Perch / demo" : root.hasPlayer ? root.media.identity : "Perch"
+                text: root.settingsOpen ? "Perch settings" : root.demo ? "Perch / demo" : "Perch"
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
                 color: Qt.alpha(root.ink, 0.55)
@@ -158,14 +202,76 @@ FocusScope {
                 onClicked: root.collapseRequested()
             }
         }
-        ColumnLayout {
+        RowLayout {
             visible: !root.settingsOpen
             anchors {
                 left: parent.left
                 right: parent.right
                 top: parent.top
+                leftMargin: Style.space(18)
+                rightMargin: Style.space(18)
+                topMargin: Style.space(45)
+            }
+            spacing: Style.space(4)
+            Repeater {
+                model: ["music", "timer", "system", "activity"]
+                delegate: PerchAction {
+                    required property string modelData
+                    objectName: "tab-" + modelData
+                    Layout.fillWidth: true
+                    text: modelData.charAt(0).toUpperCase() + modelData.slice(1) + (modelData === "activity" && root.live && root.live.items.length ? " · " + root.live.items.length : "")
+                    selected: root.page === modelData
+                    ink: root.ink
+                    surface: root.surface
+                    onClicked: root.page = modelData
+                }
+            }
+        }
+        TimerView {
+            visible: !root.settingsOpen && root.page === "timer"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            live: root.live
+            ink: root.ink
+            surface: root.surface
+        }
+        SystemView {
+            visible: !root.settingsOpen && root.page === "system"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            system: root.system
+            ink: root.ink
+            surface: root.surface
+        }
+        ActivityView {
+            visible: !root.settingsOpen && root.page === "activity"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            live: root.live
+            ink: root.ink
+            surface: root.surface
+        }
+        PlayersView {
+            visible: !root.settingsOpen && root.page === "players"
+            x: Style.space(18)
+            y: Style.space(94)
+            width: parent.width - Style.space(36)
+            media: root.media
+            ink: root.ink
+            surface: root.surface
+            onSelected: root.page = "music"
+        }
+        ColumnLayout {
+            visible: !root.settingsOpen && root.page === "music"
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: parent.top
                 margins: Style.space(18)
-                topMargin: Style.space(48)
+                topMargin: Style.space(94)
             }
             spacing: Style.space(14)
             RowLayout {
@@ -191,6 +297,16 @@ FocusScope {
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                         visible: status === Image.Ready
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: root.hasPlayer && root.media.canRaise
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: root.media.raisePlayer()
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Open media player"
+                        Accessible.onPressAction: if (enabled)
+                            root.media.raisePlayer()
                     }
                 }
                 ColumnLayout {
@@ -259,18 +375,12 @@ FocusScope {
                     Layout.fillWidth: true
                 }
                 NotchButton {
-                    visible: root.hasPlayer && root.media.players.length > 1
+                    visible: root.hasPlayer
                     glyph: "players"
                     label: "Switch player"
                     ink: root.ink
                     surface: root.surface
-                    onClicked: {
-                        var list = root.media.players;
-                        var i = list.findIndex(function (p) {
-                            return Policy.key(p) === root.media.playerKey;
-                        });
-                        root.media.choose(Policy.key(list[(i + 1) % list.length]));
-                    }
+                    onClicked: root.page = "players"
                 }
             }
             RowLayout {
@@ -282,17 +392,25 @@ FocusScope {
                     color: Qt.alpha(root.ink, 0.45)
                     font.pixelSize: Style.space(9)
                 }
-                Rectangle {
+                PerchSlider {
+                    id: seek
+                    objectName: "seek"
                     Layout.fillWidth: true
-                    implicitHeight: Style.space(2)
-                    radius: 1
-                    color: Qt.alpha(root.ink, 0.14)
-                    Rectangle {
-                        height: parent.height
-                        radius: 1
-                        color: Qt.alpha(root.ink, 0.75)
-                        width: parent.width * (root.hasPlayer && root.media.timeline ? Policy.progress(root.media.position, root.media.duration) : 0)
+                    ink: root.ink
+                    enabled: root.hasPlayer && root.media.canSeek
+                    property string capturedPlayer: ""
+                    property string capturedTrack: ""
+                    value: root.hasPlayer && root.media.timeline ? Policy.progress(root.media.position, root.media.duration) : 0
+                    Accessible.name: "Track position"
+                    onPressedChanged: {
+                        if (pressed) {
+                            capturedPlayer = root.media.playerKey;
+                            capturedTrack = root.media.trackKey;
+                        } else if (root.hasPlayer)
+                            root.media.seekTo(value * root.media.duration, capturedPlayer, capturedTrack);
                     }
+                    onMoved: if (!pressed && root.hasPlayer)
+                        root.media.seekTo(value * root.media.duration, root.media.playerKey, root.media.trackKey)
                 }
                 Text {
                     text: root.hasPlayer ? Policy.time(root.media.duration) : ""
@@ -356,14 +474,14 @@ FocusScope {
                 }
             }
             Repeater {
-                model: ["Hide when no player is open", "Reduce motion", "Attach flush to screen edge"]
+                model: ["Hide when idle", "Reduce motion", "Attach flush to screen edge", "Clock when idle", "Open on hover", "Volume and power banners"]
                 delegate: Controls.CheckBox {
                     required property int index
                     required property string modelData
                     Layout.fillWidth: true
                     implicitHeight: Style.space(30)
                     text: modelData
-                    checked: index === 0 ? root.hideIdle : index === 1 ? root.reducedMotion : root.edgeAttached
+                    checked: index === 0 ? root.hideIdle : index === 1 ? root.reducedMotion : index === 2 ? root.edgeAttached : index === 3 ? root.showClock : index === 4 ? root.hoverOpen : root.eventBanners
                     indicator: Rectangle {
                         x: parent.width - width
                         y: (parent.height - height) / 2
@@ -390,11 +508,13 @@ FocusScope {
                         verticalAlignment: Text.AlignVCenter
                         rightPadding: Style.space(36)
                     }
-                    onToggled: root.settingsChanged(index === 0 ? checked : root.hideIdle, index === 1 ? checked : root.reducedMotion, index === 2 ? checked : root.edgeAttached)
+                    onToggled: root.preferenceChanged(["hideIdle", "reducedMotion", "edgeAttached", "showClock", "hoverOpen", "eventBanners"][index], checked)
                 }
             }
             Text {
-                text: "Preferences reset when the shell restarts."
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: root.settingsError || (root.demo ? "Preferences apply to Perch, including demo." : "Saved automatically in Omarchy settings.")
                 color: Qt.alpha(root.ink, 0.4)
                 font.pixelSize: Style.space(10)
             }

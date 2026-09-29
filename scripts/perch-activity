@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Send explicitly supplied progress to Perch; never runs the reported task."""
+import argparse
+import json
+import math
+import re
+import subprocess
+import sys
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('id', help='Stable activity id, e.g. build.perch')
+parser.add_argument('--state', choices=['running', 'waiting', 'done', 'error'], default='running')
+parser.add_argument('--title', default='Activity')
+parser.add_argument('--detail', default='')
+parser.add_argument('--progress', type=float, default=-1)
+parser.add_argument('--ttl', type=int, help='Expire after 5–86400 seconds')
+parser.add_argument('--dismiss', action='store_true')
+args = parser.parse_args()
+if not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}', args.id):
+    parser.error('id must be 1–64 letters, digits, dots, underscores or hyphens, beginning with a letter or digit')
+if not math.isfinite(args.progress) or not -1 <= args.progress <= 1:
+    parser.error('progress must be between 0 and 1, or -1 for unknown')
+if args.ttl is not None and not 5 <= args.ttl <= 86400:
+    parser.error('ttl must be between 5 and 86400 seconds')
+payload = {'id': args.id, 'state': args.state, 'title': args.title[:120], 'detail': args.detail[:240], 'progress': args.progress}
+if args.ttl is not None:
+    payload['ttl'] = args.ttl
+command = ['omarchy-shell', 'io.github.tcballard.perch', 'dismiss' if args.dismiss else 'activity', args.id if args.dismiss else json.dumps(payload, ensure_ascii=False)]
+try:
+    result = subprocess.run(command, capture_output=True, text=True, timeout=5, check=False)
+except FileNotFoundError:
+    sys.exit('omarchy-shell is unavailable. Run this inside Omarchy with Perch enabled.')
+except subprocess.TimeoutExpired:
+    sys.exit('Perch did not respond within five seconds.')
+print(result.stdout.strip() or result.stderr.strip())
+sys.exit(0 if result.returncode == 0 and result.stdout.strip() == 'ok' else 1)
