@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import sys
 import time
@@ -29,30 +30,49 @@ def enabled_plugins():
         return [e if isinstance(e,str) else e.get('id') for e in entries]
     except (OSError,ValueError,AttributeError):return []
 
+def exact_hooks(config, event, command, matcher=None):
+    hooks=config.get('hooks',{})
+    groups=hooks.get(event,[]) if isinstance(hooks,dict) else []
+    if not isinstance(groups,list):return False
+    return any(isinstance(g,dict) and (matcher is None or g.get('matcher')==matcher)
+        and isinstance(g.get('hooks'),list) and any(isinstance(h,dict) and
+        h.get('type')=='command' and h.get('command')==command for h in g['hooks']) for g in groups)
+
+def adapter_current(name):
+    try:
+        installed=read_file(Path.home()/'.local/share/omarchy-perch'/name,1048576)
+        return installed==(ROOT/'scripts'/name).read_bytes()
+    except (OSError,ValueError):return False
+
 def health():
     ids=enabled_plugins();adapter=str(Path.home()/'.local/share/omarchy-perch/perch-agent-hook')
     result={'notifications':'enabled' if 'io.github.tcballard.perch-notifications' in ids else 'disabled', 'osd':'enabled' if 'io.github.tcballard.perch-osd' in ids else 'disabled'}
-    # After a core update the separate companion copies lag until Update is used.
     result['updates']=[kind for kind in ('notifications','osd') if result[kind]=='enabled' and companion_state(kind)=='outdated']
-    for agent,directory,filename in [('claude',os.environ.get('CLAUDE_CONFIG_DIR',str(Path.home()/'.claude')),'settings.json'),('codex',os.environ.get('CODEX_HOME',str(Path.home()/'.codex')),'config.toml')]:
-        try:
-            raw=read_file(Path(directory)/filename,1048576).decode()
-            data=json.loads(raw) if agent=='claude' else tomllib.loads(raw)
-            if agent=='codex':result[agent]='enabled' if data.get('notify')==['python3',adapter,'--perch-hook-v1','codex'] else 'existing notifier' if 'notify' in data else 'disabled'
-            else:result[agent]='hooks disabled' if data.get('disableAllHooks') else 'enabled' if adapter in json.dumps(data.get('hooks',{})) and '--perch-hook-v1' in json.dumps(data.get('hooks',{})) else 'disabled'
-        except FileNotFoundError:result[agent]='not configured'
-        except (ValueError,OSError):result[agent]='configuration unreadable'
     try:
-        config=json.loads(read_file(Path(os.environ.get('CLAUDE_CONFIG_DIR',str(Path.home()/'.claude')))/'settings.json',1048576,follow=True))
-        line=config.get('statusLine',{})
-        result['usage']='enabled' if isinstance(line,dict) and 'perch-usage-statusline' in str(line.get('command','')) else 'custom status line' if line else 'disabled'
-    except (OSError,ValueError,AttributeError):result['usage']='disabled'
+        path=Path(os.environ.get('CODEX_HOME',str(Path.home()/'.codex')))/'config.toml'
+        data=tomllib.loads(read_file(path,1048576).decode())
+        result['codex']='enabled' if data.get('notify')==['python3',adapter,'--perch-hook-v1','codex'] else 'existing notifier' if 'notify' in data else 'disabled'
+    except FileNotFoundError:result['codex']='not configured'
+    except (ValueError,OSError):result['codex']='configuration unreadable'
     try:
-        data=json.loads(read_file(Path(os.environ.get('CLAUDE_CONFIG_DIR',str(Path.home()/'.claude')))/'settings.json',1048576,follow=True))
-        import shlex
-        owned=shlex.join(['python3',str(Path.home()/'.local/share/omarchy-perch/perch-request-hook')])
-        result['requests']='enabled' if any(h.get('command')==owned for g in data.get('hooks',{}).get('PermissionRequest',[]) for h in g.get('hooks',[]) if isinstance(h,dict)) else 'disabled'
-    except (OSError,ValueError,AttributeError,TypeError):result['requests']='disabled'
+        path=Path(os.environ.get('CLAUDE_CONFIG_DIR',str(Path.home()/'.claude')))/'settings.json'
+        config=json.loads(read_file(path,1048576))
+        if not isinstance(config,dict):raise ValueError('Invalid settings')
+        command=shlex.join(['python3',adapter,'--perch-hook-v1','claude'])
+        present=[exact_hooks(config,event,command) for event in ('UserPromptSubmit','PostToolUse','Notification','Stop','SessionEnd')]
+        result['claude']='hooks disabled' if config.get('disableAllHooks') else 'enabled' if all(present) else 'incomplete' if any(present) else 'disabled'
+        line=config.get('statusLine')
+        owned={'type':'command','command':shlex.join(['python3',str(Path.home()/'.local/share/omarchy-perch/perch-usage-statusline')])}
+        result['usage']='enabled' if line==owned else 'custom status line' if line else 'disabled'
+        request_command=shlex.join(['python3',str(Path.home()/'.local/share/omarchy-perch/perch-request-hook')])
+        requests=[exact_hooks(config,event,request_command,matcher) for event,matcher in [('PermissionRequest','*'),('PreToolUse','AskUserQuestion')]]
+        result['requests']='hooks disabled' if config.get('disableAllHooks') else 'enabled' if all(requests) else 'incomplete' if any(requests) else 'disabled'
+    except FileNotFoundError:
+        for key in ('claude','usage','requests'):result[key]='not configured'
+    except (OSError,ValueError,TypeError):
+        for key in ('claude','usage','requests'):result[key]='configuration unreadable'
+    for key,name in [('claude','perch-agent-hook'),('codex','perch-agent-hook'),('usage','perch-usage-statusline'),('requests','perch-request-hook')]:
+        if result[key]=='enabled' and not adapter_current(name):result['updates'].append(key)
     result['brightness']=backlight_state()
     result['sharing']='available' if (shutil.which('localsend') or shutil.which('localsend_app')) else 'LocalSend missing'
     result['alarm']='available' if shutil.which('canberra-gtk-play') else 'sound helper missing'
@@ -86,7 +106,7 @@ def worker(p):
         except (OSError,ValueError,subprocess.SubprocessError) as error:failures.append(name+': '+str(error)[:200])
     if failures:
         # Each step is atomic and preserves existing configuration; report which one stopped.
-        status={'status':'failed','message':'Setup did not complete. '+'; '.join(failures)[:400]+'. Nothing else was changed; fix this and retry.','started':time.time()}
+        status={'status':'failed','message':'Setup did not complete. '+'; '.join(failures)[:400]+'. Other steps may have completed; review the integration states and retry.','started':time.time()}
     elif enabled and any(name in ('osd','notifications') for name in names):
         status={'status':'done','message':'Companion files updated and enabled. Run "omarchy restart shell" to load the new copy; restart agent clients after hook changes.','started':time.time()}
     else:
