@@ -1,0 +1,10 @@
+#!/bin/sh
+# Explicit build step; never invoked by QML or a runtime adapter.
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/omarchy-perch-build/target}"
+case "$CARGO_TARGET_DIR" in /*) ;; *) CARGO_TARGET_DIR="$(pwd)/$CARGO_TARGET_DIR";; esac
+cargo build --release --locked --manifest-path "$root/backend/Cargo.toml"
+mkdir -p "$root/bin"
+install -m 755 "$CARGO_TARGET_DIR/release/perch-backend" "$root/bin/perch-backend"
+printf 'Built %s\n' "$root/bin/perch-backend"
