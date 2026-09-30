@@ -4,7 +4,7 @@
 
 Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A quiet notch opens into native cards, with an optional strip for your favourite tools and plugins.
 
-**Rust backend migration — unreleased.** The published `0.0.1` tag remains the original preview. This branch replaces its runtime helpers with Rust. Start with the [preview guide](PREVIEW.md) for the exact candidate install, a ten-minute test and how to report feedback. Hardware and compositor acceptance remain outstanding; this is not a stable release or full Open Island parity.
+**0.0.2 — Rust backend preview.** Runtime helpers now run in a compiled Rust backend. Start with the [preview guide](PREVIEW.md) for the tagged install, a ten-minute test and how to report feedback. Hardware and compositor acceptance remain outstanding; this is not a stable release or full Open Island parity.
 
 ![Notch and Plugin Perch, rendered from production QML with fictional data](notch-preview.png)
 
@@ -26,7 +26,7 @@ The compact view prioritizes finished timers and activities needing attention, t
 
 ## Install or update
 
-Build a source checkout before enabling it, or use a reviewed archive containing the compiled backend. See [BUILDING.md](BUILDING.md) for packaging and migration. The published `0.0.1` tag does not contain this migration.
+Build a source checkout before enabling it, or use a reviewed archive containing the compiled backend. See [BUILDING.md](BUILDING.md) for packaging and migration. The `v0.0.2` release includes the Rust migration; `0.0.1` remains the original Python preview.
 
 Requires Omarchy Quattro’s plugin-capable shell with the scoped `updateEntryInline` API, QtQuick Controls/Layouts, Quickshell MPRIS, PipeWire, Bluetooth, UPower, IO, Wayland and Hyprland modules, plus Omarchy’s `qs.Commons` and `qs.Ui` modules. These are provided by the target shell; a media player must expose MPRIS for music controls.
 

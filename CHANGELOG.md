@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.0.1 — public preview candidate (unreleased)
+## 0.0.2 — Rust backend preview (2026-09-30)
+
+Perch now runs its backend in Rust. The native QML interface stays in place.
+
+- Replace Python runtime helpers with the compiled backend for desktop operations, calendars, agent hooks, approval bridges, SSH relay and notification storage.
+- Ship a compiled Linux x86_64 archive and checksum. Archive installs need neither Python nor Rust; source installs require Cargo 1.88+.
+- Migrate Perch-owned legacy hooks with backups while preserving custom hooks, notifiers and managed restrictions. Reapply copied integrations from Setup after updating.
+- Fix OpenCode approval delivery while its input pipe remains open.
+
+Portable Rust, CLI, socket, QML and JavaScript checks passed. Live Omarchy hardware/compositor and real-client acceptance remain outstanding. This is a preview for testing and feedback.
+
+## 0.0.1 — public preview
 
 - Package the current Notch, native plugin drawer and desktop modules as a clearly scoped preview, with a tester guide and structured bug/UX reports.
 - Raise live activity capacity to 32. New attention events can replace old idle/completed rows, then ordinary running work; unresolved requests and attention rows are never evicted. A fully occupied attention queue returns control to the agent session.

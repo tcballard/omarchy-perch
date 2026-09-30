@@ -1,6 +1,6 @@
 # Test the Perch preview
 
-**Rust migration preview · unreleased.** The published `0.0.1` tag is unchanged.
+**0.0.2 · Rust backend preview.** Install the immutable `v0.0.2` tag or its compiled release archive.
 Use [BUILDING.md](BUILDING.md) for a compiled review archive or source build.
 
 Perch puts music, files, timers, meetings and your chosen plugins at the edge of
@@ -22,24 +22,26 @@ compositor, install/update/removal and real agent round trips still need live
 testing. The screenshots are labelled fixture renders, not proof of a complete
 desktop acceptance pass. Check the candidate PR's current CI before installing.
 
-## Install the review candidate
+## Install version 0.0.2
 
-The normal add command clones the default branch. Until this stack is merged,
-select the Rust review branch and build its backend **before enabling** it. Do not use `--enable` on the
-first command below. A published preview will instead have an immutable tag.
+The [v0.0.2 release](https://github.com/tcballard/omarchy-perch/releases/tag/v0.0.2)
+contains a Linux x86_64 archive with the compiled backend and its checksum.
+Archive testers need neither Python nor Cargo; follow [BUILDING.md](BUILDING.md)
+for archive installation.
 
-Fresh install, one command at a time:
+For a Git checkout, Cargo 1.88+ is required to build the backend. Build before
+enabling Perch. Fresh install, one command at a time:
 
 ```bash
 omarchy plugin add https://github.com/tcballard/omarchy-perch.git
 ```
 
 ```bash
-git -C "$HOME/.config/omarchy/plugins/io.github.tcballard.perch" fetch origin rust/native-runtime
+git -C "$HOME/.config/omarchy/plugins/io.github.tcballard.perch" fetch origin tag v0.0.2
 ```
 
 ```bash
-git -C "$HOME/.config/omarchy/plugins/io.github.tcballard.perch" switch --detach origin/rust/native-runtime
+git -C "$HOME/.config/omarchy/plugins/io.github.tcballard.perch" switch --detach v0.0.2
 ```
 
 ```bash
@@ -59,16 +61,15 @@ omarchy restart shell
 omarchy-shell shell summon io.github.tcballard.perch
 ```
 
-For an existing installation, first record `git rev-parse HEAD` and check
-`git status --short` in that plugin directory. Keep any local edits; do not reset
+For an existing installation, record `git rev-parse HEAD` and check
+`git status --short` in that plugin directory. Preserve local edits; do not reset
 them. Disable Perch with `omarchy plugin disable io.github.tcballard.perch`, then
-follow the fetch, switch, validate, enable and restart steps above. Git must show
-a clean working tree before switching the candidate.
+follow the fetch, switch, build, validate, enable and restart steps above. Git must
+show a clean working tree before switching the tag.
 
-The branch can receive fixes: repeat fetch/switch/validate/restart deliberately
-to update, then open **Setup & health** and update any enabled copied integrations
-it marks outdated. Record the new commit with each report. Host automatic
-updates intentionally do not update this detached preview checkout.
+Open **Setup & health** after updating and reapply any enabled copied integrations
+it marks outdated. Record the tested version with each report. Host automatic
+updates intentionally do not update this detached tagged checkout.
 
 ## First ten minutes
 
