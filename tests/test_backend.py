@@ -141,8 +141,13 @@ else:print('ok')
         if os.environ.get('PERCH_REQUIRE_SOCKET_TESTS')=='1':raise
         sockets_available=False
         print('Local socket creation is blocked; GitHub CI requires the live bridge/HTTP checks.')
+    # Interactive stdin must consume a complete line while the writer stays open.
+    pipe_child=subprocess.Popen([str(ROOT/'scripts/perch-request-hook'),'--agent','opencode'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,env=env)
+    pipe_child.stdin.write('not-json\n');pipe_child.stdin.flush()
+    pipe_child.wait(timeout=1);assert pipe_child.returncode==0 and pipe_child.stdout.read()==''
+    pipe_child.stdin.close()
+    # Real request bridge sockets, cancellation and one-off decisions.
     if sockets_available:
-        # Real request bridge sockets, cancellation and one-off decisions.
         request={'hook_event_name':'PermissionRequest','tool_name':'Bash','tool_input':{'command':'make test'},'cwd':'/work/repo'}
         def start_request(agent='claude'):
             child=subprocess.Popen([str(ROOT/'scripts/perch-request-hook')]+(['--agent',agent] if agent!='claude' else []),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,env=env)
