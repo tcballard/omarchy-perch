@@ -252,9 +252,15 @@ pub fn input_line(limit: usize, timeout: f64) -> Result<Vec<u8>> {
             continue;
         };
         let mut byte = [0u8; 1];
-        if std::io::stdin().read(&mut byte)? == 0 {
+        // Poll and read the same unbuffered descriptor. std::io::Stdin can
+        // prefetch the rest of the line, leaving poll waiting on an empty pipe.
+        let count = unsafe { libc::read(0, byte.as_mut_ptr().cast(), 1) };
+        if count < 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        if count == 0 {
             return err("Input closed");
-        };
+        }
         if byte[0] == b'\n' {
             return Ok(raw);
         }

@@ -1,6 +1,7 @@
 # Test the Perch preview
 
-**0.0.1 · preview candidate, not yet tagged or released.**
+**Rust migration preview · unreleased.** The published `0.0.1` tag is unchanged.
+Use [BUILDING.md](BUILDING.md) for a compiled review archive or source build.
 
 Perch puts music, files, timers, meetings and your chosen plugins at the edge of
 Omarchy. This preview also includes optional coding-agent status and selected
@@ -10,7 +11,7 @@ responsiveness and reliability before a stable release.
 ## Compatibility and evidence
 
 Requires the plugin-capable **Omarchy Quattro shell**, including its scoped
-`updateEntryInline` settings API, Python 3.11+ and the shell's native Quickshell
+`updateEntryInline` settings API and the shell's native Quickshell
 modules. This is not intended for older non-plugin Omarchy installations.
 Integration contracts were inspected against Omarchy source
 `b421b1b479ee9ea0863792282eee4ffeb50923dc`; that is a source reference, not a
@@ -24,7 +25,7 @@ desktop acceptance pass. Check the candidate PR's current CI before installing.
 ## Install the review candidate
 
 The normal add command clones the default branch. Until this stack is merged,
-select the preview branch **before enabling** it. Do not use `--enable` on the
+select the Rust review branch and build its backend **before enabling** it. Do not use `--enable` on the
 first command below. A published preview will instead have an immutable tag.
 
 Fresh install, one command at a time:
@@ -34,14 +35,15 @@ omarchy plugin add https://github.com/tcballard/omarchy-perch.git
 ```
 
 ```bash
-git -C "$HOME/.config/omarchy/plugins/io.github.tcballard.perch" fetch origin release/preview-rc6
+git -C "$HOME/.config/omarchy/plugins/io.github.tcballard.perch" fetch origin rust/native-runtime
 ```
 
 ```bash
-git -C "$HOME/.config/omarchy/plugins/io.github.tcballard.perch" switch --detach origin/release/preview-rc6
+git -C "$HOME/.config/omarchy/plugins/io.github.tcballard.perch" switch --detach origin/rust/native-runtime
 ```
 
 ```bash
+"$HOME/.config/omarchy/plugins/io.github.tcballard.perch/scripts/build-backend"
 omarchy plugin validate "$HOME/.config/omarchy/plugins/io.github.tcballard.perch"
 ```
 
@@ -137,10 +139,10 @@ login of its own and does not send telemetry.
 Run this locally for a small support report, then review it before attaching:
 
 ```bash
-python3 "$HOME/.config/omarchy/plugins/io.github.tcballard.perch/scripts/perch-support"
+"$HOME/.config/omarchy/plugins/io.github.tcballard.perch/scripts/perch-support"
 ```
 
-It reports Perch version/revision, whether the checkout has edits, Linux/Python
+It reports Perch version/revision, whether the checkout has edits, Linux/backend
 versions and optional-command availability. It does not read agent transcripts,
 shell configuration, notification/clipboard history, credentials or logs, and
 does not upload anything. Add your Omarchy version, monitor/scale, relevant

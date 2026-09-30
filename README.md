@@ -4,7 +4,7 @@
 
 Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A quiet notch opens into native cards, with an optional strip for your favourite tools and plugins.
 
-**0.0.1 — public preview candidate.** Built for people who want to test Perch and help shape it. The current stack is not yet a published release. Start with the [preview guide](PREVIEW.md) for the exact candidate install, a ten-minute test and how to report feedback. Hardware and compositor acceptance remain outstanding; this is not a stable release or full Open Island parity.
+**Rust backend migration — unreleased.** The published `0.0.1` tag remains the original preview. This branch replaces its runtime helpers with Rust. Start with the [preview guide](PREVIEW.md) for the exact candidate install, a ten-minute test and how to report feedback. Hardware and compositor acceptance remain outstanding; this is not a stable release or full Open Island parity.
 
 ![Notch and Plugin Perch, rendered from production QML with fictional data](notch-preview.png)
 
@@ -26,18 +26,22 @@ The compact view prioritizes finished timers and activities needing attention, t
 
 ## Install or update
 
-The commands below install the repository default branch. Until the preview stack is merged, use [PREVIEW.md](PREVIEW.md) to test the candidate branch.
+Build a source checkout before enabling it, or use a reviewed archive containing the compiled backend. See [BUILDING.md](BUILDING.md) for packaging and migration. The published `0.0.1` tag does not contain this migration.
 
 Requires Omarchy Quattro’s plugin-capable shell with the scoped `updateEntryInline` API, QtQuick Controls/Layouts, Quickshell MPRIS, PipeWire, Bluetooth, UPower, IO, Wayland and Hyprland modules, plus Omarchy’s `qs.Commons` and `qs.Ui` modules. These are provided by the target shell; a media player must expose MPRIS for music controls.
 
 ```bash
-omarchy plugin add https://github.com/tcballard/omarchy-perch.git --enable
+omarchy plugin add https://github.com/tcballard/omarchy-perch.git
+cd "$HOME/.config/omarchy/plugins/io.github.tcballard.perch"
+./scripts/build-backend
+omarchy plugin enable io.github.tcballard.perch
 ```
 
 Existing installation:
 
 ```bash
 omarchy plugin update io.github.tcballard.perch --yes
+~/.config/omarchy/plugins/io.github.tcballard.perch/scripts/build-backend
 omarchy restart shell
 ```
 
@@ -95,7 +99,7 @@ Optional `attention` is `approval` or `question` for a more specific waiting-car
 
 `state` is `running`, `waiting`, `done` or `error`; `waiting` displays “Needs attention”. `progress` is 0–1, or omitted/−1 when unknown. `ttl` is 5–86400 seconds; the default is 300 seconds, or 30 for a completed card. Producers should refresh long-running cards before expiry. Activities are transient and clear on shell restart. Ordinary activity payloads cannot execute commands or grant permissions. Interactive requests use the separate, opt-in bridge below.
 
-An optional Python 3 helper quotes JSON safely and applies a five-second IPC timeout:
+The Rust helper quotes JSON safely and applies a five-second IPC timeout:
 
 ```bash
 ~/.config/omarchy/plugins/io.github.tcballard.perch/scripts/perch-activity build \
@@ -116,7 +120,7 @@ The legacy timer IPC rejects replacement of a running/paused selected timer. Use
 
 ## State, dependencies and boundaries
 
-Perch runs inside `omarchy-shell`. Native media/device changes are event-driven. Bounded Python jobs handle file/calendar/app operations and explicit integration setup. Configured calendars refresh every five minutes; Setup polls every three seconds only while a setup job is running. Helper operations run one at a time and queue briefly behind each other. Recognized active agent processes are checked every 15 seconds; optional local session discovery scans every minute. No browser polling runs. Python 3.11+ is required; optional features use `brightnessctl` (backlight devices only, never keyboard LEDs), the LocalSend GUI (`localsend` or `localsend_app`), `canberra-gtk-play`, `notify-send`, `gtk-launch` and `xdg-open`. Nothing is installed automatically.
+Perch runs inside `omarchy-shell`. Native media/device changes are event-driven. Bounded Rust jobs handle file/calendar/app operations and explicit integration setup. Configured calendars refresh every five minutes; Setup polls every three seconds only while a setup job is running. Helper operations run one at a time and queue briefly behind each other. Recognized active agent processes are checked every 15 seconds; optional local session discovery scans every minute. No browser polling runs. Packaged builds require neither Python nor Rust at runtime; source builds require Cargo 1.88+. HTTP features use curl; optional features use `brightnessctl` (backlight devices only, never keyboard LEDs), the LocalSend GUI (`localsend` or `localsend_app`), `canberra-gtk-play`, `notify-send`, `gtk-launch` and `xdg-open`. Nothing is installed automatically.
 
 Settings, pins, display profiles and timer transitions use Perch's own `shell.json` entry through the scoped host API. Unknown own-entry keys are retained. Bad settings block writes. FileView reads the user-owned shell settings before applying its 1 MiB parse limit. Timers save on transitions, not every tick; changing the system clock affects their deadlines.
 
@@ -202,7 +206,7 @@ Remove each integration before removing Perch (existing unrelated hooks remain):
 ./scripts/perch-agent-setup codex --remove --apply
 ```
 
-After removing both integrations, the inert `~/.local/share/omarchy-perch/perch-agent-hook` file can be deleted. Dated config backups are retained for you to review/remove. Setup never reads agent credential files. For manual integration with an existing notifier, invoke `python3 ~/.local/share/omarchy-perch/perch-agent-hook --perch-hook-v1 codex "$event_json"` from your own notifier; Perch does not automatically chain existing commands.
+After removing both integrations, the inert `~/.local/share/omarchy-perch/perch-agent-hook` file can be deleted. Dated config backups are retained for you to review/remove. Setup never reads agent credential files. For manual integration with an existing notifier, invoke `~/.local/share/omarchy-perch/perch-agent-hook --perch-hook-v1 codex "$event_json"` from your own notifier; Perch does not automatically chain existing commands.
 
 Contracts: [Claude Code hooks](https://code.claude.com/docs/en/hooks), [Codex notify](https://developers.openai.com/codex/config-advanced#notifications), [Quickshell notifications](https://quickshell.org/docs/v0.2.1/types/Quickshell.Services.Notifications/Notification/).
 
@@ -459,7 +463,7 @@ policy hooks can still deny a request. Codex question tools are not intercepted.
 ### Updates through Omarchy
 
 Setup offers **Check and update Perch** for a git-managed installation in the
-normal Omarchy plugin directory. It delegates to Omarchy's updater, which owns
+normal Omarchy plugin directory. It delegates to Omarchy's updater, then rebuilds the Rust backend with Cargo. Omarchy owns
 fast-forwarding, manifest validation and shell rescan. Perch first rejects
 local changes, custom/review branches and development/symlink installations.
 It does not reset your checkout, change its remote or update other plugins.
@@ -539,8 +543,7 @@ Contract: [Zellij programmatic control](https://zellij.dev/documentation/program
 ### Read status from an existing Codex app-server
 
 Setup → **Codex server status** accepts an explicitly chosen local Unix control
-socket. With the optional system package `python-websockets` (15 or newer), Perch
-reads up to eight loaded top-level threads every five seconds. It displays
+socket. The bundled Rust WebSocket client reads up to eight loaded top-level threads every five seconds. It displays
 working, approval/question attention, idle and error state. An observed active
 to idle transition becomes completion; an initial idle snapshot does not ring.
 Hooks remain the lower-latency source for clients that expose them.

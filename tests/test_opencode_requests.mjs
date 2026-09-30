@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
 const children=[], calls=[];
 globalThis.perchSpawn=(program,argv,options)=>{
-    assert.equal(program,'python3');assert.deepEqual(argv,['/owned/request','--agent','opencode']);
+    assert.equal(program,'/owned/request');assert.deepEqual(argv,['--agent','opencode']);
     assert.deepEqual(options.stdio,['pipe','pipe','ignore']);
     const child=new EventEmitter();child.stdout=new EventEmitter();child.stdin=new EventEmitter();
     child.stdin.write=raw=>child.raw=JSON.parse(raw);

@@ -20,7 +20,7 @@ Item {
         if (!ready || io.running || !pending)
             return;
         reading = false;
-        io.command = ["/usr/bin/python3", "-I", decodeURIComponent(Qt.resolvedUrl("store.py").toString().replace(/^file:\/\//, "")), "write"];
+        io.command = [decodeURIComponent(Qt.resolvedUrl("perch-notification-store").toString().replace(/^file:\/\//, "")), "write"];
         io.running = true;
         deadline.restart();
     }
@@ -77,12 +77,12 @@ Item {
             return;
         readAttempts++;
         reading = true;
-        io.command = ["/usr/bin/python3", "-I", decodeURIComponent(Qt.resolvedUrl("store.py").toString().replace(/^file:\/\//, "")), "read"];
+        io.command = [decodeURIComponent(Qt.resolvedUrl("perch-notification-store").toString().replace(/^file:\/\//, "")), "read"];
         io.running = true;
         deadline.restart();
     }
     Timer {
-        // A cold python start at login can miss the first deadline; try again.
+        // A cold backend start at login can miss the first deadline; try again.
         id: readRetry
         interval: 2000
         onTriggered: root.read()

@@ -1,0 +1,14 @@
+#!/bin/sh
+# Resolve the installed build without compiling or downloading at runtime.
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+export PERCH_ROOT="$root"
+if [ ! -x "$root/bin/perch-backend" ]; then
+    if [ "${1:-}" = tools ]; then
+        printf '%s\n' '{"ok":false,"error":"Rust backend missing. Run scripts/build-backend once before enabling Perch."}'
+        exit 0
+    fi
+    printf '%s\n' 'Perch Rust backend missing. Run scripts/build-backend once before enabling Perch.' >&2
+    exit 1
+fi
+exec "$root/bin/perch-backend" "$@"

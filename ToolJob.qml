@@ -13,7 +13,7 @@ Item {
         killGrace.stop();
         operation = op;
         busy = true;
-        worker.command = ["/usr/bin/python3", "-I", decodeURIComponent(Qt.resolvedUrl("scripts/perch-tools").toString().replace(/^file:\/\//, "")), op, JSON.stringify(payload || {})];
+        worker.command = [decodeURIComponent(Qt.resolvedUrl("scripts/perch-tools").toString().replace(/^file:\/\//, "")), op, JSON.stringify(payload || {})];
         deadline.restart();
         worker.running = true;
         return true;

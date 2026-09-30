@@ -10,7 +10,7 @@ export default function perchStatus(pi) {
                 if (typeof id !== 'string' || !id || id.length > 4096) return;
                 const data = JSON.stringify({session_id:id, state, cwd:ctx.cwd});
                 await new Promise(resolve => {
-                    const child = execFile('python3', [adapter, '--perch-hook-v1', agent],
+                    const child = execFile(adapter, ['--perch-hook-v1', agent],
                         {timeout:2500, maxBuffer:1024, windowsHide:true}, () => resolve());
                     child.stdin.on('error', () => {});
                     child.stdin.end(data);

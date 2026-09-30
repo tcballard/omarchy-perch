@@ -1,0 +1,8 @@
+#!/bin/sh
+# Perch Rust notification store v1
+set -eu
+source_backend=$(dirname "$0")/../../scripts/perch-backend
+if [ -x "$source_backend" ]; then
+    exec "$source_backend" notification-store "$@"
+fi
+exec "$HOME/.local/share/omarchy-perch/perch-backend" notification-store "$@"

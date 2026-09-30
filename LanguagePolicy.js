@@ -197,7 +197,7 @@ Object.assign(chinese,{"Receive remote agent status":"接收远程智能体状�
 Object.assign(chinese,{"Working, permission and question attention; local extension":"工作状态、授权和问题提醒；本地扩展","Allow once or deny through the v1 client; questions stay in the session":"通过 v1 客户端允许一次或拒绝；问题仍在会话中回答"});
 Object.assign(chinese,{"Open in Codex desktop":"在 Codex 桌面应用中打开"});
 Object.assign(chinese,{"Select Zellij pane":"选择 Zellij 窗格"});
-Object.assign(chinese,{"Codex server status":"Codex 服务器状态","Read an existing private local control socket every five seconds. Permissions stay in Codex. Requires python-websockets 15 or newer.":"每五秒读取现有的私有本地控制套接字。授权仍在 Codex 中处理。需要 python-websockets 15 或更高版本。","Absolute control socket path":"控制套接字的绝对路径","Stop reading Codex status":"停止读取 Codex 状态","Read Codex status":"读取 Codex 状态","Checking Codex status…":"正在检查 Codex 状态…"," loaded sessions":" 个已加载会话"});
+Object.assign(chinese,{"Codex server status":"Codex 服务器状态","Read an existing private local control socket every five seconds. Permissions stay in Codex. Uses the bundled Rust WebSocket client.":"每五秒读取现有的私有本地控制套接字。授权仍在 Codex 中处理。使用随附的 Rust WebSocket 客户端。","Absolute control socket path":"控制套接字的绝对路径","Stop reading Codex status":"停止读取 Codex 状态","Read Codex status":"读取 Codex 状态","Checking Codex status…":"正在检查 Codex 状态…"," loaded sessions":" 个已加载会话"});
 function translate(text, language) {
     return language === "zh-CN" && Object.prototype.hasOwnProperty.call(chinese,text) ? chinese[text] : text;
 }
