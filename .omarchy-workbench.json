@@ -20,6 +20,14 @@
       "required": true
     },
     {
+      "name": "rust",
+      "argv": [
+        "cargo",
+        "--version"
+      ],
+      "required": true
+    },
+    {
       "name": "python",
       "argv": [
         "python3",

@@ -238,7 +238,7 @@ ColumnLayout {
             }
             Text {
                 Layout.fillWidth: true
-                text: PerchStrings.t("Read an existing private local control socket every five seconds. Permissions stay in Codex. Requires python-websockets 15 or newer.")
+                text: PerchStrings.t("Read an existing private local control socket every five seconds. Permissions stay in Codex. Uses the bundled Rust WebSocket client.")
                 wrapMode: Text.Wrap
                 color: Qt.alpha(root.ink, 0.6)
                 font.pixelSize: Style.space(10)

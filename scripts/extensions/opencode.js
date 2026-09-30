@@ -18,7 +18,7 @@ export const PerchStatus = async ({directory}) => ({
             if (!state) return;
             const data = JSON.stringify({session_id:p.sessionID, state, attention, cwd:directory});
             await new Promise(resolve => {
-                const child = execFile('python3', [adapter, '--perch-hook-v1', 'opencode'],
+                const child = execFile(adapter, ['--perch-hook-v1', 'opencode'],
                     {timeout:2500, maxBuffer:1024, windowsHide:true}, () => resolve());
                 child.stdin.on('error', () => {});
                 child.stdin.end(data);

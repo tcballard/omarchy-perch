@@ -33,7 +33,7 @@ export const PerchRequests = async ({client, directory}) => {
                 tool_input:input, cwd:directory});
             if (Buffer.byteLength(raw) > 65536) return;
             let child;
-            try { child = spawn('python3', [adapter, '--agent', 'opencode'], {stdio:['pipe','pipe','ignore'], windowsHide:true}); }
+            try { child = spawn(adapter, ['--agent', 'opencode'], {stdio:['pipe','pipe','ignore'], windowsHide:true}); }
             catch (_) { return; }
             const entry = {child, sessionID:p.sessionID, applying:false, output:'', timer:null};
             pending.set(p.id, entry);

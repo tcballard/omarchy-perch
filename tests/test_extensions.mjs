@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const sent=[];
 globalThis.perchExec = (program, argv, options, callback) => {
-    assert.equal(program,'python3');assert.equal(options.timeout,2500);
+    assert.equal(program,'/owned/hook');assert.equal(options.timeout,2500);
     assert.equal(options.maxBuffer,1024);
     return {stdin:{on(){},end(raw){sent.push({argv,data:JSON.parse(raw)});callback(null);}}};
 };

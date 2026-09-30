@@ -3,5 +3,6 @@ set -euo pipefail
 state="${1:-playing}"
 case "$state" in playing|paused|empty|timer|system|activity|inbox|desktop|shelf|calendar|setup|hub) ;; *) printf 'Usage: demo/run [playing|paused|empty|timer|system|activity|inbox|desktop|shelf|calendar|setup|hub]\n' >&2; exit 2;; esac
 command -v omarchy-shell >/dev/null || { printf 'Run this inside an Omarchy Quattro session with the plugin enabled.\n' >&2; exit 1; }
-payload=$(python3 -c 'import json,sys;print(json.dumps({"demo":True,"state":sys.argv[1],"page":sys.argv[1] if sys.argv[1] in ["timer","system","activity","inbox","desktop","shelf","calendar","setup","hub"] else "music"}))' "$state")
+case "$state" in playing|paused|empty) page=music;; *) page=$state;; esac
+payload="{\"demo\":true,\"state\":\"$state\",\"page\":\"$page\"}"
 omarchy-shell shell summon io.github.tcballard.perch "$payload"

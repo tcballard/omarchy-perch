@@ -27,7 +27,7 @@ Item {
     Component.onCompleted: reconcile()
     Process {
         id: worker
-        command: ["/usr/bin/python3", "-I", decodeURIComponent(Qt.resolvedUrl("scripts/perch-relay").toString().replace(/^file:\/\//, "")), "serve"]
+        command: [decodeURIComponent(Qt.resolvedUrl("scripts/perch-relay").toString().replace(/^file:\/\//, "")), "serve"]
         stdout: SplitParser {
             onRead: data => {
                 if (!root.optedIn || data.length > 8192)
