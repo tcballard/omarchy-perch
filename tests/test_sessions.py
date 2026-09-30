@@ -32,6 +32,14 @@ for clients, reply in [('[]', 'ok'), ('{}', 'ok'), ('[{"address":"0xabc123"}]', 
 
 print('Agent session jump validates one Hyprland address and uses fixed argv.')
 boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+with patch.object(sessions, 'process_start', return_value='100'):
+    rows=[{'id':'session.'+str(i),'pid':100+i,'start':'100','boot':boot} for i in range(32)]
+    assert sessions.liveness(rows)['ended']==[]
+    try:
+        sessions.liveness(rows+[rows[0]])
+        raise AssertionError('Unbounded liveness batch accepted')
+    except ValueError:
+        pass
 for pid, saved_boot, start, succeeds in [(123,boot,"100",True),(124,boot,"100",False),(123,"old-boot","100",False),(123,boot,"999",False),(123,boot,"",False)]:
     with patch.object(sessions,'process_start',return_value='100'), patch.object(sessions.shutil,'which',return_value='/usr/bin/hyprctl'), patch.object(sessions,'run',side_effect=['[{"address":"0xabc123","pid":123}]','ok']) as execute:
         try:

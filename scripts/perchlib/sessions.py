@@ -131,7 +131,7 @@ def open_workspace(target):
 
 
 def liveness(records):
-    if not isinstance(records,list) or len(records)>8:raise ValueError('Invalid session records')
+    if not isinstance(records,list) or len(records)>32:raise ValueError('Invalid session records')
     boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
     ended=[]
     for row in records:

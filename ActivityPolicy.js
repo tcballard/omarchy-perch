@@ -46,7 +46,19 @@ function normalize(encoded, now) {
 }
 function upsert(items, item, now) {
     var next = items.filter(function(p) { return p.expiresAt > now && p.id !== item.id })
-    if (next.length >= 8) return null
+    if (next.length >= 32) {
+        // Attention must not be crowded out by history or ordinary work.
+        // Never evict an unresolved request or another attention event.
+        var candidates = next.filter(function(p) {
+            return !p.requestId && (p.state === "idle" || p.state === "done" ||
+                ((item.state === "waiting" || item.state === "error") && p.state === "running"))
+        }).sort(function(a,b) {
+            var rank = {idle:0, done:1, running:2}
+            return rank[a.state] - rank[b.state] || a.updatedAt - b.updatedAt
+        })
+        if (!candidates.length) return null
+        next = next.filter(function(p) { return p.id !== candidates[0].id })
+    }
     next.push(item)
     return next
 }
@@ -82,7 +94,7 @@ function discovered(items, records, now, dismissed) {
     if (!Array.isArray(records)) return items
     var next = items.filter(function(p) { return p.expiresAt > now })
     records.slice(0,8).forEach(function(p) {
-        if (!p || dismissed.indexOf(p.id) >= 0 || next.some(function(i) { return i.id === p.id }) || next.length >= 8) return
+        if (!p || dismissed.indexOf(p.id) >= 0 || next.some(function(i) { return i.id === p.id }) || next.length >= 32) return
         var recovered = recover([p],now)[0]
         if (!recovered) return
         recovered.detail = "Last seen in local session history"

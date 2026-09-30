@@ -323,7 +323,7 @@ Item {
         });
         var next = Activities.upsert(items, item, now);
         if (!next)
-            return "error: eight activities already active";
+            return "error: activity capacity reached; continue in your agent session";
         items = next;
         if (["done", "waiting", "error"].indexOf(item.state) >= 0 && (!previous || previous.state !== item.state || previous.attention !== item.attention || (item.eventKey && item.eventKey !== previous.eventKey)))
             activityEvent(item);

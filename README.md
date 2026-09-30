@@ -4,13 +4,9 @@
 
 Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A quiet notch opens into native cards, with an optional strip for your favourite tools and plugins.
 
-**Unreleased: native modules.** Choose a quiet Notch or the visible Plugin Perch strip, with drag/keyboard ordering. Every tool uses the shared native card host, including Clipboard, Stats and Weather. Weather is opt-in; clipboard reuses Omarchy's existing history. [Module contract and exact boundaries](MODULES.md). [Notch and Plugin Perch preview](notch-preview.png).
+**0.1.0-rc.6 — public preview candidate.** Built for people who want to test Perch and help shape it. The current stack is not yet a published release. Start with the [preview guide](PREVIEW.md) for the exact candidate install, a ten-minute test and how to report feedback. Hardware and compositor acceptance remain outstanding; this is not a stable release or full Open Island parity.
 
-![Native Perch module cards, rendered with fictional data](modules-preview.png)
-
-**v0.1.0-rc.5 — release candidate.** rc.3 added contextual controls, files, calendars, multiple timers, richer system controls and guided setup; rc.4 fixed dropdown input/hover handling, serialized helper jobs, detected outdated companion copies and reported failing setup steps; rc.5 adds a Hyprland global shortcut, page and context transitions, compact artwork, whole-card drag and deferred timer alerts. Portable tests and actual QML fixture rendering pass. The hardware/compositor integrations still need the XPS checks in [TESTING.md](TESTING.md); this is not a stable release or a claim of macOS feature parity. [Scope and boundaries](GAPS.md).
-
-![Unreleased native cards rendered from production QML with fictional fixtures](preview.png)
+![Notch and Plugin Perch, rendered from production QML with fictional data](notch-preview.png)
 
 ## What you get
 
@@ -29,6 +25,8 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 The compact view prioritizes finished timers and activities needing attention, then new notification previews, device feedback, imminent meetings, running timers and music. When activity cards are enabled, new completion or attention events open a dedicated card only while Perch is collapsed, without taking keyboard focus. Open tools and settings stay in place. Completion cards close after eight seconds (extended while hovered); attention cards remain until dismissed, resolved or expired. Fullscreen defaults to hidden; Settings also offers timer/activity alerts or always show.
 
 ## Install or update
+
+The commands below install the repository default branch. Until the preview stack is merged, use [PREVIEW.md](PREVIEW.md) to test the candidate branch.
 
 Requires Omarchy Quattro’s plugin-capable shell with the scoped `updateEntryInline` API, QtQuick Controls/Layouts, Quickshell MPRIS, PipeWire, Bluetooth, UPower, IO, Wayland and Hyprland modules, plus Omarchy’s `qs.Commons` and `qs.Ui` modules. These are provided by the target shell; a media player must expose MPRIS for music controls.
 
@@ -477,7 +475,7 @@ Development/manual installs must use their original update method.
 
 When a status hook can identify a recognized ancestor agent executable or
 package entry point, it includes that process's PID, start time and boot ID.
-Perch rechecks up to eight such active sessions every 15 seconds. A process
+Perch rechecks up to 32 such active sessions every 15 seconds. A process
 that exited or was replaced becomes **Agent process ended**, without a false
 completion alert. Unreadable process metadata stays unknown. Generic wrappers
 and remote events are not guessed; their status still expires normally.

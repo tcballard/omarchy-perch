@@ -1,12 +1,20 @@
 # Changelog
 
-## Unreleased — native modules
+## 0.1.0-rc.6 — public preview candidate (unreleased)
+
+- Package the current Notch, native plugin drawer and desktop modules as a clearly scoped preview, with a tester guide and structured bug/UX reports.
+- Raise live activity capacity to 32. New attention events can replace old idle/completed rows, then ordinary running work; unresolved requests and attention rows are never evicted. A fully occupied attention queue returns control to the agent session.
+- Include opt-in status adapters for 13 agent clients; Claude/Codex/OpenCode v1 approvals and Claude questions; local usage; optional recovery/discovery; SSH status; verified window, tmux, WezTerm and workspace return; Zellij pane selection; Codex desktop links and read-only existing-server status.
+- Keep integrations explicit: notifications/OSD replace their stock owners only when enabled; weather and remote artwork remain opt-in; copied integration updates are reported in Setup.
+- Remaining preview limitations and a repeatable desktop smoke test are in PREVIEW.md. No live hardware/compositor acceptance or stable-release claim.
+
+### Native surfaces included
 
 - Search and open all tools and installed plugins, pin/unpin from results, and use Ctrl+K for search. Disabled plugins remain visibly unavailable.
 - Prioritize fresh notifications, device feedback and meetings ahead of music; inbox refreshes no longer revive expired previews. Split activity cards from device feedback settings.
 - Add Quiet mode, independent activity sounds, three system sound presets with preview/error feedback, and DND-aware dispatch. Follow the Omarchy theme or retain a dark island, including per-display appearance. Reducing motion during a transition now settles the page immediately.
 
-- Content-sized music, timer, activity and plugin cards; dedicated completion, permission, input and error surfaces. New events open only from collapsed Perch, without keyboard focus; duplicate status updates stay quiet. Completion dismisses after eight seconds, with hover protection. Approval/input actions return to the agent session.
+- Content-sized music, timer, activity and plugin cards; dedicated completion, permission, input and error surfaces. New events open only from collapsed Perch, without keyboard focus; duplicate status updates stay quiet. Completion dismisses after eight seconds, with hover protection. Supported request bridges offer explicit responses; other approval/input actions return to the agent session.
 
 - Native Plugin Perch drawer: bounded provider snapshots render inside Perch with explicit actions, late-response protection and a full-panel fallback. RSS Feed is the first paired provider; it requires its Perch-card integration change.
 

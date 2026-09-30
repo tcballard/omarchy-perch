@@ -1,5 +1,13 @@
 # Verification — 29 September 2026
 
+For the current **rc.6 public preview candidate**, start with [PREVIEW.md](PREVIEW.md).
+The sections below retain historical slice-by-slice evidence; their earlier
+feature limitations are not a statement of the current build. The rc.6 local
+suite passes production Qt tests with host stubs. Unix socket round trips are
+skipped where this execution sandbox prohibits sockets; the candidate's CI must
+pass them. Real Omarchy/XPS acceptance remains outstanding.
+
+
 ## Completed in the build environment
 
 - `./tests/run` with Python 3, Node and PySide6 Essentials 6.11.2: passed.

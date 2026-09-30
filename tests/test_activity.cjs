@@ -11,12 +11,26 @@ const agent=A.normalize(JSON.stringify({id:'claude.1',state:'waiting',title:'Per
 assert.equal(agent.kind,'agent');assert.equal(agent.project,'perch');assert.equal(agent.target,'0x123abc');
 assert.equal(A.normalize(JSON.stringify({id:'bad-target',state:'waiting',kind:'agent',target:'address:$(bad)'}),now).target,'');
 let items=[];
-for(let i=0;i<8;i++) items=A.upsert(items,{...valid,id:'job'+i},now);
+for(let i=0;i<32;i++) items=A.upsert(items,{...valid,id:'job'+i},now);
 assert.equal(A.upsert(items,{...valid,id:'overflow'},now),null);
 items=A.upsert(items,{...valid,id:'job0',state:'waiting',updatedAt:now+1},now);
-assert.equal(items.length,8);assert.equal(A.focus(items).id,'job0');
+assert.equal(items.length,32);assert.equal(A.focus(items).id,'job0');
 assert.equal(A.attention(items).length,1);
 assert.equal(A.upsert(items,{...valid,id:'new'},now+300001).length,1);
+const approval={...agent,id:'request.new',requestId:'b'.repeat(32)};
+const admitted=A.upsert(items,approval,now);
+assert.equal(admitted.length,32);
+assert(admitted.some(p=>p.id===approval.id));
+assert(admitted.some(p=>p.id==='job0')); // Existing attention survives.
+const fullAttention=Array.from({length:32},(_,i)=>({...approval,id:'request.'+i}));
+assert.equal(A.upsert(fullAttention,{...approval,id:'overflow'},now),null);
+assert.equal(A.upsert(fullAttention,{...approval,id:'request.0'},now).length,32);
+const withHistory=items.map((p,i)=>({...p,state:p.id==='job1'?'idle':p.id==='job2'?'done':p.state}));
+const refreshed=A.upsert(withHistory,{...valid,id:'fresh'},now);
+assert.equal(refreshed.length,32);assert(!refreshed.some(p=>p.id==='job1'));
+assert(refreshed.some(p=>p.id==='job2'));
+const eightIdle=Array.from({length:8},(_,i)=>({...valid,id:'old.'+i,state:'idle'}));
+assert.equal(A.upsert(eightIdle,approval,now).length,9);
 assert.equal(A.timer({status:'running',deadline:now-1,total:60,remaining:60,label:'Focus'},now).status,'done');
 assert.equal(A.timer({status:'running',deadline:Infinity,total:60,remaining:60},now).status,'idle');
 assert.equal(P.clean({edge:'bad',showClock:false,hideIdle:'true'}).edge,'top');
