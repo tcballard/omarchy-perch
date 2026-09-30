@@ -14,6 +14,7 @@ START = '# BEGIN PERCH NOTIFY v1\n'
 END = '# END PERCH NOTIFY v1\n'
 EVENTS = ['UserPromptSubmit', 'PostToolUse', 'Notification', 'Stop', 'SessionEnd']
 GEMINI_EVENTS = ['BeforeAgent','AfterTool','AfterAgent','Notification','SessionEnd']
+CODEX_EVENTS = ['UserPromptSubmit','PreToolUse','PostToolUse','PermissionRequest','Stop','SessionEnd','Interrupt']
 GROK_EVENTS = ['UserPromptSubmit','PostToolUse','Notification','Stop','SessionEnd','StopCancelled','StopFailure']
 KIMI_EVENTS = ['TurnStarted','PostToolUse','PermissionRequest','PermissionResult','Stop','SessionEnd','Interrupt','StopFailure']
 CURSOR_EVENTS = ['beforeSubmitPrompt','postToolUse','stop','sessionEnd']
@@ -84,7 +85,7 @@ def transform(agent, old, adapter, remove, standalone=False):
             result = block + old
         tomllib.loads(result)
         return result
-    if agent not in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','grok'):raise ValueError('Unsupported agent')
+    if agent not in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','grok','codex-hooks'):raise ValueError('Unsupported agent')
     data = json.loads(old) if old.strip() else {}
     if not isinstance(data, dict):
         raise ValueError('Agent settings must be a JSON object')
@@ -114,7 +115,7 @@ def transform(agent, old, adapter, remove, standalone=False):
             raise ValueError('Gemini hooks are disabled; no changes made')
         disabled=hooks.get('disabled',[])
         if isinstance(disabled,list) and ('perch-status' in disabled or command in disabled):raise ValueError('Perch hook is disabled; no changes made')
-    for event in GEMINI_EVENTS if agent == 'gemini' else GROK_EVENTS if agent == 'grok' else EVENTS:
+    for event in GEMINI_EVENTS if agent == 'gemini' else GROK_EVENTS if agent == 'grok' else CODEX_EVENTS if agent == 'codex-hooks' else EVENTS:
         groups = hooks.get(event, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get('hooks'), list) for g in groups):
             raise ValueError(f'Unrecognized {event} hook configuration; no changes made.')
@@ -139,17 +140,25 @@ def transform(agent, old, adapter, remove, standalone=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('agent', choices=['claude', 'codex', 'gemini', 'cursor','qwen','qoder','factory','codebuddy','kimi','grok'])
+    parser.add_argument('agent', choices=['claude', 'codex', 'gemini', 'cursor','qwen','qoder','factory','codebuddy','kimi','grok','codex-hooks'])
     parser.add_argument('--remove', action='store_true')
     parser.add_argument('--apply', action='store_true', help='Write the previewed changes and a dated backup')
     args = parser.parse_args()
     home = Path.home()
     adapter = home / '.local/share/omarchy-perch/perch-agent-hook'
     config_dir = Path(os.environ.get('CODEX_HOME', home / '.codex')) if args.agent == 'codex' else Path(os.environ.get('CLAUDE_CONFIG_DIR', home / '.claude'))
-    if args.agent in ('gemini','cursor','qwen','qoder','factory','codebuddy','grok'):config_dir = home / ('.'+args.agent)
+    if args.agent in ('gemini','cursor','qwen','qoder','factory','codebuddy','grok','codex-hooks'):config_dir = home / ('.'+args.agent)
     path = config_dir / ('config.toml' if args.agent == 'codex' else 'hooks.json' if args.agent == 'cursor' else 'settings.json')
     if args.agent == 'kimi':path = Path(os.environ.get('KIMI_CODE_HOME', home/'.kimi-code'))/'config.toml'
     if args.agent == 'grok':path = Path(os.environ.get('GROK_HOME',home/'.grok'))/'hooks/perch-status.json'
+    if args.agent == 'codex-hooks':
+        config_dir = Path(os.environ.get('CODEX_HOME', home/'.codex'))
+        config = tomllib.loads(read(config_dir/'config.toml'))
+        features = config.get('features', {})
+        policy = config.get('hooks', {})
+        if not args.remove and (features.get('hooks',features.get('codex_hooks',True)) is False or config.get('allow_managed_hooks_only') or policy.get('allow_managed_hooks_only')):
+            raise ValueError('Codex hooks are disabled or managed-only; no changes made')
+        path = config_dir/'hooks.json'
     standalone = False
     if args.agent == 'factory':
         settings = json.loads(read(path) or '{}')
@@ -187,6 +196,7 @@ def main():
             atomic(backup, old)
             print(f'Backup: {backup}')
         atomic(path, new)
+    if args.agent == 'codex-hooks':print('Review and trust the new or changed hooks in Codex /hooks. Perch does not change trust or policy.')
     if args.agent == 'codebuddy':print('Review the external hook changes in CodeBuddy /hooks before they take effect.')
     print('Done. Restart the agent to load its hooks. Managed restrictions are never overridden.')
 

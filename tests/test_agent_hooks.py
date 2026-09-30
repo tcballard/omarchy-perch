@@ -77,3 +77,15 @@ with patch.object(hook,'hyprland_target',return_value={}):
         assert result['state']==state and 'PRIVATE' not in json.dumps(result)
     assert hook.report('grok',{'sessionId':'one','hookEventName':'pre_tool_use'}) is None
 print('Grok camelCase/snake_case lifecycle and observation-only event ownership passed.')
+
+new=setup.transform('codex-hooks','{}',adapter,False)
+assert set(json.loads(new)['hooks'])==set(setup.CODEX_EVENTS)
+assert json.loads(setup.transform('codex-hooks',new,adapter,True))=={}
+with patch.object(hook,'hyprland_target',return_value={}):
+    for event,state in [('UserPromptSubmit','running'),('PreToolUse','running'),('PostToolUse','running'),('PermissionRequest','waiting'),('Stop','done'),('Interrupt','done')]:
+        result=hook.report('codex-hooks',{'session_id':'one','hook_event_name':event,'prompt':'PRIVATE'})
+        assert result['state']==state and result['id'].startswith('codex.') and 'PRIVATE' not in json.dumps(result)
+    assert hook.report('codex-hooks',{'session_id':'one','hook_event_name':'SubagentStop'}) is None
+r=subprocess.run([sys.executable,str(ROOT/'scripts/perch-agent-hook'),'--perch-hook-v1','codex-hooks'],input='not json',text=True,capture_output=True)
+assert r.returncode==0 and not r.stdout and not r.stderr
+print('Codex lifecycle states, legacy identity compatibility, nonblocking output and subagent isolation passed.')

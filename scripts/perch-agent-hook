@@ -107,6 +107,7 @@ def project_name(data):
 def report(agent, data):
     if not isinstance(data, dict):
         return None
+    if agent == 'codex-hooks':agent = 'codex'
     attention = 'attention'
     if agent in ('pi','omp','opencode'):
         session = data.get('session_id')
@@ -142,10 +143,19 @@ def report(agent, data):
         state, detail = states[event]
         if event == 'PermissionRequest':attention = 'approval'
     elif agent == 'codex':
-        if data.get('type') != 'agent-turn-complete':
-            return None
-        session = data.get('thread-id')
-        state, detail = 'done', 'Turn complete'
+        if data.get('type') == 'agent-turn-complete':
+            session = data.get('thread-id')
+            state, detail = 'done', 'Turn complete'
+        else:
+            session = data.get('session_id')
+            event = data.get('hook_event_name')
+            states = {'UserPromptSubmit':('running','Working'), 'PreToolUse':('running','Working'),
+                'PostToolUse':('running','Working'), 'PermissionRequest':('waiting','Needs your approval in Codex'),
+                'Stop':('done','Turn complete'), 'SessionEnd':('done','Session ended'),
+                'Interrupt':('done','Turn cancelled')}
+            if event not in states:return None
+            state,detail = states[event]
+            if event == 'PermissionRequest':attention = 'approval'
     elif agent in ('claude','qwen','qoder','factory','codebuddy'):
         session = data.get('session_id')
         event = data.get('hook_event_name')
@@ -218,7 +228,7 @@ def main():
         if len(sys.argv) != 4:
             return
         raw = sys.argv[3]
-    elif agent in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok') and len(sys.argv) == 3:
+    elif agent in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks') and len(sys.argv) == 3:
         raw = sys.stdin.buffer.read(LIMIT + 1)
     else:
         return

@@ -28,3 +28,19 @@ with tempfile.TemporaryDirectory() as d:
     config['statusLine']={'type':'command','command':'echo perch-usage-statusline'}
     assert check()['claude']=='disabled' and check()['usage']=='custom status line'
 print('Integration health checks exact ownership, complete hook sets, disabled hooks and installed adapter versions.')
+
+import subprocess
+with tempfile.TemporaryDirectory() as d:
+    home=Path(d)
+    env={**os.environ,'HOME':d,'CODEX_HOME':d+'/.codex','CLAUDE_CONFIG_DIR':d+'/.claude','KIMI_CODE_HOME':d+'/.kimi-code','GROK_HOME':d+'/.grok'}
+    for agent in ('qwen','qoder','factory','codebuddy','kimi','grok','codex-hooks'):
+        args=[sys.executable,str(I.ROOT/'scripts/perch-agent-setup'),agent,'--apply']
+        completed=subprocess.run(args,env=env,capture_output=True,text=True)
+        assert completed.returncode==0,(agent,completed.stderr)
+        with patch.object(Path,'home',return_value=home),patch.dict(os.environ,env),patch.object(I,'enabled_plugins',return_value=[]),patch.object(I,'job_state',return_value={}),patch.object(I,'backlight_state',return_value='missing'):
+            assert I.health()['health'][agent]=='enabled',agent
+        assert subprocess.run(args+['--remove'],env=env,capture_output=True).returncode==0
+    (home/'.codex/config.toml').write_text('[features]\nhooks = false\n')
+    r=subprocess.run([sys.executable,str(I.ROOT/'scripts/perch-agent-setup'),'codex-hooks','--apply'],env=env,capture_output=True)
+    assert r.returncode!=0
+print('All new adapters install into isolated homes, report exact health and remove; disabled Codex hooks stay disabled.')

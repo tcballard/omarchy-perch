@@ -117,6 +117,19 @@ def health():
         if result['grok']=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append('grok')
     except FileNotFoundError:result['grok']='not configured'
     except (OSError,ValueError):result['grok']='configuration unreadable'
+    try:
+        directory=Path(os.environ.get('CODEX_HOME',str(Path.home()/'.codex')))
+        config=tomllib.loads(read_file(directory/'config.toml',1048576).decode()) if (directory/'config.toml').exists() else {}
+        data=json.loads(read_file(directory/'hooks.json',1048576))
+        if not isinstance(data,dict):raise ValueError('Invalid Codex hooks')
+        command=shlex.join(['python3',adapter,'--perch-hook-v1','codex-hooks'])
+        present=[exact_hooks(data,event,command) for event in ('UserPromptSubmit','PreToolUse','PostToolUse','PermissionRequest','Stop','SessionEnd','Interrupt')]
+        features=config.get('features',{})
+        disabled=features.get('hooks',features.get('codex_hooks',True)) is False or config.get('allow_managed_hooks_only') or config.get('hooks',{}).get('allow_managed_hooks_only')
+        result['codex-hooks']='hooks disabled' if disabled else 'enabled' if all(present) else 'incomplete' if any(present) else 'disabled'
+        if result['codex-hooks']=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append('codex-hooks')
+    except FileNotFoundError:result['codex-hooks']='not configured'
+    except (OSError,ValueError,AttributeError):result['codex-hooks']='configuration unreadable'
     for agent in extensions.AGENTS:
         try:result[agent]=extensions.health(agent)
         except (OSError,ValueError):result[agent]='configuration unreadable'
@@ -144,13 +157,13 @@ def backlight_state():
     except (OSError,ValueError,subprocess.SubprocessError):return 'no backlight device'
 
 def worker(p):
-    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
+    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
         if name in extensions.AGENTS:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-extension-setup'),name,'--apply']
         elif name=='requests':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--apply']
         elif name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
-        elif name in ('claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','kimi','grok'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
+        elif name in ('claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','kimi','grok','codex-hooks'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
         else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
         if not enabled:argv.append('--remove')
         try:run(argv,timeout=90,limit=16384,detail=True)
@@ -166,7 +179,7 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','usage','requests'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','usage','requests'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():

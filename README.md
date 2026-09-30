@@ -393,3 +393,20 @@ or bypasses the client's hook policy. Restart clients after setup/removal.
 
 Contracts: [Kimi](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html),
 [Grok](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/10-hooks.md).
+
+### Codex lifecycle hooks
+
+Choose **Codex lifecycle** in Setup for working, permission attention, turn
+completion, session end and interruption events. It merges exactly owned
+commands into `$CODEX_HOME/hooks.json` (default `~/.codex`) and leaves your
+notifier and unrelated hooks in place. Review and trust the new hooks in
+Codex `/hooks` before they run. Perch neither writes trust records nor enables
+disabled/managed-only hooks. Setup health reports file configuration, not
+whether the client has granted trust or delivered an event.
+
+The separately labelled **Codex notify (legacy)** option remains available for
+older clients. Prefer lifecycle hooks on supporting clients; disable Perch's
+legacy notifier to avoid duplicate completion events. This does not remove any
+other notifier. Permission attention is status only; answer it inside Codex.
+
+Contract: [Codex hooks](https://learn.chatgpt.com/docs/hooks).

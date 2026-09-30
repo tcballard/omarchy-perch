@@ -125,8 +125,13 @@ ColumnLayout {
                         detail: PerchStrings.t("Working, attention and completion")
                     },
                     {
+                        id: "codex-hooks",
+                        name: "Codex lifecycle",
+                        detail: PerchStrings.t("Working, approval attention and completion; review and trust in Codex /hooks")
+                    },
+                    {
                         id: "codex",
-                        name: "Codex",
+                        name: "Codex notify (legacy)",
                         detail: PerchStrings.t("Turn completion only")
                     }
                 ]

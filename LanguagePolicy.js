@@ -1,5 +1,6 @@
 // UI-owned text only. Provider content, user labels, commands and errors retain their source language.
 var chinese = {
+"Working, approval attention and completion; review and trust in Codex /hooks":"工作、授权提醒和完成状态；请在 Codex /hooks 中审核并信任",
 "Working and completion; local extension":"通过本地扩展显示工作和完成状态",
 "Working, permission attention and completion; local extension":"通过本地扩展显示工作、授权提醒和完成状态",
 "Placement":"位置", "Behaviour":"行为", "Alerts & sound":"提醒与声音", "Your strip":"工具栏", "Plugin pins":"固定插件",
