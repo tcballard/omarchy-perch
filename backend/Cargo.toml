@@ -1,0 +1,22 @@
+[package]
+name = "perch-backend"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.88"
+license = "MIT"
+
+[dependencies]
+serde_json = "=1.0.150"
+sha2 = "=0.10.9"
+regex = "=1.13.1"
+libc = "=0.2.186"
+tempfile = "=3.27.0"
+chrono = "=0.4.45"
+toml = "=1.1.2"
+tungstenite = { version = "=0.30.0", default-features = false, features = ["handshake"] }
+url = "=2.5.8"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

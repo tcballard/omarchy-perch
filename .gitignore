@@ -2,3 +2,7 @@ __pycache__/
 *.py[cod]
 *.log
 test-results/
+
+/backend/target/
+/bin/perch-backend
+/dist/
