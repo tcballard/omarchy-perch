@@ -13,6 +13,8 @@ export const PerchStatus = async ({directory}) => ({
             else if (event.type === 'session.error') state = 'error';
             else if (event.type === 'permission.asked') { state = 'waiting'; attention = 'approval'; }
             else if (event.type === 'permission.replied') state = 'running';
+            else if (event.type === 'question.asked') { state = 'waiting'; attention = 'question'; }
+            else if (event.type === 'question.replied' || event.type === 'question.rejected') state = 'running';
             if (!state) return;
             const data = JSON.stringify({session_id:p.sessionID, state, attention, cwd:directory});
             await new Promise(resolve => {

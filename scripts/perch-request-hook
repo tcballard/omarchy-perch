@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Perch request bridge v1. A short-lived, same-user socket for one explicit decision."""
-import hashlib,json,os,re,secrets,signal,socket,stat,struct,subprocess,sys,tempfile,time
+import hashlib,json,os,re,secrets,select,signal,socket,stat,struct,subprocess,sys,tempfile,time
 from pathlib import Path
 
 LIMIT=16384
@@ -40,6 +40,7 @@ def decision(data,response):
     if action=='session':return {}
     if data['kind']=='approval':
         if action not in ('allow','deny'):raise ValueError('Choose Allow once or Deny')
+        if data.get('agent')=='opencode':return {'response':'once' if action=='allow' else 'reject'}
         return {'hookSpecificOutput':{'hookEventName':'PermissionRequest','decision':{'behavior':action}}}
     if action=='deny':return {'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':'User declined to answer in Perch'}}
     if action!='answer':raise ValueError('Unsupported response')
@@ -55,7 +56,7 @@ def respond(payload):
     path=directory()/(token+'.sock');info=path.lstat()
     if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid():raise ValueError('Request is unavailable')
     with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
-        conn.settimeout(2);conn.connect(str(path))
+        conn.settimeout(8);conn.connect(str(path))
         _,uid,_=struct.unpack('3i',conn.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))
         if uid!=os.getuid():raise ValueError('Request owner changed')
         conn.sendall(json.dumps(payload).encode()+b'\n')
@@ -68,7 +69,7 @@ def request_data(raw,token,deadline,agent="claude"):
     if event not in ('PermissionRequest','PreToolUse') or not isinstance(tool,str) or len(tool)>160 or not isinstance(value,dict):raise ValueError('Unsupported request')
     if len(json.dumps(value).encode())>LIMIT:raise ValueError('Review large input in the agent session')
     kind='approval'
-    if agent not in ('claude','codex') or (agent=='codex' and event!='PermissionRequest'):raise ValueError('Unsupported agent request')
+    if agent not in ('claude','codex','opencode') or (agent!='claude' and event!='PermissionRequest'):raise ValueError('Unsupported agent request')
     if event=='PreToolUse':
         if tool!='AskUserQuestion':raise ValueError('Unsupported question tool')
         questions=value.get('questions')
@@ -88,7 +89,7 @@ def publish(payload,verb='activity'):
     r=subprocess.run(['omarchy-shell','io.github.tcballard.perch',verb,json.dumps(payload) if verb=='activity' else payload],stdin=subprocess.DEVNULL,capture_output=True,timeout=2)
     return r.returncode==0 and r.stdout.strip()==b'ok'
 
-def serve(raw,timeout=120,agent="claude"):
+def serve(raw,timeout=120,agent="claude",deliver=None):
     root=directory();token=secrets.token_hex(16);deadline=time.time()+timeout
     data=request_data(raw,token,deadline,agent)
     # Keep runtime records bounded and clear abandoned records after their deadline.
@@ -105,7 +106,7 @@ def serve(raw,timeout=120,agent="claude"):
         try:
             fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600)
             with os.fdopen(fd,'w') as out:json.dump(data,out)
-            if not publish({'id':activity,'kind':'agent','agent':'Codex' if agent=='codex' else 'Claude','state':'waiting','attention':data['kind'],'requestId':token,'title':data['tool'],'detail':'Review in Perch or continue in your session','project':Path(data['cwd']).name,'ttl':timeout}):return {}
+            if not publish({'id':activity,'kind':'agent','agent':{'codex':'Codex','opencode':'OpenCode'}.get(agent,'Claude'),'state':'waiting','attention':data['kind'],'requestId':token,'title':data['tool'],'detail':'Review in Perch or continue in your session','project':Path(data['cwd']).name,'ttl':timeout}):return {}
             while time.time()<deadline:
                 server.settimeout(max(.01,deadline-time.time()))
                 try:conn,_=server.accept()
@@ -118,6 +119,9 @@ def serve(raw,timeout=120,agent="claude"):
                         response=recv(conn)
                         if response.get('id')!=token or time.time()>=deadline:raise ValueError('Request expired')
                         result=decision(data,response)
+                        if result and deliver is not None and not deliver(result):
+                            conn.sendall(b'{"ok":false,"error":"Client did not confirm delivery. Continue in your agent session."}\n')
+                            return {}
                         conn.sendall(b'{"ok":true}\n')
                         return result
                     except (OSError,ValueError,TypeError):
@@ -132,15 +136,20 @@ def serve(raw,timeout=120,agent="claude"):
 def main():
     agent='claude'
     if len(sys.argv)>1:
-        if sys.argv[1:]!=['--agent','codex']:return
-        agent='codex'
+        if len(sys.argv)!=3 or sys.argv[1]!='--agent' or sys.argv[2] not in ('codex','opencode'):return
+        agent=sys.argv[2]
     signal.signal(signal.SIGTERM,lambda *_:sys.exit(0))
-    raw=sys.stdin.buffer.read(65537)
+    raw=sys.stdin.buffer.readline(65537) if agent=='opencode' else sys.stdin.buffer.read(65537)
     if len(raw)>65536:return
     value=json.loads(raw)
     if not isinstance(value,dict):return
-    result=serve(value,agent=agent)
-    if result:print(json.dumps(result))
+    def deliver(result):
+        print(json.dumps(result),flush=True)
+        if not select.select([sys.stdin],[],[],6)[0]:return False
+        try:return json.loads(sys.stdin.buffer.readline(1025)).get('delivered') is True
+        except (ValueError,AttributeError):return False
+    result=serve(value,agent=agent,deliver=deliver if agent=='opencode' else None)
+    if result and agent!='opencode':print(json.dumps(result))
 if __name__=='__main__':
     try:main()
     except (OSError,ValueError,TypeError,AttributeError,RecursionError,subprocess.SubprocessError):pass

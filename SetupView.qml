@@ -117,7 +117,12 @@ ColumnLayout {
                     {
                         id: "opencode",
                         name: "OpenCode (v1 plugin API)",
-                        detail: PerchStrings.t("Working, permission attention and completion; local extension")
+                        detail: PerchStrings.t("Working, permission and question attention; local extension")
+                    },
+                    {
+                        id: "opencode-requests",
+                        name: "OpenCode approvals",
+                        detail: PerchStrings.t("Allow once or deny through the v1 client; questions stay in the session")
                     },
                     {
                         id: "grok",

@@ -138,7 +138,7 @@ def health():
         except (OSError,ValueError):result[agent]='configuration unreadable'
         if result[agent]=='outdated':
             result[agent]='enabled';result['updates'].append(agent)
-        elif result[agent]=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append(agent)
+        elif result[agent]=='enabled' and not adapter_current('perch-request-hook' if agent=='opencode-requests' else 'perch-agent-hook'):result['updates'].append(agent)
     result['selfUpdate']=updates.availability()
     result['brightness']=backlight_state()
     result['sharing']='available' if (shutil.which('localsend') or shutil.which('localsend_app')) else 'LocalSend missing'
@@ -161,7 +161,7 @@ def backlight_state():
     except (OSError,ValueError,subprocess.SubprocessError):return 'no backlight device'
 
 def worker(p):
-    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','requests-codex','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
+    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','opencode-requests','kimi','grok','codex-hooks','requests-codex','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
         if name=='perch-update':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-tools'),'self-update-apply','{}']
@@ -191,7 +191,7 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','requests-codex','usage','requests','perch-update'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','opencode-requests','kimi','grok','codex-hooks','requests-codex','usage','requests','perch-update'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():

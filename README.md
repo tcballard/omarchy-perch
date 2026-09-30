@@ -183,7 +183,7 @@ For Claude, enable **Claude usage status line** in Setup. The installer backs up
 
 Enable **Claude approvals & questions** in Setup to review pending tool inputs, allow once or deny, and answer AskUserQuestion choices/free text inside Perch. This is separate from status hooks. It installs PermissionRequest and a narrowly matched AskUserQuestion PreToolUse hook; existing hooks and managed policies remain in force. It does not install persistent permission rules.
 
-Each request has a random identity and a private, same-user Unix socket. Complete tool input is visible during review and temporarily held in the private runtime directory, then removed. Inputs above 16 KiB fall back to the agent session instead of presenting a truncated approval. A reply is accepted once for that request, within 120 seconds. **Answer in session**, timeout, unavailable Perch or malformed input returns control to the agent’s normal permission flow without approving. Closing Perch does not approve a request. Question support depends on the Claude client exposing the documented tool hooks; Codex remains status-only.
+Each request has a random identity and a private, same-user Unix socket. Complete tool input is visible during review and temporarily held in the private runtime directory, then removed. Inputs above 16 KiB fall back to the agent session instead of presenting a truncated approval. A reply is accepted once for that request, within 120 seconds. **Answer in session**, timeout, unavailable Perch or malformed input returns control to the agent’s normal permission flow without approving. Closing Perch does not approve a request. Question support depends on the Claude client exposing the documented tool hooks. Separate Codex and OpenCode approval integrations are described below.
 
 ## Optional agent hooks
 
@@ -195,7 +195,7 @@ cd ~/.config/omarchy/plugins/io.github.tcballard.perch
 
 Omit `--apply` for a read-only preview. Restart the agent after setup. The installer uses user-level settings (`CLAUDE_CONFIG_DIR` / `CODEX_HOME` when set), preserves unrelated settings and hooks, makes mode-600 dated backups beside modified config files, and installs a small adapter under `~/.local/share/omarchy-perch/`. It refuses to overwrite an existing Codex notifier or a modified Perch notify block. Claude JSON formatting may change; unrelated values are preserved. Managed hook restrictions and disabled-hook preferences are not overridden.
 
-Claude Code sends working on prompt/tool completion, attention on permission/idle/elicitation notifications, and completion on Stop/SessionEnd. These are reported events, not an inferred process monitor; event support varies across agent clients. Working/attention cards expire after an hour without another event, completed cards after 30 seconds. Codex's supported `notify` contract reports **turn completion only**; it does not supply working or approval state. Oversized events above 64 KiB are ignored. These status hooks cannot approve, reject or alter a tool operation. Claude/Codex return silently; Gemini/Cursor return the neutral JSON required by their hook protocols. The separate, opt-in Claude request bridge described above handles explicit user responses. Prompt text, transcripts, tool inputs and credentials are never forwarded; session IDs are hashed for card identity. Perch sends the final working-directory component as the project label and, when the hook can match its process ancestry to a Hyprland client, the client address for the explicit **Go to session** action. The address is used only as fixed `hyprctl focuswindow` input and expires with the activity.
+Claude Code sends working on prompt/tool completion, attention on permission/idle/elicitation notifications, and completion on Stop/SessionEnd. These are reported events, not an inferred process monitor; event support varies across agent clients. Working/attention cards expire after an hour without another event, completed cards after 30 seconds. Codex's supported `notify` contract reports **turn completion only**; it does not supply working or approval state. Oversized events above 64 KiB are ignored. These status hooks cannot approve, reject or alter a tool operation. Claude/Codex return silently; Gemini/Cursor return the neutral JSON required by their hook protocols. The separate, opt-in request bridges handle explicit user responses. Prompt text, transcripts, tool inputs and credentials are never forwarded; session IDs are hashed for card identity. Perch sends the final working-directory component as the project label and, when the hook can match its process ancestry to a Hyprland client, the client address for the explicit **Go to session** action. The address is used only as fixed `hyprctl focuswindow` input and expires with the activity.
 
 Remove each integration before removing Perch (existing unrelated hooks remain):
 
@@ -357,7 +357,7 @@ Contracts: [Qwen](https://qwenlm.github.io/qwen-code-docs/en/users/features/hook
 
 Setup can install a small local status extension for Pi, Oh My Pi and OpenCode's
 v1 plugin API. Pi/Oh My Pi report agent start, completion and session shutdown;
-OpenCode additionally reports permission attention and session errors. They
+OpenCode additionally reports permission/question attention and session errors. They
 forward only session identity, generic state and project directory to the local
 Perch adapter. They neither read messages nor make permission decisions.
 
@@ -481,3 +481,22 @@ Perch rechecks up to eight such active sessions every 15 seconds. A process
 that exited or was replaced becomes **Agent process ended**, without a false
 completion alert. Unreadable process metadata stays unknown. Generic wrappers
 and remote events are not guessed; their status still expires normally.
+
+### OpenCode approval responses
+
+**OpenCode approvals** installs a separate `perch-requests.js` extension for the
+v1 plugin API. It shows the complete permission patterns and metadata, and sends
+only **Allow once** or **Deny** through the plugin's supplied client. It never
+creates an `always` rule or reads server credentials. Perch confirms delivery
+only after the client reports success; an error, timeout, unsupported client or
+oversized request leaves review in OpenCode. Answering in OpenCode cancels the
+waiting card; unloading the extension terminates its pending bridges.
+
+Enable it independently of status in Setup, or preview with
+`scripts/perch-extension-setup opencode-requests`; add `--apply` to install or
+`--remove --apply` to remove. Requests expire after 120 seconds. Questions produce
+attention cards and are answered in OpenCode: the supplied v1 client has no
+public question-reply method. This integration does not claim v2 plugin support.
+
+Contract: [OpenCode v1 SDK permission response](https://github.com/anomalyco/opencode/blob/dev/packages/sdk/js/src/gen/sdk.gen.ts)
+and [permission request schema](https://github.com/anomalyco/opencode/blob/dev/packages/schema/src/v1/permission.ts).

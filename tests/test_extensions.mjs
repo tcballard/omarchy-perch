@@ -21,7 +21,7 @@ for(const agent of ['pi','omp']){
     }
 }
 const plugin=await (await load('opencode')).PerchStatus({directory:'/work/project'});
-for(const [type,status,state] of [['session.status','busy','running'],['session.status','retry','running'],['session.status','idle','done'],['session.error',null,'error'],['permission.asked',null,'waiting'],['permission.replied',null,'running']]){
+for(const [type,status,state] of [['session.status','busy','running'],['session.status','retry','running'],['session.status','idle','done'],['session.error',null,'error'],['permission.asked',null,'waiting'],['permission.replied',null,'running'],['question.asked',null,'waiting'],['question.replied',null,'running'],['question.rejected',null,'running']]){
     await plugin.event({event:{type,properties:{sessionID:'abc',status:{type:status},input:'PRIVATE'}}});
     assert.equal(sent.at(-1).data.state,state);
 }

@@ -23,11 +23,13 @@ def main():
     if not args.apply:
         print('Preview only. Add --apply to write changes.');return
     if not args.remove:
-        adapter = Path.home()/'.local/share/omarchy-perch/perch-agent-hook'
+        name = 'perch-request-hook' if args.agent=='opencode-requests' else 'perch-agent-hook'
+        adapter = Path.home()/'.local/share/omarchy-perch'/name
         existing = api['read'](adapter)
-        if existing and '"""Best-effort, status-only Claude Code / Codex hook.' not in existing:
+        marker = '"""Perch request bridge v1.' if args.agent=='opencode-requests' else '"""Best-effort, status-only Claude Code / Codex hook.'
+        if existing and marker not in existing:
             raise ValueError('Adapter path is occupied by an unrelated file')
-        api['atomic'](adapter, (ROOT/'perch-agent-hook').read_text(), 0o700)
+        api['atomic'](adapter, (ROOT/name).read_text(), 0o700)
     if api['read'](path) != old:raise ValueError('Extension changed during setup; retry')
     new = '' if args.remove else ext['render'](args.agent)
     if old != new:

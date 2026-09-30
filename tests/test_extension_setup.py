@@ -7,7 +7,7 @@ from perchlib import extensions
 with tempfile.TemporaryDirectory() as tmp:
     env={**os.environ,'HOME':tmp,'XDG_CONFIG_HOME':tmp+'/.config'}
     env.pop('PI_CODING_AGENT_DIR',None)
-    for agent,relative in [('pi','.pi/agent/extensions/perch-status.js'),('omp','.omp/agent/extensions/perch-status.js'),('opencode','.config/opencode/plugins/perch-status.js')]:
+    for agent,relative in [('pi','.pi/agent/extensions/perch-status.js'),('omp','.omp/agent/extensions/perch-status.js'),('opencode','.config/opencode/plugins/perch-status.js'),('opencode-requests','.config/opencode/plugins/perch-requests.js')]:
         args=[sys.executable,str(ROOT/'scripts/perch-extension-setup'),agent]
         path=Path(tmp)/relative
         assert subprocess.run(args,env=env,capture_output=True).returncode==0 and not path.exists()

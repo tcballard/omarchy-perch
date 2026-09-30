@@ -52,3 +52,29 @@ new=setup['transform'](old,Path('/owned/request'),False,'codex')
 assert set(json.loads(new)['hooks'])=={'Stop','PermissionRequest'}
 assert json.loads(setup['transform'](new,Path('/owned/request'),True,'codex'))==json.loads(old)
 print('Codex approval schema, explicit fallback and separately owned setup/removal passed.')
+
+opencode=bridge.request_data(raw,'a'*32,time.time()+120,'opencode')
+assert bridge.decision(opencode,{'action':'allow'})=={'response':'once'}
+assert bridge.decision(opencode,{'action':'deny'})=={'response':'reject'}
+assert bridge.decision(opencode,{'action':'session'})=={}
+if socket_allowed:
+    with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,{'XDG_RUNTIME_DIR':tmp}):
+        for accepted in (True,False):
+            events=queue.Queue();out=[];deliveries=[]
+            def publish(value,verb='activity'):
+                if verb=='activity':events.put(value)
+                return True
+            def deliver(value):
+                deliveries.append(value);return accepted
+            with patch.object(bridge,'publish',side_effect=publish):
+                thread=threading.Thread(target=lambda:out.append(bridge.serve(raw,3,'opencode',deliver)));thread.start()
+                token=events.get(timeout=2)['requestId']
+                try:
+                    bridge.respond({'id':token,'action':'allow'});assert accepted
+                except ValueError as error:
+                    assert not accepted and 'did not confirm' in str(error)
+                thread.join(2);assert not thread.is_alive()
+                assert deliveries==[{'response':'once'}]
+                assert out==[{'response':'once'} if accepted else {}]
+                assert not list(bridge.directory().glob('*.json'))
+print('OpenCode decision schema passed; client acknowledgment socket checks run where permitted.')

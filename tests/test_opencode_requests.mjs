@@ -1,0 +1,43 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {EventEmitter} from 'node:events';
+const children=[], calls=[];
+globalThis.perchSpawn=(program,argv,options)=>{
+    assert.equal(program,'python3');assert.deepEqual(argv,['/owned/request','--agent','opencode']);
+    assert.deepEqual(options.stdio,['pipe','pipe','ignore']);
+    const child=new EventEmitter();child.stdout=new EventEmitter();child.stdin=new EventEmitter();
+    child.stdin.write=raw=>child.raw=JSON.parse(raw);
+    child.stdin.end=raw=>{child.ack=JSON.parse(raw);child.emit('exit');};
+    child.kill=()=>{child.killed=true;child.emit('exit');};children.push(child);return child;
+};
+let source=fs.readFileSync(new URL('../scripts/extensions/opencode-requests.js',import.meta.url),'utf8')
+    .replace("import { spawn } from 'node:child_process';",'const spawn=globalThis.perchSpawn;')
+    .replace('__PERCH_REQUEST_ADAPTER__','"/owned/request"');
+const {PerchRequests}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+let result={data:true};
+const client={async postSessionIdPermissionsPermissionId(options){calls.push(options);return result;}};
+const plugin=await PerchRequests({client,directory:'/work/project'});
+const props={id:'per_1',sessionID:'ses_1',permission:'bash',patterns:['make test'],metadata:{command:'make test'}};
+const event=(type,p=props)=>plugin.event({event:{type,properties:p}});
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
+await event('permission.asked');await event('permission.asked');assert.equal(children.length,1);
+assert.deepEqual(children[0].raw.tool_input,{patterns:props.patterns,metadata:props.metadata});
+children[0].stdout.emit('data',Buffer.from('{"response":"once"}\n'));await settle();
+assert.deepEqual(calls[0].path,{id:'ses_1',permissionID:'per_1'});
+assert.deepEqual(calls[0].body,{response:'once'});assert.deepEqual(children[0].ack,{delivered:true});
+result={error:{message:'stale'}};
+await event('permission.asked');children.at(-1).stdout.emit('data',Buffer.from('{"response":"reject"}\n'));await settle();
+assert.deepEqual(children.at(-1).ack,{delivered:false});assert.equal(calls.at(-1).body.response,'reject');
+await event('permission.asked');children.at(-1).stdout.emit('data',Buffer.from('{"response":"always"}\n'));await settle();
+assert.equal(calls.length,2);assert.deepEqual(children.at(-1).ack,{delivered:false});
+await event('permission.asked');const cancelled=children.at(-1);
+await event('permission.replied',{requestID:'per_1',sessionID:'another'});assert(!cancelled.killed);
+await event('permission.replied',{requestID:'per_1',sessionID:'ses_1'});assert(cancelled.killed);
+cancelled.stdout.emit('data',Buffer.from('{"response":"once"}\n'));await settle();assert.equal(calls.length,2);
+const n=children.length;
+await event('question.asked');await event('permission.asked',{...props,metadata:{command:'x'.repeat(16384)}});
+await (await PerchRequests({client:{}})).event({event:{type:'permission.asked',properties:props}});
+assert.equal(children.length,n);
+for(let i=0;i<9;i++)await event('permission.asked',{...props,id:'per_'+i});
+assert.equal(children.length,n+8);await plugin.dispose();assert(children.slice(-8).every(c=>c.killed));
+console.log('OpenCode once-only approvals: explicit SDK acknowledgment, failures, cancellation, bounds and cleanup passed.');

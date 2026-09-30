@@ -40,7 +40,7 @@ Item {
     }
     ToolJob {
         id: job
-        timeout: 4000
+        timeout: 10000
         onCompleted: (op, r) => {
             if (root.loadingId !== root.requestId) {
                 Qt.callLater(root.load);
