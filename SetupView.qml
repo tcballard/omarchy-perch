@@ -80,6 +80,26 @@ ColumnLayout {
                         detail: PerchStrings.t("Working, completion and errors; local desktop sessions")
                     },
                     {
+                        id: "qwen",
+                        name: "Qwen Code",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "qoder",
+                        name: "Qoder CLI",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "factory",
+                        name: "Factory Droid",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "codebuddy",
+                        name: "CodeBuddy Code",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
                         id: "codex",
                         name: "Codex",
                         detail: PerchStrings.t("Turn completion only")

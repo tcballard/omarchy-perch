@@ -42,7 +42,7 @@ def atomic(path, text, mode=0o600):
             os.unlink(tmp)
 
 
-def transform(agent, old, adapter, remove):
+def transform(agent, old, adapter, remove, standalone=False):
     argv = ['python3', str(adapter), '--perch-hook-v1', agent]
     if agent == 'codex':
         parsed = tomllib.loads(old)
@@ -59,16 +59,18 @@ def transform(agent, old, adapter, remove):
             result = block + old
         tomllib.loads(result)
         return result
-    if agent not in ('claude','gemini','cursor'):raise ValueError('Unsupported agent')
+    if agent not in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy'):raise ValueError('Unsupported agent')
     data = json.loads(old) if old.strip() else {}
     if not isinstance(data, dict):
-        raise ValueError('Claude settings must be a JSON object')
-    if data.get('disableAllHooks') and not remove:
-        raise ValueError('Claude hooks are disabled; Perch will not override that preference.')
+        raise ValueError('Agent settings must be a JSON object')
+    if (data.get('disableAllHooks') or data.get('allowManagedHooksOnly') or data.get('hooksDisabled')) and not remove:
+        raise ValueError('Agent hooks are disabled; Perch will not override that preference.')
+    if standalone:
+        data = {'hooks':data}
     result = copy.deepcopy(data)
     hooks = result.setdefault('hooks', {})
     if not isinstance(hooks, dict):
-        raise ValueError('Claude hooks must be an object')
+        raise ValueError('Agent hooks must be an object')
     command = shlex.join(argv)
     if agent == 'cursor':
         if result.get('version',1) != 1:raise ValueError('Unsupported Cursor hooks version')
@@ -107,22 +109,36 @@ def transform(agent, old, adapter, remove):
             hooks.pop(event, None)
     if not hooks:
         result.pop('hooks', None)
-    return old if result == data else json.dumps(result, indent=2, ensure_ascii=False) + '\n'
+    return old if result == data else json.dumps(result.get('hooks', {}) if standalone else result, indent=2, ensure_ascii=False) + '\n'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('agent', choices=['claude', 'codex', 'gemini', 'cursor'])
+    parser.add_argument('agent', choices=['claude', 'codex', 'gemini', 'cursor','qwen','qoder','factory','codebuddy'])
     parser.add_argument('--remove', action='store_true')
     parser.add_argument('--apply', action='store_true', help='Write the previewed changes and a dated backup')
     args = parser.parse_args()
     home = Path.home()
     adapter = home / '.local/share/omarchy-perch/perch-agent-hook'
     config_dir = Path(os.environ.get('CODEX_HOME', home / '.codex')) if args.agent == 'codex' else Path(os.environ.get('CLAUDE_CONFIG_DIR', home / '.claude'))
-    if args.agent in ('gemini','cursor'):config_dir = home / ('.'+args.agent)
+    if args.agent in ('gemini','cursor','qwen','qoder','factory','codebuddy'):config_dir = home / ('.'+args.agent)
     path = config_dir / ('config.toml' if args.agent == 'codex' else 'hooks.json' if args.agent == 'cursor' else 'settings.json')
+    standalone = False
+    if args.agent == 'factory':
+        settings = json.loads(read(path) or '{}')
+        if not isinstance(settings,dict):raise ValueError('Invalid Factory settings')
+        if not args.remove and (settings.get('hooksDisabled') or settings.get('disableAllHooks') or settings.get('allowManagedHooksOnly')):
+            raise ValueError('Factory hooks are disabled or managed-only; no changes made')
+        # Preserve the legacy source when it is active instead of shadowing it.
+        direct = config_dir / 'hooks.json'
+        if direct.exists() or 'hooks' not in settings:
+            legacy = config_dir / 'hooks/hooks.json'
+            if not direct.exists() and legacy.exists():
+                raise ValueError('Migrate legacy Factory hooks with /hooks first; no changes made')
+            path, standalone = direct, True
     old = read(path)
-    new = transform(args.agent, old, adapter, args.remove)
+    new = transform(args.agent, old, adapter, args.remove, standalone)
+
     print(('Remove' if args.remove else 'Install') + f' Perch {args.agent} hooks in {path}')
     print('Reports generic status, project folder name and a local Hyprland window target. Existing unrelated settings/hooks are preserved.')
     if not args.apply:
@@ -144,6 +160,7 @@ def main():
             atomic(backup, old)
             print(f'Backup: {backup}')
         atomic(path, new)
+    if args.agent == 'codebuddy':print('Review the external hook changes in CodeBuddy /hooks before they take effect.')
     print('Done. Restart the agent to load its hooks. Managed restrictions are never overridden.')
 
 if __name__ == '__main__':

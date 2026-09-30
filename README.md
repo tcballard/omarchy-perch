@@ -332,3 +332,23 @@ Detached sessions and ambiguous multiple-client sessions do not get a guessed
 window target. No keys or commands are entered into the pane. Re-run agent
 setup after upgrading to refresh the installed hook. tmux must be installed;
 remote relay events intentionally carry no local terminal targets.
+
+### More status clients
+
+Setup also supports Qwen Code, Qoder CLI, Factory Droid and CodeBuddy Code.
+Each integration is independently opt-in and reports working, attention and
+completion through the same bounded local status adapter. Permissions and
+questions are answered in the agent itself. Prompts and tool inputs are not
+forwarded. Disable removes only Perch's exact hook commands.
+
+Qwen, Qoder and CodeBuddy use their user `settings.json`. Factory uses its
+standalone `hooks.json` event map, or preserves an existing active legacy
+`settings.json` hook source without shadowing unrelated hooks. An older
+`hooks/hooks.json` must first be migrated using Factory's `/hooks` UI.
+CodeBuddy requires reviewing external configuration changes in `/hooks`.
+Managed-only and disabled-hook settings are never overridden.
+
+Contracts: [Qwen](https://qwenlm.github.io/qwen-code-docs/en/users/features/hooks/),
+[Qoder](https://docs.qoder.com/cli/hooks),
+[Factory](https://docs.factory.ai/harness/hooks),
+[CodeBuddy](https://www.codebuddy.ai/docs/cli/hooks).

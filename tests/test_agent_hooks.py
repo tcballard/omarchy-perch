@@ -32,3 +32,22 @@ with patch.object(hook,'hyprland_target',return_value={}):
     assert hook.report('cursor',{'conversation_id':'one','hook_event_name':'stop','status':'error'})['state']=='error'
     assert hook.report('gemini',{'session_id':'one','hook_event_name':'Notification','notification_type':'Other'}) is None
 print('Gemini/Cursor event mapping, privacy, reversible configuration, timeout units and nonblocking output passed.')
+
+for agent in ('qwen','qoder','factory','codebuddy'):
+    old=json.dumps({'theme':'keep','hooks':{'Stop':[{'hooks':[{'type':'command','command':'keep'}]}]}})
+    for standalone in ([False,True] if agent=='factory' else [False]):
+        before=json.dumps(json.loads(old)['hooks']) if standalone else old
+        new=setup.transform(agent,before,adapter,False,standalone)
+        assert setup.transform(agent,new,adapter,False,standalone)==new
+        assert json.loads(setup.transform(agent,new,adapter,True,standalone))==json.loads(before)
+        for event,state in [('UserPromptSubmit','running'),('PostToolUse','running'),('Stop','done'),('SessionEnd','done'),('Notification','waiting')]:
+            p={'session_id':'one','hook_event_name':event,'notification_type':'permission_prompt','cwd':'/work/test','prompt':'PRIVATE','tool_input':{'command':'PRIVATE'}}
+            with patch.object(hook,'hyprland_target',return_value={}):result=hook.report(agent,p)
+            assert result['state']==state and result['id'].startswith(agent+'.')
+            assert 'PRIVATE' not in json.dumps(result)
+    for flag in ('disableAllHooks','allowManagedHooksOnly','hooksDisabled'):
+        try:setup.transform(agent,json.dumps({flag:True}),adapter,False);raise AssertionError('disabled hooks overwritten')
+        except ValueError:pass
+    r=subprocess.run([sys.executable,str(ROOT/'scripts/perch-agent-hook'),'--perch-hook-v1',agent],input='not json',text=True,capture_output=True)
+    assert r.returncode==0 and r.stdout=='' and r.stderr==''
+print('Qwen/Qoder/Factory/CodeBuddy status mapping, privacy, managed restrictions and reversible ownership passed.')

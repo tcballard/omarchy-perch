@@ -73,9 +73,16 @@ def health():
         for key in ('claude','usage','requests'):result[key]='configuration unreadable'
     for key,name in [('claude','perch-agent-hook'),('codex','perch-agent-hook'),('usage','perch-usage-statusline'),('requests','perch-request-hook')]:
         if result[key]=='enabled' and not adapter_current(name):result['updates'].append(key)
-    for agent,filename,events in [('gemini','settings.json',('BeforeAgent','AfterTool','AfterAgent','Notification','SessionEnd')),('cursor','hooks.json',('beforeSubmitPrompt','postToolUse','stop','sessionEnd'))]:
+    for agent,filename,events in [(a,'settings.json',('UserPromptSubmit','PostToolUse','Notification','Stop','SessionEnd')) for a in ('qwen','qoder','factory','codebuddy')] + [('gemini','settings.json',('BeforeAgent','AfterTool','AfterAgent','Notification','SessionEnd')),('cursor','hooks.json',('beforeSubmitPrompt','postToolUse','stop','sessionEnd'))]:
         try:
-            data=json.loads(read_file(Path.home()/('.'+agent)/filename,1048576))
+            directory = Path.home()/('.'+agent)
+            data=json.loads(read_file(directory/filename,1048576)) if (directory/filename).exists() else {}
+            if not isinstance(data,dict):raise ValueError('Invalid settings')
+            if agent == 'factory' and (directory/'hooks.json').exists():
+                flags={k:data.get(k) for k in ('hooksDisabled','disableAllHooks','allowManagedHooksOnly')}
+                data={**flags,'hooks':json.loads(read_file(directory/'hooks.json',1048576))}
+            elif not (directory/filename).exists():raise FileNotFoundError()
+
             if not isinstance(data,dict):raise ValueError('Invalid settings')
             command=shlex.join(['python3',adapter,'--perch-hook-v1',agent])
             hooks=data.get('hooks',{})
@@ -83,7 +90,7 @@ def health():
             if agent=='cursor':
                 present=[isinstance(hooks.get(e),list) and any(isinstance(h,dict) and h.get('type','command')=='command' and h.get('command')==command for h in hooks[e]) for e in events]
             else:present=[exact_hooks(data,e,command) for e in events]
-            disabled=data.get('disableAllHooks') or hooks.get('enabled') is False or agent=='gemini' and (isinstance(data.get('tools'),dict) and data['tools'].get('enableHooks') is False or isinstance(hooks.get('disabled'),list) and ('perch-status' in hooks['disabled'] or command in hooks['disabled']))
+            disabled=data.get('disableAllHooks') or data.get('allowManagedHooksOnly') or data.get('hooksDisabled') or hooks.get('enabled') is False or agent=='gemini' and (isinstance(data.get('tools'),dict) and data['tools'].get('enableHooks') is False or isinstance(hooks.get('disabled'),list) and ('perch-status' in hooks['disabled'] or command in hooks['disabled']))
             result[agent]='hooks disabled' if disabled else 'enabled' if all(present) else 'incomplete' if any(present) else 'disabled'
             if result[agent]=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append(agent)
         except FileNotFoundError:result[agent]='not configured'
@@ -109,12 +116,12 @@ def backlight_state():
     except (OSError,ValueError,subprocess.SubprocessError):return 'no backlight device'
 
 def worker(p):
-    store=Store('integrations');names=['claude','codex','gemini','cursor','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
+    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
         if name=='requests':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--apply']
         elif name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
-        elif name in ('claude','codex','gemini','cursor'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
+        elif name in ('claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
         else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
         if not enabled:argv.append('--remove')
         try:run(argv,timeout=90,limit=16384,detail=True)
@@ -130,7 +137,7 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','usage','requests'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','usage','requests'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():
