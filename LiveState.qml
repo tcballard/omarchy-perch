@@ -99,6 +99,23 @@ Item {
         discoveryEnabled = preferences.values.discoverSessions;
         discoverSessions();
     }
+    ToolJob {
+        id: livenessJob
+        timeout: 2000
+        onCompleted: function(op, result) {
+            if (!result.ok || !Array.isArray(result.ended)) return;
+            root.items = Activities.endedProcesses(root.items,result,Date.now());
+        }
+    }
+    Timer {
+        interval: 15000
+        repeat: true
+        running: root.items.some(function(item) { return !!item.agentProcess && (item.state === "running" || item.state === "waiting"); })
+        onTriggered: {
+            var records = root.items.filter(function(item) { return !!item.agentProcess && !item.requestId && (item.state === "running" || item.state === "waiting"); }).map(function(item) { return Object.assign({id:item.id},item.agentProcess); });
+            if (records.length) livenessJob.run("agent-liveness",{sessions:records});
+        }
+    }
     function discoverSessions() {
         if (preferences && preferences.ready && preferences.values.discoverSessions)
             discoveryJob.run("agent-discover", {});

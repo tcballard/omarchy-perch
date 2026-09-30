@@ -45,3 +45,9 @@ assert.equal(A.discovered([remembered],snapshot,now+1000,[])[0].state,remembered
 assert.equal(P.clean({discoverSessions:true}).discoverSessions,true);
 assert.equal(P.clean({}).discoverSessions,false);
 console.log('Discovered sessions remain idle, respect dismissal and never overwrite live activity.');
+const liveProcess={...agent,state:'running',agentProcess:{pid:123,start:'100',boot:'boot'}};
+const check={ended:[agent.id],checked:[{id:agent.id,pid:123,start:'100',boot:'boot'}]};
+assert.equal(A.endedProcesses([liveProcess],check,now)[0].state,'idle');
+assert.equal(A.endedProcesses([{...liveProcess,agentProcess:{pid:124,start:'200',boot:'boot'}}],check,now)[0].state,'running');
+assert.equal(A.endedProcesses([{...liveProcess,requestId:'pending'}],check,now)[0].state,'running');
+console.log('Late liveness replies cannot overwrite a replaced process or pending request.');

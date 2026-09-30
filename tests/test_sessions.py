@@ -96,3 +96,11 @@ with __import__('tempfile').TemporaryDirectory() as d:
             except ValueError:pass
             launch.assert_not_called()
 print('Workspace return restricts editor commands, verifies process identity and passes only an existing absolute folder.')
+
+for start,expected in [('100',[]),('101',['codex.one'])]:
+    with patch.object(sessions,'process_start',return_value=start):
+        assert sessions.liveness([{'id':'codex.one','pid':123,'start':'100','boot':boot}])['ended']==expected
+for error,expected in [(FileNotFoundError(),['codex.one']),(PermissionError(),[])]:
+    with patch.object(sessions,'process_start',side_effect=error):
+        assert sessions.liveness([{'id':'codex.one','pid':123,'start':'100','boot':boot}])['ended']==expected
+print('Session liveness distinguishes exit/PID reuse from unreadable process identity.')

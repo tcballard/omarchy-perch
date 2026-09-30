@@ -77,7 +77,24 @@ def open_workspace(target):
     return {'message':'Opened session workspace'}
 
 
+def liveness(records):
+    if not isinstance(records,list) or len(records)>8:raise ValueError('Invalid session records')
+    boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    ended=[]
+    for row in records:
+        if not isinstance(row,dict):raise ValueError('Invalid session record')
+        ident,pid=row.get('id'),row.get('pid')
+        if not isinstance(ident,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,63}',ident) or type(pid) is not int or pid<=1:
+            raise ValueError('Invalid session process')
+        try:
+            if row.get('boot')!=boot or process_start(pid)!=row.get('start'):ended.append(ident)
+        except (FileNotFoundError,ProcessLookupError):ended.append(ident)
+        except (PermissionError,IndexError,ValueError):pass # Unknown is not proof of exit.
+    return {'ended':ended,'checked':records}
+
+
 def handle(op, payload):
+    if op == 'agent-liveness':return liveness(payload.get('sessions'))
     if op == 'agent-discover':
         from .discovery import discover
         return discover()

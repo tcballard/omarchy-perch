@@ -138,6 +138,25 @@ def workspace_target(data):
     return {}
 
 
+def agent_process(agent):
+    names={'claude':('claude',),'codex':('codex',),'gemini':('gemini',),'cursor':('cursor','cursor-agent'),
+        'qwen':('qwen',),'qoder':('qoder','qodercli'),'factory':('droid',),'codebuddy':('codebuddy',),
+        'kimi':('kimi',),'grok':('grok',),'opencode':('opencode',),'pi':('pi',),'omp':('omp',)}
+    packages={'claude':'/@anthropic-ai/claude-code/','codex':'/@openai/codex/',
+        'gemini':'/@google/gemini-cli/','qwen':'/@qwen-code/qwen-code/',
+        'pi':'/@earendil-works/pi-coding-agent/','omp':'/@oh-my-pi/pi-coding-agent/'}
+    for pid in parent_pids(os.getpid()):
+        try:
+            with open(f'/proc/{pid}/cmdline','rb') as stream:args=stream.read(4096).split(b'\0')[:3]
+            paths=[v.decode('utf-8',errors='replace') for v in args if v.startswith(b'/')]
+            name=Path(os.readlink(f'/proc/{pid}/exe')).name.lower()
+            match=name in names.get(agent,()) or any(Path(v).name in names.get(agent,()) or (packages.get(agent) and packages[agent] in v) for v in paths)
+            if match:return {'agentProcess':{'pid':pid,'start':process_start(pid),
+                'boot':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}}
+        except (OSError,ValueError,IndexError):continue
+    return {}
+
+
 def project_name(data):
     cwd = data.get('cwd') if isinstance(data, dict) else None
     if not isinstance(cwd, str) or not cwd or len(cwd) > 4096:
@@ -244,7 +263,7 @@ def report(agent, data):
     return {'id': agent + '.' + key, 'title': project_name(data) or label,
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
             'kind': 'agent', 'agent': label,
-            'project': project_name(data), **hyprland_target(), **workspace_target(data), 'attention': attention,
+            'project': project_name(data), **hyprland_target(), **workspace_target(data), **agent_process(agent), 'attention': attention,
             'eventKey': hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:32]}
 
 

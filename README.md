@@ -472,3 +472,12 @@ it records an attempt before starting so a shell reload cannot create a loop.
 Prepare removal turns automatic updates off. Installed hook and companion
 copies remain explicit Setup updates so client hook review is preserved.
 Development/manual installs must use their original update method.
+
+### Agent process liveness
+
+When a status hook can identify a recognized ancestor agent executable or
+package entry point, it includes that process's PID, start time and boot ID.
+Perch rechecks up to eight such active sessions every 15 seconds. A process
+that exited or was replaced becomes **Agent process ended**, without a false
+completion alert. Unreadable process metadata stays unknown. Generic wrappers
+and remote events are not guessed; their status still expires normally.
