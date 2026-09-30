@@ -27,6 +27,59 @@ def parent_pids(pid):
         result.append(pid)
     return result
 
+def process_start(pid):
+    raw = Path(f'/proc/{pid}/stat').read_text()
+    return raw[raw.rfind(')') + 2:].split()[19]
+
+
+def tmux_target(clients):
+    value, pane = os.environ.get('TMUX', ''), os.environ.get('TMUX_PANE', '')
+    if not value or not re.fullmatch(r'%[0-9]+', pane):
+        return {}
+    path = value.rsplit(',', 2)[0]
+    info = os.lstat(path)
+    if not os.path.isabs(path) or not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
+        return {}
+    def query(*args):
+        result = subprocess.run(['tmux', '-S', path, *args], stdin=subprocess.DEVNULL,
+            capture_output=True, timeout=.75, check=False)
+        if result.returncode or len(result.stdout) > 65536:
+            raise ValueError('tmux query failed')
+        return result.stdout.decode().strip()
+    pane_pid, session = query('display-message', '-p', '-t', pane, '#{pane_pid} #{session_id}').split()
+    pane_pid = int(pane_pid)
+    if pane_pid not in parent_pids(os.getpid()):
+        return {}
+    candidates = []
+    for line in query('list-clients', '-F', '#{client_pid} #{client_tty} #{session_id}').splitlines():
+        pid, tty, attached = line.split()
+        if attached != session:
+            continue
+        pid = int(pid)
+        ancestors = set([pid] + parent_pids(pid))
+        for window in clients:
+            if isinstance(window, dict) and window.get('pid') in ancestors:
+                candidates.append((window, {'socket':path, 'pane':pane, 'panePid':pane_pid,
+                    'paneStart':process_start(pane_pid), 'client':tty, 'clientPid':pid,
+                    'clientStart':process_start(pid)}))
+    # Multiple attached terminals are ambiguous: never select one arbitrarily.
+    if len(candidates) != 1:
+        return {}
+    window, target = candidates[0]
+    return window_target(window, target)
+
+
+def window_target(window, tmux=None):
+    address = window.get('address', '')
+    if not isinstance(address, str) or not re.fullmatch(r'0x[0-9a-fA-F]{1,16}', address):
+        return {}
+    result = {'target':address, 'targetPid':window['pid'],
+        'targetBoot':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}
+    if tmux:
+        result['targetTmux'] = tmux
+    return result
+
+
 def hyprland_target():
     if not os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
         return {}
@@ -35,15 +88,12 @@ def hyprland_target():
             capture_output=True, timeout=.75, check=False)
         if completed.returncode or len(completed.stdout) > 262144:
             return {}
+        clients = json.loads(completed.stdout)
+        if os.environ.get('TMUX'):
+            return tmux_target(clients)
         ancestors = set(parent_pids(os.getpid()))
-        matches = [c for c in json.loads(completed.stdout) if isinstance(c, dict) and c.get('pid') in ancestors]
-        if not matches:
-            return {}
-        address = matches[0].get('address', '')
-        if not isinstance(address, str) or not re.fullmatch(r'0x[0-9a-fA-F]{1,16}', address):
-            return {}
-        return {'target': address, 'targetPid': matches[0]['pid'],
-                'targetBoot': Path('/proc/sys/kernel/random/boot_id').read_text().strip()}
+        matches = [c for c in clients if isinstance(c, dict) and c.get('pid') in ancestors]
+        return window_target(matches[0]) if len(matches) == 1 else {}
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):
         return {}
 

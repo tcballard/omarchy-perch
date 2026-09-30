@@ -1,4 +1,6 @@
 import json
+import os
+import stat
 import re
 import shutil
 from pathlib import Path
@@ -6,6 +8,34 @@ from pathlib import Path
 from .process import run
 
 ADDRESS = re.compile(r'^0x[0-9a-fA-F]{1,16}$')
+
+
+def process_start(pid):
+    raw = Path(f'/proc/{pid}/stat').read_text()
+    return raw[raw.rfind(')') + 2:].split()[19]
+
+
+def select_tmux(target):
+    if not isinstance(target, dict):
+        raise ValueError('Invalid tmux target')
+    path, pane, client = (target.get(k, '') for k in ('socket', 'pane', 'client'))
+    if (not isinstance(path, str) or not path.startswith('/') or len(path) > 4096
+            or not isinstance(pane, str) or not re.fullmatch(r'%[0-9]+', pane)
+            or not isinstance(client, str) or not re.fullmatch(r'/dev/[A-Za-z0-9/_-]+', client)):
+        raise ValueError('Invalid tmux target')
+    info = os.lstat(path)
+    if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid() or not shutil.which('tmux'):
+        raise ValueError('That tmux server is unavailable')
+    for prefix in ('pane', 'client'):
+        pid = target.get(prefix + 'Pid')
+        if type(pid) is not int or pid <= 1 or process_start(pid) != target.get(prefix + 'Start'):
+            raise ValueError('That tmux session has changed')
+    argv = ['tmux', '-S', path]
+    actual = run(argv + ['display-message', '-p', '-t', pane, '#{pane_pid}'], timeout=.75, limit=4096).strip()
+    attached = run(argv + ['list-clients', '-F', '#{client_pid} #{client_tty}'], timeout=.75, limit=65536).splitlines()
+    if actual != str(target['panePid']) or f"{target['clientPid']} {client}" not in attached:
+        raise ValueError('That tmux pane or terminal is no longer available')
+    run(argv + ['switch-client', '-c', client, '-t', pane], timeout=1, limit=4096)
 
 
 def handle(op, payload):
@@ -28,6 +58,10 @@ def handle(op, payload):
             and c.get('pid') == payload.get('targetPid') for c in clients
         ):
             raise ValueError('That session target has changed; open it from your terminal')
+    if payload.get('targetTmux'):
+        if not payload.get('targetPid') or not payload.get('targetBoot'):
+            raise ValueError('Missing tmux window identity')
+        select_tmux(payload['targetTmux'])
     reply = run(['hyprctl', 'dispatch', 'focuswindow', 'address:' + address], timeout=1, limit=4096)
     if reply.strip() != 'ok':
         raise ValueError('Hyprland could not focus that session window')

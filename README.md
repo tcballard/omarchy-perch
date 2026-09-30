@@ -321,3 +321,14 @@ only after confirming that connection has exited.
 Reference: [OpenSSH Unix-socket forwarding](https://man.openbsd.org/ssh#R).
 The portable tests exercise the socket protocol in CI. A real SSH/Omarchy session
 is still required to verify forwarding and service teardown on your desktop.
+
+### Returning to tmux sessions
+
+Status hooks recognize local tmux panes through `TMUX` and `TMUX_PANE`.
+When exactly one attached client can be tied to a Hyprland terminal, Jump
+selects that session, window and pane before focusing the terminal. Perch
+checks the boot, pane/client process identities and their start times first.
+Detached sessions and ambiguous multiple-client sessions do not get a guessed
+window target. No keys or commands are entered into the pane. Re-run agent
+setup after upgrading to refresh the installed hook. tmux must be installed;
+remote relay events intentionally carry no local terminal targets.

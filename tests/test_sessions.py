@@ -41,3 +41,37 @@ for pid, saved_boot, succeeds in [(123,boot,True),(124,boot,False),(123,'old-boo
             assert not succeeds
         assert execute.call_count == (2 if succeeds else 1)
 print('Recovered session PID and boot identity checked before focus.')
+
+# tmux commands target a captured pane and a specific attached client; no keystrokes.
+import os
+import stat
+from types import SimpleNamespace
+import runpy
+hook = runpy.run_path(str(ROOT/'scripts/perch-agent-hook'))
+tmux = {'socket':'/tmp/tmux-1000/default','pane':'%3','panePid':123,
+        'paneStart':'100','client':'/dev/pts/2','clientPid':456,'clientStart':'200'}
+for pane_pid, client_line, starts, ok in [
+    ('123','456 /dev/pts/2',['100','200'],True),
+    ('124','456 /dev/pts/2',['100','200'],False),
+    ('123','457 /dev/pts/2',['100','200'],False),
+    ('123','456 /dev/pts/2',['999'],False),
+]:
+    with patch.object(sessions.os,'lstat',return_value=SimpleNamespace(st_mode=stat.S_IFSOCK|0o600,st_uid=os.getuid())), patch.object(sessions.shutil,'which',return_value='/usr/bin/tmux'), patch.object(sessions,'process_start',side_effect=starts), patch.object(sessions,'run',side_effect=[pane_pid,client_line,'']) as execute:
+        try:
+            sessions.select_tmux(tmux)
+            assert ok
+        except ValueError:
+            assert not ok
+        if ok:
+            assert execute.call_args.args[0] == ['tmux','-S',tmux['socket'],'switch-client','-c','/dev/pts/2','-t','%3']
+        else:
+            assert not any('switch-client' in call.args[0] for call in execute.call_args_list)
+
+namespace=hook['tmux_target'].__globals__
+for rows, expected in [('456 /dev/pts/2 $1',True),('456 /dev/pts/2 $1\n789 /dev/pts/4 $1',False),('456 /dev/pts/2 $2',False)]:
+    answers=[SimpleNamespace(returncode=0,stdout=b'123 $1'),SimpleNamespace(returncode=0,stdout=rows.encode())]
+    with patch.dict(os.environ,TMUX='/tmp/tmux-1000/default,50,0',TMUX_PANE='%3'), patch.object(os,'lstat',return_value=SimpleNamespace(st_mode=stat.S_IFSOCK|0o600,st_uid=os.getuid())), patch.dict(namespace,parent_pids=lambda pid:[123,999],process_start=lambda pid:'100'), patch.object(namespace['subprocess'],'run',side_effect=answers):
+        result=hook['tmux_target']([{'address':'0xabc','pid':999}])
+        assert bool(result) == expected
+        if expected:assert result['targetTmux']['pane'] == '%3'
+print('tmux pane/client identities, PID reuse and ambiguous attached-terminal rejection passed.')

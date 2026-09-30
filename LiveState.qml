@@ -39,7 +39,8 @@ Item {
         if (!jumpJob.run("agent-jump", {
             address: item.target,
             targetPid: item.targetPid || 0,
-            targetBoot: item.targetBoot || ""
+            targetBoot: item.targetBoot || "",
+            targetTmux: item.targetTmux || null
         }))
             return false;
         jumpBusy = true;
