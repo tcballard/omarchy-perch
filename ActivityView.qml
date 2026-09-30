@@ -98,6 +98,15 @@ ColumnLayout {
                             surface: root.surface
                             onClicked: root.live.openCodex(modelData)
                         }
+                        PerchAction {
+                            objectName: "select-zellij-" + modelData.id
+                            visible: modelData.kind === "agent" && !!modelData.targetZellij
+                            text: PerchStrings.t("Select Zellij pane")
+                            enabled: !!root.live && !root.live.jumpBusy
+                            ink: root.ink
+                            surface: root.surface
+                            onClicked: root.live.selectZellij(modelData)
+                        }
                         RowLayout {
                             Layout.fillWidth: true
                             Text {

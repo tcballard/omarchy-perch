@@ -100,6 +100,9 @@ def window_target(window, tmux=None):
 
 
 def hyprland_target():
+    # A Zellij server may outlive its creating terminal; that ancestor is not
+    # evidence of the currently attached desktop window.
+    if os.environ.get('ZELLIJ_SESSION_NAME') and not os.environ.get('TMUX'):return {}
     if not os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
         return {}
     try:
@@ -117,6 +120,27 @@ def hyprland_target():
         return window_target(matches[0])
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):
         return {}
+
+def zellij_target():
+    session,pane=os.environ.get('ZELLIJ_SESSION_NAME',''),os.environ.get('ZELLIJ_PANE_ID','')
+    if os.environ.get('TMUX') or os.environ.get('PERCH_RELAY_SOCKET'):return {}
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,79}',session) or not re.fullmatch(r'[0-9]{1,10}',pane) or int(pane)>=2**32:return {}
+    for pid in parent_pids(os.getpid()):
+        try:
+            binary=os.readlink(f'/proc/{pid}/exe')
+            if Path(binary).name!='zellij':continue
+            with open(f'/proc/{pid}/cmdline','rb') as stream:args=stream.read(4096).decode().split('\0')
+            if '--server' not in args:continue
+            path=Path(args[args.index('--server')+1])
+            if not path.is_absolute() or len(str(path))>1024 or path.name!=session or len(path.parents)<2:continue
+            info=path.lstat();exe=Path(f'/proc/{pid}/exe').stat();disk=Path(binary).stat()
+            if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid() or (exe.st_dev,exe.st_ino)!=(disk.st_dev,disk.st_ino):continue
+            return {'targetZellij':{'session':session,'pane':int(pane),'socket':str(path),
+                'device':str(info.st_dev),'inode':str(info.st_ino),'serverPid':pid,'serverStart':process_start(pid),
+                'boot':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),'binary':binary,
+                'binaryDevice':str(exe.st_dev),'binaryInode':str(exe.st_ino)}}
+        except (OSError,ValueError,IndexError):continue
+    return {}
 
 IDE_COMMANDS = {'code':'code','code-insiders':'code-insiders','cursor':'cursor','windsurf':'windsurf',
     'trae':'trae','zed':'zed','zed-editor':'zed','idea':'idea','webstorm':'webstorm',
@@ -275,7 +299,7 @@ def report(agent, data):
     return {'id': agent + '.' + key, 'title': project_name(data) or label,
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
             'kind': 'agent', 'agent': label,
-            'project': project_name(data), **hyprland_target(), **workspace_target(data), **agent_process(agent), **(codex_target(session) if agent=='codex' else {}), 'attention': attention,
+            'project': project_name(data), **hyprland_target(), **zellij_target(), **workspace_target(data), **agent_process(agent), **(codex_target(session) if agent=='codex' else {}), 'attention': attention,
             'eventKey': hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:32]}
 
 

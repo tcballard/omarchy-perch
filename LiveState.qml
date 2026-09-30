@@ -61,6 +61,16 @@ Item {
         jumpBusy = true;
         return true;
     }
+    function selectZellij(item) {
+        if (!item || !item.targetZellij || jumpBusy)
+            return false;
+        error = "";
+        actionMessage = "";
+        if (!jumpJob.run("agent-zellij-select", {targetZellij:item.targetZellij}))
+            return false;
+        jumpBusy = true;
+        return true;
+    }
     ToolJob {
         id: jumpJob
         timeout: 3000

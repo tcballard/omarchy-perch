@@ -60,8 +60,9 @@ are terminated. No automatic typing/pasting into applications occurs.
 Reads are capped before JSON parsing (4 MiB); image copy is capped at 8 MiB and
 supports PNG/JPEG/WebP. Missing/oversized history and unavailable Wayland copy
 produce visible errors. The built-in Omarchy Clipboard remains the place for
-full image previews, deletion and larger histories. This module shows image
-metadata, not image thumbnails. It refreshes every three seconds only while the
+full image previews, deletion and larger histories. This module shows bounded
+PNG thumbnails (8 MiB and 4096 pixels per dimension); other image formats retain
+their type label. It refreshes every three seconds only while the
 card is visible; results are cleared from module state when the card closes.
 
 ## Stats

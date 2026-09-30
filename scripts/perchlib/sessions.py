@@ -32,6 +32,42 @@ def process_start(pid):
     return raw[raw.rfind(')') + 2:].split()[19]
 
 
+def select_zellij(target):
+    if not isinstance(target,dict):raise ValueError('Invalid Zellij target')
+    session,pane,path,binary,pid=(target.get(k) for k in ('session','pane','socket','binary','serverPid'))
+    if (not isinstance(session,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,79}',session)
+            or type(pane) is not int or not 0<=pane<2**32 or type(pid) is not int or pid<=1
+            or not isinstance(path,str) or not path.startswith('/') or len(path)>1024
+            or Path(path).name!=session or len(Path(path).parents)<2
+            or not isinstance(binary,str) or not binary.startswith('/') or len(binary)>1024 or Path(binary).name!='zellij'):
+        raise ValueError('Invalid Zellij target')
+    if target.get('boot')!=Path('/proc/sys/kernel/random/boot_id').read_text().strip() or process_start(pid)!=target.get('serverStart'):
+        raise ValueError('That Zellij server has changed')
+    info=os.lstat(path);exe=Path(f'/proc/{pid}/exe').stat();disk=Path(binary).stat()
+    command=shutil.which('zellij')
+    if (not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid()
+            or not command or str(Path(command).resolve())!=binary
+            or str(info.st_dev)!=target.get('device') or str(info.st_ino)!=target.get('inode')
+            or os.readlink(f'/proc/{pid}/exe')!=binary
+            or (exe.st_dev,exe.st_ino)!=(disk.st_dev,disk.st_ino)
+            or str(exe.st_dev)!=target.get('binaryDevice') or str(exe.st_ino)!=target.get('binaryInode')):
+        raise ValueError('That Zellij socket or executable has changed')
+    with open(f'/proc/{pid}/cmdline','rb') as stream:args=stream.read(4096).decode().split('\0')
+    if '--server' not in args or args[args.index('--server')+1:args.index('--server')+2]!=[path]:
+        raise ValueError('That Zellij server no longer owns the session')
+    # The matching server binary appends its protocol directory to this root.
+    argv=['env','ZELLIJ_SOCKET_DIR='+str(Path(path).parent.parent),'zellij','--session',session,'action']
+    clients=run(argv+['list-clients'],timeout=.5,limit=65536).strip().splitlines()
+    if (len(clients)!=2 or clients[0].split()[:2]!=['CLIENT_ID','ZELLIJ_PANE_ID']
+            or not re.match(r'^\s*[0-9]+\s+(?:terminal|plugin)_[0-9]+(?:\s|$)',clients[1])):
+        raise ValueError('Select the session in Zellij: exactly one attached client is required')
+    panes=json.loads(run(argv+['list-panes','--json'],timeout=.5,limit=262144))
+    if not isinstance(panes,list) or not any(isinstance(p,dict) and type(p.get('id')) is int and p['id']==pane and p.get('is_plugin') is False and p.get('exited') is not True for p in panes):
+        raise ValueError('That Zellij pane is no longer open')
+    run(argv+['focus-pane-id','terminal_'+str(pane)],timeout=1,limit=4096)
+    return {'message':'Selected the pane in the attached Zellij client'}
+
+
 def select_tmux(target):
     if not isinstance(target, dict):
         raise ValueError('Invalid tmux target')
@@ -111,6 +147,7 @@ def liveness(records):
 
 
 def handle(op, payload):
+    if op == 'agent-zellij-select':return select_zellij(payload.get('targetZellij'))
     if op == 'agent-codex-open':return open_codex(payload.get('targetCodex'))
     if op == 'agent-liveness':return liveness(payload.get('sessions'))
     if op == 'agent-discover':

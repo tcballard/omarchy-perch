@@ -518,3 +518,22 @@ a dispatched URI is not proof that the chat was opened. Without a registered
 handler the action is absent, and terminal/workspace return remains available.
 
 Contract: [ChatGPT desktop deep links](https://learn.chatgpt.com/docs/reference/commands#deep-links).
+
+### Zellij pane selection
+
+Local hooks inside Zellij can offer **Select Zellij pane**. Perch captures the
+ancestor server, its process start time, boot ID, owned socket and executable
+identity. On click it rechecks those identities, requires exactly one attached
+client, verifies the pane is live, then uses `focus-pane-id` with a fixed argument
+list. Detached, multiply attached, replaced or unsupported sessions produce an
+error without selecting a pane. Session names use letters, numbers, dots,
+underscores and hyphens; tmux nesting takes precedence. SSH status has no target.
+
+This selects the pane in Zellij; it does not promise to raise the terminal's
+Hyprland window. The public client list does not expose a client PID/window
+mapping, and the long-lived server's creating terminal can be unrelated to its
+current client. Perch therefore does not use that ancestor as a window target.
+The installed Zellij must expose `list-clients`, `list-panes --json` and
+`focus-pane-id`. No keystrokes or terminal contents are injected or read.
+
+Contract: [Zellij programmatic control](https://zellij.dev/documentation/programmatic-control.html).

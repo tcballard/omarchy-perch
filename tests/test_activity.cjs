@@ -58,3 +58,7 @@ const desktop={thread:'12345678-1234-1234-1234-123456789abc',handler:'codex.desk
 const desktopSession=A.normalize(JSON.stringify({...remembered,state:'done',targetCodex:desktop}),now);
 assert.deepEqual(A.recover(A.snapshot([desktopSession]),now)[0].targetCodex,desktop);
 assert.equal(A.normalize(JSON.stringify({...remembered,state:'done',targetCodex:{...desktop,thread:'new?prompt=bad'}}),now).targetCodex,null);
+const zellij={session:'work',pane:3,socket:'/run/user/1000/zellij/protocol/work',binary:'/usr/bin/zellij',serverPid:123,serverStart:'100',boot:remembered.targetBoot,device:'1',inode:'2',binaryDevice:'1',binaryInode:'9'};
+const paneSession=A.normalize(JSON.stringify({...remembered,state:'done',targetZellij:zellij}),now);
+assert.deepEqual(A.recover(A.snapshot([paneSession]),now)[0].targetZellij,zellij);
+assert.equal(A.normalize(JSON.stringify({...remembered,state:'done',targetZellij:{...zellij,pane:-1}}),now).targetZellij,null);
