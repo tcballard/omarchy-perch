@@ -115,6 +115,16 @@ ColumnLayout {
                         detail: PerchStrings.t("Working, permission attention and completion; local extension")
                     },
                     {
+                        id: "grok",
+                        name: "Grok Build",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "kimi",
+                        name: "Kimi Code",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
                         id: "codex",
                         name: "Codex",
                         detail: PerchStrings.t("Turn completion only")

@@ -375,3 +375,21 @@ add `--apply` to install or `--remove --apply` to remove.
 Contracts: [Pi](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md),
 [Oh My Pi](https://github.com/can1357/oh-my-pi/blob/main/docs/extensions.md),
 [OpenCode v1](https://dev.opencode.ai/docs/plugins/).
+
+### Kimi Code and Grok Build
+
+Kimi Setup appends an exactly owned TOML hook block to
+`$KIMI_CODE_HOME/config.toml` (default `~/.kimi-code`). It preserves existing
+TOML text and refuses to overwrite an edited Perch block. Hooks cover work,
+permission attention, completion, interruption and failure; background task
+notifications do not mark the main turn complete. This targets the current
+Kimi Code hook contract, not the older `~/.kimi` configuration layout.
+
+Grok Setup merges only its exact commands into
+`$GROK_HOME/hooks/perch-status.json` (default `~/.grok`). The adapter recognizes
+Grok's camelCase fields and snake_case event values, as well as its PascalCase
+compatibility event field. Neither adapter writes decisions, reads transcripts
+or bypasses the client's hook policy. Restart clients after setup/removal.
+
+Contracts: [Kimi](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html),
+[Grok](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/10-hooks.md).

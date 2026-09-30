@@ -114,6 +114,33 @@ def report(agent, data):
         if state not in ('running','done','error','waiting'):return None
         detail = {'running':'Working','done':'Turn complete','error':'Agent stopped with an error','waiting':'Needs your attention in the agent'}[state]
         attention = 'approval' if data.get('attention') == 'approval' else 'attention'
+    elif agent == 'grok':
+        session = data.get('sessionId') or data.get('session_id')
+        event = data.get('hook_event_name') or data.get('hookEventName')
+        event = {'user_prompt_submit':'UserPromptSubmit','post_tool_use':'PostToolUse',
+            'notification':'Notification','stop':'Stop','session_end':'SessionEnd',
+            'stop_cancelled':'StopCancelled','stop_failure':'StopFailure'}.get(event,event)
+        states = {'UserPromptSubmit':('running','Working'),'PostToolUse':('running','Working'),
+            'Stop':('done','Turn complete'),'SessionEnd':('done','Session ended'),
+            'StopCancelled':('done','Turn cancelled'),'StopFailure':('error','Agent stopped with an error')}
+        if event == 'Notification':
+            kind = data.get('notificationType') or data.get('notification_type')
+            if kind not in ('permission_prompt','idle_prompt','elicitation_dialog'):return None
+            state,detail = 'waiting','Needs your attention in Grok'
+            attention = 'approval' if kind == 'permission_prompt' else 'question'
+        elif event in states:state,detail=states[event]
+        else:return None
+    elif agent == 'kimi':
+        session = data.get('session_id')
+        event = data.get('hook_event_name')
+        states = {'TurnStarted':('running','Working'), 'PostToolUse':('running','Working'),
+            'PermissionRequest':('waiting','Needs your approval in Kimi'),
+            'PermissionResult':('running','Working'), 'Stop':('done','Turn complete'),
+            'SessionEnd':('done','Session ended'), 'Interrupt':('done','Turn cancelled'),
+            'StopFailure':('error','Agent stopped with an error')}
+        if event not in states:return None
+        state, detail = states[event]
+        if event == 'PermissionRequest':attention = 'approval'
     elif agent == 'codex':
         if data.get('type') != 'agent-turn-complete':
             return None
@@ -130,7 +157,7 @@ def report(agent, data):
             if data.get('notification_type') not in ('permission_prompt', 'idle_prompt', 'elicitation_dialog'):
                 return None
             attention = 'approval' if data.get('notification_type') == 'permission_prompt' else 'question'
-            state, detail = 'waiting', 'Needs your attention in ' + {'claude':'Claude Code','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy','pi':'Pi','omp':'Oh My Pi','opencode':'OpenCode'}[agent]
+            state, detail = 'waiting', 'Needs your attention in ' + {'claude':'Claude Code','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy','pi':'Pi','omp':'Oh My Pi','opencode':'OpenCode','kimi':'Kimi','grok':'Grok'}[agent]
         elif event in states:
             state, detail = states[event]
         else:
@@ -162,7 +189,7 @@ def report(agent, data):
     if not isinstance(session, str) or not session or len(session) > 4096:
         return None
     key = hashlib.sha256(session.encode()).hexdigest()[:20]
-    label = {'claude':'Claude','codex':'Codex','gemini':'Gemini','cursor':'Cursor','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy','pi':'Pi','omp':'Oh My Pi','opencode':'OpenCode'}[agent]
+    label = {'claude':'Claude','codex':'Codex','gemini':'Gemini','cursor':'Cursor','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy','pi':'Pi','omp':'Oh My Pi','opencode':'OpenCode','kimi':'Kimi','grok':'Grok'}[agent]
     return {'id': agent + '.' + key, 'title': project_name(data) or label,
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
             'kind': 'agent', 'agent': label,
@@ -191,7 +218,7 @@ def main():
         if len(sys.argv) != 4:
             return
         raw = sys.argv[3]
-    elif agent in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode') and len(sys.argv) == 3:
+    elif agent in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok') and len(sys.argv) == 3:
         raw = sys.stdin.buffer.read(LIMIT + 1)
     else:
         return

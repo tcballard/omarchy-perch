@@ -51,3 +51,29 @@ for agent in ('qwen','qoder','factory','codebuddy'):
     r=subprocess.run([sys.executable,str(ROOT/'scripts/perch-agent-hook'),'--perch-hook-v1',agent],input='not json',text=True,capture_output=True)
     assert r.returncode==0 and r.stdout=='' and r.stderr==''
 print('Qwen/Qoder/Factory/CodeBuddy status mapping, privacy, managed restrictions and reversible ownership passed.')
+
+import tomllib
+old='model = "keep"\n[[hooks]]\nevent = "Stop"\ncommand = "keep"\n[other]\nvalue = 1\n'
+new=setup.transform('kimi',old,adapter,False)
+assert tomllib.loads(new)['other']=={'value':1}
+assert len(tomllib.loads(new)['hooks'])==len(setup.KIMI_EVENTS)+1
+assert setup.transform('kimi',new,adapter,False)==new
+assert setup.transform('kimi',new,adapter,True)==old
+try:setup.transform('kimi',new.replace('timeout = 3','timeout = 4',1),adapter,True);raise AssertionError('edited Kimi block removed')
+except ValueError:pass
+with patch.object(hook,'hyprland_target',return_value={}):
+    for event,state in [('TurnStarted','running'),('PermissionRequest','waiting'),('Stop','done'),('Interrupt','done'),('StopFailure','error')]:
+        result=hook.report('kimi',{'session_id':'one','hook_event_name':event,'prompt':'PRIVATE'})
+        assert result['state']==state and 'PRIVATE' not in json.dumps(result)
+    assert hook.report('kimi',{'session_id':'one','hook_event_name':'Notification','notification_type':'task.completed'}) is None
+print('Kimi TOML preservation, edited-block protection, lifecycle and background-event isolation passed.')
+
+new=setup.transform('grok','{}',adapter,False)
+assert set(json.loads(new)['hooks'])==set(setup.GROK_EVENTS)
+assert json.loads(setup.transform('grok',new,adapter,True))=={}
+with patch.object(hook,'hyprland_target',return_value={}):
+    for event,state in [('user_prompt_submit','running'),('post_tool_use','running'),('stop','done'),('stop_cancelled','done'),('stop_failure','error'),('notification','waiting')]:
+        result=hook.report('grok',{'sessionId':'one','hookEventName':event,'notificationType':'permission_prompt','toolInput':'PRIVATE','toolResult':'PRIVATE'})
+        assert result['state']==state and 'PRIVATE' not in json.dumps(result)
+    assert hook.report('grok',{'sessionId':'one','hookEventName':'pre_tool_use'}) is None
+print('Grok camelCase/snake_case lifecycle and observation-only event ownership passed.')
