@@ -7,6 +7,7 @@ ColumnLayout {
     id: root
     property var work: null
     property var relay: null
+    property var codexServer: null
     property color ink: Color.foreground
     property color surface: Color.background
     property bool confirmRemove: false
@@ -231,6 +232,46 @@ ColumnLayout {
             }
             Text {
                 Layout.fillWidth: true
+                text: PerchStrings.t("Codex server status")
+                color: root.ink
+                font.pixelSize: Style.space(12)
+            }
+            Text {
+                Layout.fillWidth: true
+                text: PerchStrings.t("Read an existing private local control socket every five seconds. Permissions stay in Codex. Requires python-websockets 15 or newer.")
+                wrapMode: Text.Wrap
+                color: Qt.alpha(root.ink, 0.6)
+                font.pixelSize: Style.space(10)
+            }
+            Controls.TextField {
+                id: codexSocket
+                Layout.fillWidth: true
+                text: root.codexServer ? root.codexServer.socketPath : ""
+                placeholderText: PerchStrings.t("Absolute control socket path")
+                maximumLength: 1024
+                color: root.ink
+                palette.base: root.surface
+                palette.placeholderText: Qt.alpha(root.ink, 0.5)
+            }
+            PerchAction {
+                Layout.fillWidth: true
+                text: root.codexServer && root.codexServer.optedIn ? PerchStrings.t("Stop reading Codex status") : PerchStrings.t("Read Codex status")
+                enabled: !!root.codexServer && (root.codexServer.optedIn || codexSocket.text.startsWith("/"))
+                ink: root.ink
+                surface: root.surface
+                onClicked: root.codexServer.configure(codexSocket.text, !root.codexServer.optedIn)
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: !!root.codexServer && root.codexServer.optedIn
+                text: root.codexServer ? root.codexServer.error || (root.codexServer.busy ? PerchStrings.t("Checking Codex status…") : root.codexServer.count + PerchStrings.t(" loaded sessions")) : ""
+                textFormat: Text.PlainText
+                wrapMode: Text.WrapAnywhere
+                color: Qt.alpha(root.ink, 0.6)
+                font.pixelSize: Style.space(10)
+            }
+            Text {
+                Layout.fillWidth: true
                 visible: !!root.relay && root.relay.optedIn
                 text: root.relay ? root.relay.error || root.relay.endpoint || PerchStrings.t("Starting receiver…") : ""
                 textFormat: Text.PlainText
@@ -248,6 +289,8 @@ ColumnLayout {
                     if (root.confirmRemove) {
                         if (root.relay)
                             root.relay.setEnabled(false);
+                        if (root.codexServer)
+                            root.codexServer.configure(root.codexServer.socketPath, false);
                         root.work.removeIntegrations();
                         root.confirmRemove = false;
                     } else

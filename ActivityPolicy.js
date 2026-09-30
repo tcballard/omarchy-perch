@@ -107,4 +107,29 @@ function snapshot(items) {
             target:p.target, targetTmux:tmuxTarget(p.targetTmux), targetWezterm:weztermTarget(p.targetWezterm), targetWorkspace:workspaceTarget(p.targetWorkspace), targetCodex:codexTarget(p.targetCodex), targetZellij:zellijTarget(p.targetZellij), agentProcess:processTarget(p.agentProcess), targetPid:p.targetPid, targetStart:p.targetStart, targetBoot:p.targetBoot, updatedAt:p.updatedAt}
     })
 }
-if (typeof module !== "undefined") module.exports = {normalize,upsert,focus,attention,timer,recover,snapshot,discovered,endedProcesses}
+function serverSnapshot(items, records, now) {
+    if (!Array.isArray(records) || records.length > 8) return {items:items,events:[]}
+    var ids = records.map(function(p) { return p && p.id })
+    var next = items.filter(function(p) { return p.expiresAt > now && (!p.serverSource || ids.indexOf(p.id) >= 0) })
+    var events = []
+    records.forEach(function(p) {
+        if (!p || p.kind !== "agent" || p.agent !== "Codex") return
+        var previous = next.find(function(i) { return i.id === p.id })
+        var idle = p.state === "idle"
+        var clean = normalize(JSON.stringify(Object.assign({},p,{state:idle ? "done" : p.state})),now)
+        if (!clean) return
+        clean.serverSource = true
+        if (idle) {
+            if (previous && previous.serverSource && previous.state === "done") return
+            if (previous && ["running","waiting"].indexOf(previous.state) >= 0) {
+                clean.state = "done"; clean.detail = "Turn complete"
+            } else clean.state = "idle"
+        }
+        var updated = upsert(next,clean,now)
+        if (!updated) return
+        next = updated
+        if (["done","waiting","error"].indexOf(clean.state) >= 0 && (!previous || previous.state !== clean.state || previous.attention !== clean.attention)) events.push(clean)
+    })
+    return {items:next,events:events}
+}
+if (typeof module !== "undefined") module.exports = {normalize,upsert,focus,attention,timer,recover,snapshot,discovered,endedProcesses,serverSnapshot}

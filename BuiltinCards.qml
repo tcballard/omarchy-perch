@@ -89,6 +89,7 @@ Item {
             property color ink
             property color surface
             SetupView {
+                codexServer: cards.host.media && cards.host.media.codexServer !== undefined ? cards.host.media.codexServer : null
                 relay: cards.host.media && cards.host.media.relay !== undefined ? cards.host.media.relay : null
                 anchors {
                     left: parent.left

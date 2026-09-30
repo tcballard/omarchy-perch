@@ -17,6 +17,12 @@ Item {
         id: pluginState
     }
     property alias relay: relayState
+    property alias codexServer: codexServerState
+    CodexServerState {
+        id: codexServerState
+        preferences: prefsStore
+        live: activityState
+    }
     RelayState {
         id: relayState
         preferences: prefsStore

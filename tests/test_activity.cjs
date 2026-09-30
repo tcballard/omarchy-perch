@@ -62,3 +62,15 @@ const zellij={session:'work',pane:3,socket:'/run/user/1000/zellij/protocol/work'
 const paneSession=A.normalize(JSON.stringify({...remembered,state:'done',targetZellij:zellij}),now);
 assert.deepEqual(A.recover(A.snapshot([paneSession]),now)[0].targetZellij,zellij);
 assert.equal(A.normalize(JSON.stringify({...remembered,state:'done',targetZellij:{...zellij,pane:-1}}),now).targetZellij,null);
+const server={id:'codex.server',kind:'agent',agent:'Codex',state:'idle',ttl:30};
+let observed=A.serverSnapshot([], [server],now);
+assert.equal(observed.items[0].state,'idle');assert.equal(observed.events.length,0);
+observed=A.serverSnapshot(observed.items,[{...server,state:'running'}],now+1);
+observed=A.serverSnapshot(observed.items,[server],now+2);
+assert.equal(observed.items[0].state,'done');assert.equal(observed.events.length,1);
+assert.equal(A.serverSnapshot(observed.items,[server],now+3).events.length,0);
+assert.equal(A.serverSnapshot(observed.items,[],now+3).items.length,0);
+assert.equal(A.serverSnapshot([agent],[],now).items[0],agent);
+assert.equal(P.clean({}).codexServerStatus,false);
+assert.equal(P.clean({codexServerPath:'ws://host'}).codexServerPath,'');
+console.log('Codex server snapshots distinguish initial idle from observed completion and preserve non-observer activities.');

@@ -329,6 +329,15 @@ Item {
             activityEvent(item);
         return "ok";
     }
+    function serverSnapshot(records) {
+        now = Date.now();
+        var result = Activities.serverSnapshot(items, records, now);
+        items = result.items;
+        result.events.forEach(function(item) { root.activityEvent(item); });
+    }
+    function clearServerSessions() {
+        items = items.filter(function(item) { return !item.serverSource; });
+    }
     onItemsChanged: sessionSave.restart()
     Timer {
         id: sessionSave
@@ -351,7 +360,7 @@ Item {
             }
             if (!root.preferences.values.rememberSessions) {
                 root.items = root.items.filter(function (p) {
-                    return p.state !== "idle" || (p.discovered && root.preferences.values.discoverSessions);
+                    return p.state !== "idle" || (p.discovered && root.preferences.values.discoverSessions) || (p.serverSource && root.preferences.values.codexServerStatus);
                 });
                 if (root.preferences.record.recentSessions && root.preferences.record.recentSessions.length)
                     sessionSave.restart();

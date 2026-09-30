@@ -52,6 +52,16 @@ request_state.setProperty('now',time.time()+120)
 assert not allow.isEnabled()
 request_card.deleteLater()
 # Remote receiver is off by default and follows the explicit saved preference.
+assert evaluate('service.codexServer.optedIn') is False
+evaluate('service.codexServer.configure("/tmp/perch-fixture-codex.sock",true)')
+QTest.qWait(10)
+assert evaluate('service.codexServer.optedIn') is True
+observer_job=host.findChild(QObject,'codex-server-job');assert observer_job is not None
+evaluate('service.codexServer.configure("/tmp/perch-fixture-codex.sock",false)')
+e=QQmlExpression(QQmlEngine.contextForObject(observer_job),observer_job,'finish({ok:true,sessions:[{id:"codex.stale",kind:"agent",agent:"Codex",state:"running"}]})')
+e.evaluate();assert not e.hasError(),e.error().toString()
+assert evaluate('service.live.items.some(function(p){return p.id==="codex.stale"})') is False
+assert evaluate('service.codexServer.count')==0
 assert evaluate('service.relay.optedIn') is False
 evaluate('service.preferences.update({remoteStatus:true})')
 assert evaluate('service.relay.optedIn') is True

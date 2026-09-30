@@ -537,3 +537,38 @@ The installed Zellij must expose `list-clients`, `list-panes --json` and
 `focus-pane-id`. No keystrokes or terminal contents are injected or read.
 
 Contract: [Zellij programmatic control](https://zellij.dev/documentation/programmatic-control.html).
+
+### Read status from an existing Codex app-server
+
+Setup → **Codex server status** accepts an explicitly chosen local Unix control
+socket. With the optional system package `python-websockets` (15 or newer), Perch
+reads up to eight loaded top-level threads every five seconds. It displays
+working, approval/question attention, idle and error state. An observed active
+to idle transition becomes completion; an initial idle snapshot does not ring.
+Hooks remain the lower-latency source for clients that expose them.
+
+The reader uses the current WebSocket-over-Unix transport, checks socket ownership,
+private permissions and the peer UID, and accepts the server's owned rendezvous
+symlink. It sends only initialize/initialized, `thread/loaded/list` and
+`thread/read` with `includeTurns:false`. It never starts, resumes, interrupts or
+shuts down a thread/server, fetches credentials or answers server requests. If
+asked to handle an interactive request, it disconnects and reports the problem.
+TCP/WebSocket URLs are not accepted; there is no proxy or network fallback.
+
+The app-server may include a first-message preview in metadata. Perch discards
+it, titles, history and other fields before anything reaches QML or persistence;
+only generic state, hashed identity, project basename and an available local
+thread-return target remain. Frames are capped at 64 KiB, each snapshot at 1 MiB
+and a four-second RPC deadline after connection. Not every loaded thread is shown
+when the server has more than eight. Missing dependencies, unsupported transports
+and connection failures are visible in Setup. Disable or Prepare removal stops
+polling and removes observer-owned rows; late results cannot restore them.
+
+This is observation of an existing server, not discovery or installation of a
+desktop app. Supply its control socket from your own server configuration; Perch
+does not change daemon settings. Real client/host acceptance remains separate
+from the portable and fixture-server tests.
+
+Contracts: [Codex Unix transport](https://github.com/openai/codex/blob/main/codex-rs/app-server-transport/src/transport/unix_socket.rs),
+[loaded-thread query](https://github.com/openai/codex/blob/main/codex-rs/app-server-protocol/schema/typescript/v2/ThreadLoadedListParams.ts),
+[metadata-only read](https://github.com/openai/codex/blob/main/codex-rs/app-server-protocol/schema/typescript/v2/ThreadReadParams.ts).
