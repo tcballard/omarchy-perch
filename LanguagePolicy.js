@@ -1,5 +1,8 @@
 // UI-owned text only. Provider content, user labels, commands and errors retain their source language.
 var chinese = {
+"Check and update Perch":"检查并更新 Perch",
+"Automatically update Perch":"自动更新 Perch",
+"Every six hours through Omarchy; clean default-branch installs only":"每六小时通过 Omarchy 更新；仅限无本地改动的默认分支安装",
 "Codex approvals":"Codex 授权请求",
 "Explicit Allow once or Deny; review and trust in Codex /hooks":"明确选择允许一次或拒绝；请在 Codex /hooks 中审核并信任",
 "Open workspace":"打开工作区",

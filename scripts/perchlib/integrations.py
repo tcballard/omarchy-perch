@@ -10,7 +10,7 @@ import time
 import tomllib
 from .storage import Store,read_file
 from .process import run
-from . import extensions
+from . import extensions, updates
 ROOT=Path(__file__).resolve().parents[2]
 COMPANION_FILES={'notifications':['manifest.json','Service.qml','CommandJob.qml','store.py','NotificationStore.qml'],'osd':['manifest.json','Panel.qml','CommandJob.qml']}
 
@@ -139,6 +139,7 @@ def health():
         if result[agent]=='outdated':
             result[agent]='enabled';result['updates'].append(agent)
         elif result[agent]=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append(agent)
+    result['selfUpdate']=updates.availability()
     result['brightness']=backlight_state()
     result['sharing']='available' if (shutil.which('localsend') or shutil.which('localsend_app')) else 'LocalSend missing'
     result['alarm']='available' if shutil.which('canberra-gtk-play') else 'sound helper missing'
@@ -163,18 +164,25 @@ def worker(p):
     store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','requests-codex','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
-        if name in extensions.AGENTS:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-extension-setup'),name,'--apply']
+        if name=='perch-update':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-tools'),'self-update-apply','{}']
+        elif name in extensions.AGENTS:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-extension-setup'),name,'--apply']
         elif name=='requests-codex':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--agent','codex','--apply']
         elif name=='requests':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--apply']
         elif name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
         elif name in ('claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','kimi','grok','codex-hooks'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
         else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
         if not enabled:argv.append('--remove')
-        try:run(argv,timeout=90,limit=16384,detail=True)
+        try:
+            output=run(argv,timeout=90,limit=16384,detail=True)
+            if name=='perch-update':
+                reply=json.loads(output)
+                if not reply.get('ok'):raise ValueError(reply.get('error','Update failed'))
         except (OSError,ValueError,subprocess.SubprocessError) as error:failures.append(name+': '+str(error)[:200])
     if failures:
         # Each step is atomic and preserves existing configuration; report which one stopped.
         status={'status':'failed','message':'Setup did not complete. '+'; '.join(failures)[:400]+'. Other steps may have completed; review the integration states and retry.','started':time.time()}
+    elif names==['perch-update']:
+        status={'status':'done','message':'Perch update checked by Omarchy. Review Setup for hook and companion updates.','started':time.time()}
     elif enabled and any(name in ('osd','notifications') for name in names):
         status={'status':'done','message':'Companion files updated and enabled. Run "omarchy restart shell" to load the new copy; restart agent clients after hook changes.','started':time.time()}
     else:
@@ -183,7 +191,7 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','requests-codex','usage','requests'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','requests-codex','usage','requests','perch-update'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():

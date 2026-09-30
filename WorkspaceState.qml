@@ -101,7 +101,26 @@ Item {
         });
     }
     function removeIntegrations() {
+        if (preferences) preferences.update({autoUpdate:false});
         return request("integration-remove-all", {});
+    }
+    function updatePerch() {
+        if (!preferences || !preferences.ready || busy || (health.job && health.job.status === "working")) return false;
+        if (!preferences.update({lastUpdateAttempt:Date.now()})) return false;
+        return integration("perch-update", true);
+    }
+    function setAutoUpdate(value) {
+        return preferences && preferences.update({autoUpdate:value});
+    }
+    Timer {
+        interval: 60000
+        repeat: true
+        running: !!root.preferences && root.preferences.ready && root.preferences.values.autoUpdate
+        onTriggered: {
+            var last = Number(root.preferences.record.lastUpdateAttempt || 0);
+            if ((!isFinite(last) || Date.now() - last >= 21600000 || last > Date.now() + 86400000) && root.health.selfUpdate === "available")
+                root.updatePerch();
+        }
     }
     function brightness(value) {
         return request("brightness-set", {

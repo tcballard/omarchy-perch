@@ -196,6 +196,24 @@ ColumnLayout {
                 font.pixelSize: Style.space(10)
                 wrapMode: Text.WordWrap
             }
+            PerchAction {
+                Layout.fillWidth: true
+                text: PerchStrings.t("Check and update Perch")
+                enabled: !!root.work && !root.work.busy && root.work.health.selfUpdate === "available" && !(root.work.health.job && root.work.health.job.status === "working")
+                ink: root.ink
+                surface: root.surface
+                onClicked: root.work.updatePerch()
+            }
+            PerchToggle {
+                Layout.fillWidth: true
+                text: PerchStrings.t("Automatically update Perch")
+                description: PerchStrings.t("Every six hours through Omarchy; clean default-branch installs only")
+                checked: !!root.work && !!root.work.preferences && root.work.preferences.values.autoUpdate
+                enabled: !!root.work && root.work.health.selfUpdate === "available"
+                ink: root.ink
+                surface: root.surface
+                onToggled: root.work.setAutoUpdate(checked)
+            }
             PerchToggle {
                 Layout.fillWidth: true
                 text: PerchStrings.t("Receive remote agent status")

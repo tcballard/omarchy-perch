@@ -457,3 +457,18 @@ for an explicit **Allow once**, **Deny**, or **Continue in session** choice.
 There are no automatic or remembered decisions. Timeout, a closed panel or an
 unavailable bridge leaves Codex's normal permission flow in control. Other
 policy hooks can still deny a request. Codex question tools are not intercepted.
+
+### Updates through Omarchy
+
+Setup offers **Check and update Perch** for a git-managed installation in the
+normal Omarchy plugin directory. It delegates to Omarchy's updater, which owns
+fast-forwarding, manifest validation and shell rescan. Perch first rejects
+local changes, custom/review branches and development/symlink installations.
+It does not reset your checkout, change its remote or update other plugins.
+
+**Automatically update Perch** is off by default. Opting in attempts the same
+host-managed update at most once every six hours while the shell is running;
+it records an attempt before starting so a shell reload cannot create a loop.
+Prepare removal turns automatic updates off. Installed hook and companion
+copies remain explicit Setup updates so client hook review is preserved.
+Development/manual installs must use their original update method.
