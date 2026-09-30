@@ -8,6 +8,23 @@ from pathlib import Path
 from .process import run, launch
 
 ADDRESS = re.compile(r'^0x[0-9a-fA-F]{1,16}$')
+THREAD = re.compile(r'^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$')
+DESKTOP = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,240}\.desktop$')
+
+
+def codex_handler():
+    value=run(['xdg-mime','query','default','x-scheme-handler/codex'],timeout=.5,limit=4096).strip()
+    return value if DESKTOP.fullmatch(value) else ''
+
+
+def open_codex(target):
+    if not isinstance(target,dict) or not isinstance(target.get('thread'),str) or not THREAD.fullmatch(target['thread']):
+        raise ValueError('Invalid local Codex thread')
+    handler=target.get('handler')
+    if not isinstance(handler,str) or not DESKTOP.fullmatch(handler) or handler!=codex_handler():
+        raise ValueError('The Codex desktop handler changed or is unavailable; refresh this session')
+    launch(['xdg-open','codex://threads/'+target['thread'].lower()])
+    return {'message':'Requested this local thread in the Codex desktop app'}
 
 
 def process_start(pid):
@@ -94,6 +111,7 @@ def liveness(records):
 
 
 def handle(op, payload):
+    if op == 'agent-codex-open':return open_codex(payload.get('targetCodex'))
     if op == 'agent-liveness':return liveness(payload.get('sessions'))
     if op == 'agent-discover':
         from .discovery import discover

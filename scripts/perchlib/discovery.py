@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import stat
 import time
+from .sessions import codex_handler, THREAD
 
 
 def candidates(base, now):
@@ -63,15 +64,20 @@ def discover(now=None):
         ('pi',home/'.pi/agent/sessions'),('omp',home/'.omp/agent/sessions')]
     labels={'claude':'Claude','codex':'Codex','pi':'Pi','omp':'Oh My Pi'}
     rows=[]
+    try:handler=codex_handler()
+    except (OSError,ValueError):handler=''
     for agent,base in roots:
         for modified,path in candidates(base,now):
             try:pair=metadata(path,agent)
             except (OSError,ValueError,RecursionError):continue
             if not pair:continue
             session,cwd=pair
-            rows.append({'id':agent+'.'+hashlib.sha256(session.encode()).hexdigest()[:20],
+            row={'id':agent+'.'+hashlib.sha256(session.encode()).hexdigest()[:20],
                 'kind':'agent','agent':labels[agent],'title':Path(cwd).name[:100] or labels[agent],
-                'project':Path(cwd).name[:100], 'updatedAt':min(modified,now)*1000})
+                'project':Path(cwd).name[:100], 'updatedAt':min(modified,now)*1000}
+            if agent=='codex' and handler and THREAD.fullmatch(session):
+                row['targetCodex']={'thread':session.lower(),'handler':handler}
+            rows.append(row)
     unique={}
     for row in sorted(rows,key=lambda r:r['updatedAt'],reverse=True):unique.setdefault(row['id'],row)
     return {'sessions':list(unique.values())[:8]}

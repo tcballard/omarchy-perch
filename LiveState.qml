@@ -51,6 +51,16 @@ Item {
         jumpBusy = true;
         return true;
     }
+    function openCodex(item) {
+        if (!item || !item.targetCodex || jumpBusy)
+            return false;
+        error = "";
+        actionMessage = "";
+        if (!jumpJob.run("agent-codex-open", {targetCodex:item.targetCodex}))
+            return false;
+        jumpBusy = true;
+        return true;
+    }
     ToolJob {
         id: jumpJob
         timeout: 3000

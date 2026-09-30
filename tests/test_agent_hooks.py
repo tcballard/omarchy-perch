@@ -91,3 +91,12 @@ assert r.returncode==0 and not r.stdout and not r.stderr
 print('Codex lifecycle states, legacy identity compatibility, nonblocking output and subagent isolation passed.')
 with patch.object(hook,'hyprland_target',return_value={}):
     assert hook.report('opencode',{'session_id':'one','state':'waiting','attention':'question'})['attention']=='question'
+
+from types import SimpleNamespace
+thread='12345678-1234-1234-1234-123456789abc'
+for handler,expected in [(b'codex.desktop\n',True),(b'',False),(b'../../bad.desktop',False)]:
+    with patch.object(hook.subprocess,'run',return_value=SimpleNamespace(stdout=handler,returncode=0)):
+        assert bool(hook.codex_target(thread)) is expected
+assert hook.codex_target('new?prompt=bad')=={}
+with patch.dict(hook.os.environ,PERCH_RELAY_SOCKET='/remote/socket'):
+    assert hook.codex_target(thread)=={}

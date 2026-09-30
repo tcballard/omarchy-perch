@@ -18,4 +18,10 @@ with tempfile.TemporaryDirectory() as d:
     assert all('target' not in row and 'state' not in row for row in result['sessions'])
     huge=home/'huge.jsonl';huge.write_text('x'*65536+'\n'+json.dumps({'sessionId':'bad','cwd':'/work'}))
     assert D.metadata(huge,'claude') is None
+    codex=home/'.codex/sessions/2026/09/30/recent.jsonl'
+    thread='12345678-1234-1234-1234-123456789abc'
+    codex.write_text(json.dumps({'type':'session_meta','payload':{'id':thread,'cwd':'/work/perch'}}))
+    with patch.object(Path,'home',return_value=home),patch.dict(os.environ,{'CODEX_HOME':str(home/'.codex'),'CLAUDE_CONFIG_DIR':str(home/'.claude')}),patch.object(D,'codex_handler',return_value='codex.desktop'):
+        row=next(r for r in D.discover(time.time()+1)['sessions'] if r['agent']=='Codex')
+        assert row['targetCodex']=={'thread':thread,'handler':'codex.desktop'} and 'state' not in row
 print('Session discovery bounds, metadata-only output, age filtering and symlink exclusion passed.')

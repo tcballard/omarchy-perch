@@ -54,3 +54,7 @@ console.log('Late liveness replies cannot overwrite a replaced process or pendin
 
 assert.equal(A.recover([{...snapshot[0],targetStart:""}],now)[0].target,"");
 assert.equal(A.recover(snapshot,now)[0].targetStart,"100");
+const desktop={thread:'12345678-1234-1234-1234-123456789abc',handler:'codex.desktop'};
+const desktopSession=A.normalize(JSON.stringify({...remembered,state:'done',targetCodex:desktop}),now);
+assert.deepEqual(A.recover(A.snapshot([desktopSession]),now)[0].targetCodex,desktop);
+assert.equal(A.normalize(JSON.stringify({...remembered,state:'done',targetCodex:{...desktop,thread:'new?prompt=bad'}}),now).targetCodex,null);

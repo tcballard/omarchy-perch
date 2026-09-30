@@ -42,6 +42,15 @@ for pid, saved_boot, start, succeeds in [(123,boot,"100",True),(124,boot,"100",F
         assert execute.call_count == (2 if succeeds else 1)
 print('Recovered session PID and boot identity checked before focus.')
 
+thread='12345678-1234-1234-1234-123456789abc'
+for current,ident,ok in [('codex.desktop',thread,True),('other.desktop',thread,False),('',thread,False),('codex.desktop','new?prompt=bad',False),('codex.desktop',thread+'?host=remote',False)]:
+    with patch.object(sessions,'codex_handler',return_value=current),patch.object(sessions,'launch') as launch:
+        try:sessions.handle('agent-codex-open',{'targetCodex':{'thread':ident,'handler':'codex.desktop'}});assert ok
+        except ValueError:assert not ok
+        if ok:launch.assert_called_once_with(['xdg-open','codex://threads/'+thread])
+        else:launch.assert_not_called()
+print('Codex desktop return accepts only a local UUID and the unchanged registered handler.')
+
 # tmux commands target a captured pane and a specific attached client; no keystrokes.
 import os
 import stat

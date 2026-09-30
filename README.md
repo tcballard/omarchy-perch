@@ -500,3 +500,21 @@ public question-reply method. This integration does not claim v2 plugin support.
 
 Contract: [OpenCode v1 SDK permission response](https://github.com/anomalyco/opencode/blob/dev/packages/sdk/js/src/gen/sdk.gen.ts)
 and [permission request schema](https://github.com/anomalyco/opencode/blob/dev/packages/schema/src/v1/permission.ts).
+
+### Open a local Codex thread in the desktop app
+
+When the desktop has a registered `codex://` handler, local Codex hook events
+and opt-in session discovery include **Open in Codex desktop**. It opens the
+specific thread using the documented `codex://threads/<thread-id>` form.
+The target accepts only a UUID, never a prompt, arbitrary URI or remote host.
+Perch rechecks that the registered handler has not changed before dispatching.
+It does not install an app, register a handler or start an app-server.
+
+Card IDs remain hashed. This optional action additionally keeps the local
+thread UUID and handler name in the activity; Remember sessions retains them
+with the other return targets. SSH status forwarding excludes them. The
+application owns whether that local thread is available in its current profile;
+a dispatched URI is not proof that the chat was opened. Without a registered
+handler the action is absent, and terminal/workspace return remains available.
+
+Contract: [ChatGPT desktop deep links](https://learn.chatgpt.com/docs/reference/commands#deep-links).

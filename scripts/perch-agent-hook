@@ -165,6 +165,17 @@ def project_name(data):
     name = Path(cwd).name
     return name[:100] if name not in ('', '.', '/') else cwd[:100]
 
+def codex_target(session):
+    if not isinstance(session,str) or not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}',session):return {}
+    if os.environ.get('PERCH_RELAY_SOCKET'):return {}
+    try:
+        reply=subprocess.run(['xdg-mime','query','default','x-scheme-handler/codex'],
+            stdin=subprocess.DEVNULL,capture_output=True,timeout=.25,check=False)
+        handler=reply.stdout.decode().strip()
+        if reply.returncode or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,240}\.desktop',handler):return {}
+        return {'targetCodex':{'thread':session.lower(),'handler':handler}}
+    except (OSError,ValueError,subprocess.SubprocessError):return {}
+
 def report(agent, data):
     if not isinstance(data, dict):
         return None
@@ -264,7 +275,7 @@ def report(agent, data):
     return {'id': agent + '.' + key, 'title': project_name(data) or label,
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
             'kind': 'agent', 'agent': label,
-            'project': project_name(data), **hyprland_target(), **workspace_target(data), **agent_process(agent), 'attention': attention,
+            'project': project_name(data), **hyprland_target(), **workspace_target(data), **agent_process(agent), **(codex_target(session) if agent=='codex' else {}), 'attention': attention,
             'eventKey': hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:32]}
 
 

@@ -195,6 +195,7 @@ Object.assign(chinese,{
 });
 Object.assign(chinese,{"Receive remote agent status":"接收远程智能体状态","Optional SSH socket forwarding. Status only; permissions stay in the remote session.":"可选的 SSH 套接字转发。仅接收状态；授权仍在远程会话中进行。","Starting receiver…":"正在启动接收器…"});
 Object.assign(chinese,{"Working, permission and question attention; local extension":"工作状态、授权和问题提醒；本地扩展","Allow once or deny through the v1 client; questions stay in the session":"通过 v1 客户端允许一次或拒绝；问题仍在会话中回答"});
+Object.assign(chinese,{"Open in Codex desktop":"在 Codex 桌面应用中打开"});
 function translate(text, language) {
     return language === "zh-CN" && Object.prototype.hasOwnProperty.call(chinese,text) ? chinese[text] : text;
 }

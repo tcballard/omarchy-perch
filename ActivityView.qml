@@ -89,6 +89,15 @@ ColumnLayout {
                             surface: root.surface
                             onClicked: root.reviewRequested(modelData.id)
                         }
+                        PerchAction {
+                            objectName: "open-codex-" + modelData.id
+                            visible: modelData.kind === "agent" && !!modelData.targetCodex
+                            text: PerchStrings.t("Open in Codex desktop")
+                            enabled: !!root.live && !root.live.jumpBusy
+                            ink: root.ink
+                            surface: root.surface
+                            onClicked: root.live.openCodex(modelData)
+                        }
                         RowLayout {
                             Layout.fillWidth: true
                             Text {
