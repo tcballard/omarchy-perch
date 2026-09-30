@@ -34,7 +34,7 @@ Item {
     readonly property string clock: Qt.formatTime(new Date(now), "HH:mm")
     readonly property string summary: timerStatus === "done" ? timerState.label + " finished" : focused && (focused.state === "error" || focused.state === "waiting") ? focused.title : timerActive ? Media.time(remaining) + " · " + timerState.label : focused ? focused.title : ""
     function jumpTo(item) {
-        if (!item || item.kind !== "agent" || !item.target || jumpBusy)
+        if (!item || item.kind !== "agent" || (!item.target && !item.targetWorkspace) || jumpBusy)
             return false;
         error = "";
         actionMessage = "";
@@ -43,7 +43,8 @@ Item {
             targetPid: item.targetPid || 0,
             targetBoot: item.targetBoot || "",
             targetTmux: item.targetTmux || null,
-            targetWezterm: item.targetWezterm || null
+            targetWezterm: item.targetWezterm || null,
+            targetWorkspace: item.targetWorkspace || null
         }))
             return false;
         jumpBusy = true;

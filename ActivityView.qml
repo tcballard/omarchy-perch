@@ -157,8 +157,8 @@ ColumnLayout {
                             }
                             PerchAction {
                                 objectName: "jump-session-" + modelData.id
-                                visible: modelData.kind === "agent" && modelData.target !== ""
-                                text: root.live && root.live.jumpBusy ? PerchStrings.t("Opening…") : PerchStrings.t("Go to session")
+                                visible: modelData.kind === "agent" && (modelData.target !== "" || !!modelData.targetWorkspace)
+                                text: root.live && root.live.jumpBusy ? PerchStrings.t("Opening…") : modelData.targetWorkspace ? PerchStrings.t("Open workspace") : PerchStrings.t("Go to session")
                                 enabled: !!root.live && !root.live.jumpBusy
                                 ink: root.ink
                                 surface: root.surface

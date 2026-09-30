@@ -5,7 +5,7 @@ import re
 import shutil
 from pathlib import Path
 
-from .process import run
+from .process import run, launch
 
 ADDRESS = re.compile(r'^0x[0-9a-fA-F]{1,16}$')
 
@@ -57,12 +57,34 @@ def select_wezterm(target, pid):
     run(argv+['activate-pane','--pane-id',str(pane)],timeout=1,limit=4096)
 
 
+IDE_COMMANDS = {'code','code-insiders','cursor','windsurf','trae','zed','idea','webstorm',
+    'pycharm','goland','clion','rubymine','phpstorm','rider','rustrover'}
+
+
+def open_workspace(target):
+    if not isinstance(target,dict):raise ValueError('Invalid workspace target')
+    app,path,pid=target.get('app'),target.get('path'),target.get('pid')
+    if (app not in IDE_COMMANDS or not isinstance(path,str) or not path.startswith('/')
+            or len(path)>1024 or any(ord(c)<32 for c in path) or type(pid) is not int or pid<=1):
+        raise ValueError('Invalid workspace target')
+    if target.get('boot')!=Path('/proc/sys/kernel/random/boot_id').read_text().strip() or process_start(pid)!=target.get('start'):
+        raise ValueError('That editor process has changed')
+    actual=Path(os.readlink(f'/proc/{pid}/exe')).name.lower()
+    if actual!=app and not (app=='zed' and actual=='zed-editor'):
+        raise ValueError('That editor is no longer running')
+    if not Path(path).is_dir():raise ValueError('That workspace folder is no longer available')
+    launch([app,path])
+    return {'message':'Opened session workspace'}
+
+
 def handle(op, payload):
     if op == 'agent-discover':
         from .discovery import discover
         return discover()
     if op != 'agent-jump':
         raise ValueError('Unsupported session operation')
+    if payload.get('targetWorkspace'):
+        return open_workspace(payload['targetWorkspace'])
     address = payload.get('address', '')
     if not isinstance(address, str) or not ADDRESS.fullmatch(address):
         raise ValueError('That session has no valid Hyprland window target')

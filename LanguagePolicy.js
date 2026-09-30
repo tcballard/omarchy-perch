@@ -1,5 +1,6 @@
 // UI-owned text only. Provider content, user labels, commands and errors retain their source language.
 var chinese = {
+"Open workspace":"打开工作区",
 "Discover recent local sessions":"发现最近的本地会话",
 "Read bounded session metadata; show last seen without live alerts":"仅读取有限的会话元数据；显示最近记录，不触发实时提醒",
 "Working, approval attention and completion; review and trust in Codex /hooks":"工作、授权提醒和完成状态；请在 Codex /hooks 中审核并信任",

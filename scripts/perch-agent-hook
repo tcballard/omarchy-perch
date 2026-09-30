@@ -117,6 +117,27 @@ def hyprland_target():
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):
         return {}
 
+IDE_COMMANDS = {'code':'code','code-insiders':'code-insiders','cursor':'cursor','windsurf':'windsurf',
+    'trae':'trae','zed':'zed','zed-editor':'zed','idea':'idea','webstorm':'webstorm',
+    'pycharm':'pycharm','goland':'goland','clion':'clion','rubymine':'rubymine',
+    'phpstorm':'phpstorm','rider':'rider','rustrover':'rustrover'}
+
+
+def workspace_target(data):
+    cwd=data.get('cwd')
+    if not isinstance(cwd,str) or not cwd.startswith('/') or len(cwd)>1024 or not Path(cwd).is_dir():return {}
+    try:
+        for pid in parent_pids(os.getpid()):
+            try:name=Path(os.readlink(f'/proc/{pid}/exe')).name.lower()
+            except OSError:continue
+            command=IDE_COMMANDS.get(name)
+            if command:
+                return {'targetWorkspace':{'app':command,'path':cwd,'pid':pid,'start':process_start(pid),
+                    'boot':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}}
+    except (OSError,ValueError,IndexError):pass
+    return {}
+
+
 def project_name(data):
     cwd = data.get('cwd') if isinstance(data, dict) else None
     if not isinstance(cwd, str) or not cwd or len(cwd) > 4096:
@@ -223,7 +244,7 @@ def report(agent, data):
     return {'id': agent + '.' + key, 'title': project_name(data) or label,
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
             'kind': 'agent', 'agent': label,
-            'project': project_name(data), **hyprland_target(), 'attention': attention,
+            'project': project_name(data), **hyprland_target(), **workspace_target(data), 'attention': attention,
             'eventKey': hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:32]}
 
 

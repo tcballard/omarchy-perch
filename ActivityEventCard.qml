@@ -69,8 +69,8 @@ ColumnLayout {
         spacing: Style.space(6)
         PerchAction {
             objectName: "event-return"
-            visible: !!root.item && root.item.kind === "agent" && root.item.target !== ""
-            text: root.live && root.live.jumpBusy ? PerchStrings.t("Opening…") : PerchStrings.t("Go to session")
+            visible: !!root.item && root.item.kind === "agent" && (root.item.target !== "" || !!root.item.targetWorkspace)
+            text: root.live && root.live.jumpBusy ? PerchStrings.t("Opening…") : root.item.targetWorkspace ? PerchStrings.t("Open workspace") : PerchStrings.t("Go to session")
             enabled: !!root.live && !root.live.jumpBusy
             ink: root.ink
             surface: root.surface

@@ -437,3 +437,13 @@ Ambiguous multi-window processes receive no guessed target. Inside tmux,
 the tmux route takes precedence. Update installed hooks from Setup after an
 upgrade. Requires WezTerm's `cli list --format json` and `cli activate-pane`
 interfaces; it does not read terminal text or send keystrokes.
+
+### IDE workspace return
+
+For agents launched by a recognized editor process, the status hook can capture
+the project folder and editor process identity. **Open workspace** rechecks the
+same process and boot, then opens that folder with an allowlisted editor CLI.
+This targets the workspace; it does not select a particular chat tab. VS Code,
+Cursor, Windsurf, Trae, Zed and native-named JetBrains launchers are recognized.
+Generic Java/Electron processes are not guessed. The editor CLI must be on PATH.
+Remote status strips this target along with terminal targets.

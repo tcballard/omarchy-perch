@@ -84,3 +84,15 @@ for rows,ino,start,ok in [('[{"pane_id":3}]',2,'100',True),('[]',2,'100',False),
         if ok:assert execute.call_args.args[0]==['env','WEZTERM_UNIX_SOCKET=/tmp/wezterm.sock','wezterm','cli','activate-pane','--pane-id','3']
         else:assert not any('activate-pane' in c.args[0] for c in execute.call_args_list)
 print('WezTerm verifies instance socket, window process start and live pane before fixed-argv activation.')
+
+with __import__('tempfile').TemporaryDirectory() as d:
+    target={'app':'code','path':d,'pid':123,'start':'100','boot':boot}
+    with patch.object(sessions,'process_start',return_value='100'),patch.object(sessions.os,'readlink',return_value='/opt/code/code'),patch.object(sessions,'launch') as launch:
+        assert sessions.open_workspace(target)['message']=='Opened session workspace'
+        launch.assert_called_once_with(['code',d])
+    for patch_target in [dict(target,app='bash'),dict(target,path='--execute'),dict(target,boot='old')]:
+        with patch.object(sessions,'launch') as launch:
+            try:sessions.open_workspace(patch_target);raise AssertionError('invalid workspace accepted')
+            except ValueError:pass
+            launch.assert_not_called()
+print('Workspace return restricts editor commands, verifies process identity and passes only an existing absolute folder.')
