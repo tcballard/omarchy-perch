@@ -10,6 +10,7 @@ import time
 import tomllib
 from .storage import Store,read_file
 from .process import run
+from . import extensions
 ROOT=Path(__file__).resolve().parents[2]
 COMPANION_FILES={'notifications':['manifest.json','Service.qml','CommandJob.qml','store.py','NotificationStore.qml'],'osd':['manifest.json','Panel.qml','CommandJob.qml']}
 
@@ -95,6 +96,12 @@ def health():
             if result[agent]=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append(agent)
         except FileNotFoundError:result[agent]='not configured'
         except (OSError,ValueError,TypeError):result[agent]='configuration unreadable'
+    for agent in extensions.AGENTS:
+        try:result[agent]=extensions.health(agent)
+        except (OSError,ValueError):result[agent]='configuration unreadable'
+        if result[agent]=='outdated':
+            result[agent]='enabled';result['updates'].append(agent)
+        elif result[agent]=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append(agent)
     result['brightness']=backlight_state()
     result['sharing']='available' if (shutil.which('localsend') or shutil.which('localsend_app')) else 'LocalSend missing'
     result['alarm']='available' if shutil.which('canberra-gtk-play') else 'sound helper missing'
@@ -116,10 +123,11 @@ def backlight_state():
     except (OSError,ValueError,subprocess.SubprocessError):return 'no backlight device'
 
 def worker(p):
-    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
+    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
-        if name=='requests':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--apply']
+        if name in extensions.AGENTS:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-extension-setup'),name,'--apply']
+        elif name=='requests':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--apply']
         elif name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
         elif name in ('claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
         else:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-notifications-setup'),'--kind',name,'--apply']
@@ -137,7 +145,7 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','usage','requests'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','usage','requests'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():

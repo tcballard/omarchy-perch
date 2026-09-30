@@ -1,5 +1,7 @@
 // UI-owned text only. Provider content, user labels, commands and errors retain their source language.
 var chinese = {
+"Working and completion; local extension":"通过本地扩展显示工作和完成状态",
+"Working, permission attention and completion; local extension":"通过本地扩展显示工作、授权提醒和完成状态",
 "Placement":"位置", "Behaviour":"行为", "Alerts & sound":"提醒与声音", "Your strip":"工具栏", "Plugin pins":"固定插件",
 "Choose where Perch lives on your desktop.":"选择 Perch 在桌面上的位置。", "Control how Perch opens and moves.":"控制 Perch 的展开方式和动画。",
 "Choose interruptions, previews and sounds.":"选择提醒、预览和声音。", "Choose and arrange up to eight tools and plugin pins.":"选择并排列最多八个工具或插件。",

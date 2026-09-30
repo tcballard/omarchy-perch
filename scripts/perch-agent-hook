@@ -42,7 +42,7 @@ def tmux_target(clients):
         return {}
     def query(*args):
         result = subprocess.run(['tmux', '-S', path, *args], stdin=subprocess.DEVNULL,
-            capture_output=True, timeout=.75, check=False)
+            capture_output=True, timeout=.25, check=False)
         if result.returncode or len(result.stdout) > 65536:
             raise ValueError('tmux query failed')
         return result.stdout.decode().strip()
@@ -85,7 +85,7 @@ def hyprland_target():
         return {}
     try:
         completed = subprocess.run(['hyprctl', '-j', 'clients'], stdin=subprocess.DEVNULL,
-            capture_output=True, timeout=.75, check=False)
+            capture_output=True, timeout=.25, check=False)
         if completed.returncode or len(completed.stdout) > 262144:
             return {}
         clients = json.loads(completed.stdout)
@@ -108,7 +108,13 @@ def report(agent, data):
     if not isinstance(data, dict):
         return None
     attention = 'attention'
-    if agent == 'codex':
+    if agent in ('pi','omp','opencode'):
+        session = data.get('session_id')
+        state = data.get('state')
+        if state not in ('running','done','error','waiting'):return None
+        detail = {'running':'Working','done':'Turn complete','error':'Agent stopped with an error','waiting':'Needs your attention in the agent'}[state]
+        attention = 'approval' if data.get('attention') == 'approval' else 'attention'
+    elif agent == 'codex':
         if data.get('type') != 'agent-turn-complete':
             return None
         session = data.get('thread-id')
@@ -124,7 +130,7 @@ def report(agent, data):
             if data.get('notification_type') not in ('permission_prompt', 'idle_prompt', 'elicitation_dialog'):
                 return None
             attention = 'approval' if data.get('notification_type') == 'permission_prompt' else 'question'
-            state, detail = 'waiting', 'Needs your attention in ' + {'claude':'Claude Code','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy'}[agent]
+            state, detail = 'waiting', 'Needs your attention in ' + {'claude':'Claude Code','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy','pi':'Pi','omp':'Oh My Pi','opencode':'OpenCode'}[agent]
         elif event in states:
             state, detail = states[event]
         else:
@@ -156,7 +162,7 @@ def report(agent, data):
     if not isinstance(session, str) or not session or len(session) > 4096:
         return None
     key = hashlib.sha256(session.encode()).hexdigest()[:20]
-    label = {'claude':'Claude','codex':'Codex','gemini':'Gemini','cursor':'Cursor','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy'}[agent]
+    label = {'claude':'Claude','codex':'Codex','gemini':'Gemini','cursor':'Cursor','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy','pi':'Pi','omp':'Oh My Pi','opencode':'OpenCode'}[agent]
     return {'id': agent + '.' + key, 'title': project_name(data) or label,
             'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
             'kind': 'agent', 'agent': label,
@@ -185,7 +191,7 @@ def main():
         if len(sys.argv) != 4:
             return
         raw = sys.argv[3]
-    elif agent in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy') and len(sys.argv) == 3:
+    elif agent in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode') and len(sys.argv) == 3:
         raw = sys.stdin.buffer.read(LIMIT + 1)
     else:
         return

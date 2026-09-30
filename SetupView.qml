@@ -100,6 +100,21 @@ ColumnLayout {
                         detail: PerchStrings.t("Working, attention and completion")
                     },
                     {
+                        id: "pi",
+                        name: "Pi",
+                        detail: PerchStrings.t("Working and completion; local extension")
+                    },
+                    {
+                        id: "omp",
+                        name: "Oh My Pi",
+                        detail: PerchStrings.t("Working and completion; local extension")
+                    },
+                    {
+                        id: "opencode",
+                        name: "OpenCode (v1 plugin API)",
+                        detail: PerchStrings.t("Working, permission attention and completion; local extension")
+                    },
+                    {
                         id: "codex",
                         name: "Codex",
                         detail: PerchStrings.t("Turn completion only")

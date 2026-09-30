@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""Install/remove an explicitly selected Perch status extension, with preview by default."""
+import argparse
+from pathlib import Path
+import runpy
+import time
+
+ROOT = Path(__file__).resolve().parent
+api = runpy.run_path(str(ROOT/'perch-agent-setup'))
+ext = runpy.run_path(str(ROOT/'perchlib/extensions.py'))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('agent', choices=ext['AGENTS'])
+    parser.add_argument('--apply', action='store_true')
+    parser.add_argument('--remove', action='store_true')
+    args = parser.parse_args()
+    path = ext['target'](args.agent)
+    old = api['read'](path)
+    if old and not old.startswith(ext['MARKER']):raise ValueError('Extension path is occupied by an unrelated file')
+    print(('Remove' if args.remove else 'Install') + ' Perch status extension: ' + str(path))
+    if not args.apply:
+        print('Preview only. Add --apply to write changes.');return
+    if not args.remove:
+        adapter = Path.home()/'.local/share/omarchy-perch/perch-agent-hook'
+        existing = api['read'](adapter)
+        if existing and '"""Best-effort, status-only Claude Code / Codex hook.' not in existing:
+            raise ValueError('Adapter path is occupied by an unrelated file')
+        api['atomic'](adapter, (ROOT/'perch-agent-hook').read_text(), 0o700)
+    if api['read'](path) != old:raise ValueError('Extension changed during setup; retry')
+    new = '' if args.remove else ext['render'](args.agent)
+    if old != new:
+        if old:api['atomic'](path.with_name(path.name + '.perch-backup-' + str(time.time_ns())), old)
+        if args.remove:
+            if path.exists():path.unlink()
+        else:api['atomic'](path, new)
+    print('Done. Restart the client to load or unload the extension. Profile and client-level disabling remain authoritative.')
+
+
+if __name__ == '__main__':
+    try:main()
+    except (OSError, ValueError) as error:raise SystemExit(str(error))

@@ -352,3 +352,26 @@ Contracts: [Qwen](https://qwenlm.github.io/qwen-code-docs/en/users/features/hook
 [Qoder](https://docs.qoder.com/cli/hooks),
 [Factory](https://docs.factory.ai/harness/hooks),
 [CodeBuddy](https://www.codebuddy.ai/docs/cli/hooks).
+
+### Pi, Oh My Pi and OpenCode extensions
+
+Setup can install a small local status extension for Pi, Oh My Pi and OpenCode's
+v1 plugin API. Pi/Oh My Pi report agent start, completion and session shutdown;
+OpenCode additionally reports permission attention and session errors. They
+forward only session identity, generic state and project directory to the local
+Perch adapter. They neither read messages nor make permission decisions.
+
+The files are `perch-status.js` under `~/.pi/agent/extensions/`,
+`~/.omp/agent/extensions/`, or `$XDG_CONFIG_HOME/opencode/plugins/` (default
+`~/.config`). `PI_CODING_AGENT_DIR` selects an explicit Pi/OMP agent directory;
+Setup does not infer named profiles. Existing unrelated files at these paths
+are protected. Updates/removal save a dated backup outside the loader's JS
+suffix. Restart the client after either operation. Client/profile disabling
+continues to apply; file health confirms installation, not delivery.
+
+CLI preview: `scripts/perch-extension-setup pi` (or `omp`, `opencode`);
+add `--apply` to install or `--remove --apply` to remove.
+
+Contracts: [Pi](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md),
+[Oh My Pi](https://github.com/can1357/oh-my-pi/blob/main/docs/extensions.md),
+[OpenCode v1](https://dev.opencode.ai/docs/plugins/).
