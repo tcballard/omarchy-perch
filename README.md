@@ -410,3 +410,19 @@ legacy notifier to avoid duplicate completion events. This does not remove any
 other notifier. Permission attention is status only; answer it inside Codex.
 
 Contract: [Codex hooks](https://learn.chatgpt.com/docs/hooks).
+
+### Discovering recent sessions
+
+**Settings → Alerts & sound → Discover recent local sessions** opts into a
+once-per-minute metadata scan of local Claude, Codex, Pi and Oh My Pi JSONL
+session directories. Perch bounds directory entries, file count, bytes and
+metadata length, skips symlinks and sessions older than one day, and returns
+only hashed session identity, project basename and last-modified time. It
+never returns prompts or responses. Custom Pi/OMP profile stores are not
+scanned automatically.
+
+Discovered sessions appear as **Last seen in local session history**, without
+alerts, active-work claims or guessed terminal targets. A later hook event
+replaces the matching record with live status. Dismissed sessions stay hidden
+for the current shell session. Disabling discovery removes discovered rows;
+the separate remember-sessions setting controls persistence across restarts.

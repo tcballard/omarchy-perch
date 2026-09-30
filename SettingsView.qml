@@ -339,6 +339,11 @@ ColumnLayout {
                     Repeater {
                         model: [
                             {
+                                key: "discoverSessions",
+                                title: PerchStrings.t("Discover recent local sessions"),
+                                detail: PerchStrings.t("Read bounded session metadata; show last seen without live alerts")
+                            },
+                            {
                                 key: "rememberSessions",
                                 title: PerchStrings.t("Remember agent sessions"),
                                 detail: PerchStrings.t("Keep up to eight last-seen sessions for one day across shell restarts. Pending requests are never saved.")

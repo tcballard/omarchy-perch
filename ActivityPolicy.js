@@ -54,10 +54,23 @@ function recover(records, now) {
         return clean
     }).filter(function(p) { return p !== null })
 }
+function discovered(items, records, now, dismissed) {
+    if (!Array.isArray(records)) return items
+    var next = items.filter(function(p) { return p.expiresAt > now })
+    records.slice(0,8).forEach(function(p) {
+        if (!p || dismissed.indexOf(p.id) >= 0 || next.some(function(i) { return i.id === p.id }) || next.length >= 8) return
+        var recovered = recover([p],now)[0]
+        if (!recovered) return
+        recovered.detail = "Last seen in local session history"
+        recovered.discovered = true
+        next.push(recovered)
+    })
+    return next
+}
 function snapshot(items) {
     return items.filter(function(p) { return p.kind === "agent" }).slice(0,8).map(function(p) {
         return {id:p.id, kind:"agent", title:p.title, project:p.project, agent:p.agent,
             target:p.target, targetTmux:tmuxTarget(p.targetTmux), targetPid:p.targetPid, targetBoot:p.targetBoot, updatedAt:p.updatedAt}
     })
 }
-if (typeof module !== "undefined") module.exports = {normalize,upsert,focus,attention,timer,recover,snapshot}
+if (typeof module !== "undefined") module.exports = {normalize,upsert,focus,attention,timer,recover,snapshot,discovered}

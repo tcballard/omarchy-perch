@@ -12,6 +12,8 @@ Item {
     signal timerFinished(string label)
     property var timerState: Activities.timer(null, now)
     property bool restored: false
+    property var dismissedDiscoveries: []
+    property bool discoveryEnabled: false
     property string error: ""
     property string actionMessage: ""
     property bool jumpBusy: false
@@ -92,6 +94,26 @@ Item {
         late.forEach(function (label) {
             root.timerFinished(label);
         });
+        discoveryEnabled = preferences.values.discoverSessions;
+        discoverSessions();
+    }
+    function discoverSessions() {
+        if (preferences && preferences.ready && preferences.values.discoverSessions)
+            discoveryJob.run("agent-discover", {});
+    }
+    ToolJob {
+        id: discoveryJob
+        timeout: 4000
+        onCompleted: function(op, result) {
+            if (result.ok && root.preferences && root.preferences.values.discoverSessions)
+                root.items = Activities.discovered(root.items, result.sessions, Date.now(), root.dismissedDiscoveries);
+        }
+    }
+    Timer {
+        interval: 60000
+        repeat: true
+        running: !!root.preferences && root.preferences.ready && root.preferences.values.discoverSessions
+        onTriggered: root.discoverSessions()
     }
     onPreferencesChanged: restore()
     Connections {
@@ -281,9 +303,15 @@ Item {
     Connections {
         target: root.preferences
         function onValuesChanged() {
+            if (root.discoveryEnabled !== root.preferences.values.discoverSessions) {
+                root.discoveryEnabled = root.preferences.values.discoverSessions;
+                if (!root.discoveryEnabled)
+                    root.items = root.items.filter(function(p) { return !p.discovered; });
+                else root.discoverSessions();
+            }
             if (!root.preferences.values.rememberSessions) {
                 root.items = root.items.filter(function (p) {
-                    return p.state !== "idle";
+                    return p.state !== "idle" || (p.discovered && root.preferences.values.discoverSessions);
                 });
                 if (root.preferences.record.recentSessions && root.preferences.record.recentSessions.length)
                     sessionSave.restart();
@@ -291,6 +319,7 @@ Item {
         }
     }
     function dismiss(id) {
+        dismissedDiscoveries = dismissedDiscoveries.concat([id]).slice(-128);
         items = items.filter(function (p) {
             return p.id !== id;
         });

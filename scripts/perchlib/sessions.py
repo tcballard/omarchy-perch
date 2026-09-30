@@ -39,6 +39,9 @@ def select_tmux(target):
 
 
 def handle(op, payload):
+    if op == 'agent-discover':
+        from .discovery import discover
+        return discover()
     if op != 'agent-jump':
         raise ValueError('Unsupported session operation')
     address = payload.get('address', '')
