@@ -63,11 +63,12 @@ def respond(payload):
         if reply.get('ok') is not True:raise ValueError(reply.get('error','Request was not accepted'))
     return {'message':'Response delivered'}
 
-def request_data(raw,token,deadline):
+def request_data(raw,token,deadline,agent="claude"):
     event=raw.get('hook_event_name');tool=raw.get('tool_name');value=raw.get('tool_input')
     if event not in ('PermissionRequest','PreToolUse') or not isinstance(tool,str) or len(tool)>160 or not isinstance(value,dict):raise ValueError('Unsupported request')
     if len(json.dumps(value).encode())>LIMIT:raise ValueError('Review large input in the agent session')
     kind='approval'
+    if agent not in ('claude','codex') or (agent=='codex' and event!='PermissionRequest'):raise ValueError('Unsupported agent request')
     if event=='PreToolUse':
         if tool!='AskUserQuestion':raise ValueError('Unsupported question tool')
         questions=value.get('questions')
@@ -81,15 +82,15 @@ def request_data(raw,token,deadline):
         kind='question'
     cwd=raw.get('cwd','')
     if not isinstance(cwd,str) or len(cwd)>4096:cwd=''
-    return {'id':token,'kind':kind,'tool':tool,'input':value,'cwd':cwd,'expiresAt':deadline,'pid':os.getpid()}
+    return {'id':token,'agent':agent,'kind':kind,'tool':tool,'input':value,'cwd':cwd,'expiresAt':deadline,'pid':os.getpid()}
 
 def publish(payload,verb='activity'):
     r=subprocess.run(['omarchy-shell','io.github.tcballard.perch',verb,json.dumps(payload) if verb=='activity' else payload],stdin=subprocess.DEVNULL,capture_output=True,timeout=2)
     return r.returncode==0 and r.stdout.strip()==b'ok'
 
-def serve(raw,timeout=120):
+def serve(raw,timeout=120,agent="claude"):
     root=directory();token=secrets.token_hex(16);deadline=time.time()+timeout
-    data=request_data(raw,token,deadline)
+    data=request_data(raw,token,deadline,agent)
     # Keep runtime records bounded and clear abandoned records after their deadline.
     count=0
     for path in list(root.glob('*.json'))[:32]:
@@ -104,7 +105,7 @@ def serve(raw,timeout=120):
         try:
             fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600)
             with os.fdopen(fd,'w') as out:json.dump(data,out)
-            if not publish({'id':activity,'kind':'agent','agent':'Claude','state':'waiting','attention':data['kind'],'requestId':token,'title':data['tool'],'detail':'Review in Perch or continue in your session','project':Path(data['cwd']).name,'ttl':timeout}):return {}
+            if not publish({'id':activity,'kind':'agent','agent':'Codex' if agent=='codex' else 'Claude','state':'waiting','attention':data['kind'],'requestId':token,'title':data['tool'],'detail':'Review in Perch or continue in your session','project':Path(data['cwd']).name,'ttl':timeout}):return {}
             while time.time()<deadline:
                 server.settimeout(max(.01,deadline-time.time()))
                 try:conn,_=server.accept()
@@ -129,12 +130,16 @@ def serve(raw,timeout=120):
             except (OSError,subprocess.SubprocessError):pass
 
 def main():
+    agent='claude'
+    if len(sys.argv)>1:
+        if sys.argv[1:]!=['--agent','codex']:return
+        agent='codex'
     signal.signal(signal.SIGTERM,lambda *_:sys.exit(0))
     raw=sys.stdin.buffer.read(65537)
     if len(raw)>65536:return
     value=json.loads(raw)
     if not isinstance(value,dict):return
-    result=serve(value)
+    result=serve(value,agent=agent)
     if result:print(json.dumps(result))
 if __name__=='__main__':
     try:main()

@@ -126,10 +126,13 @@ def health():
         present=[exact_hooks(data,event,command) for event in ('UserPromptSubmit','PreToolUse','PostToolUse','PermissionRequest','Stop','SessionEnd','Interrupt')]
         features=config.get('features',{})
         disabled=features.get('hooks',features.get('codex_hooks',True)) is False or config.get('allow_managed_hooks_only') or config.get('hooks',{}).get('allow_managed_hooks_only')
+        request_command=shlex.join(['python3',str(Path.home()/'.local/share/omarchy-perch/perch-request-hook'),'--agent','codex'])
+        result['requests-codex']='hooks disabled' if disabled else 'enabled' if exact_hooks(data,'PermissionRequest',request_command,'*') else 'disabled'
+        if result['requests-codex']=='enabled' and not adapter_current('perch-request-hook'):result['updates'].append('requests-codex')
         result['codex-hooks']='hooks disabled' if disabled else 'enabled' if all(present) else 'incomplete' if any(present) else 'disabled'
         if result['codex-hooks']=='enabled' and not adapter_current('perch-agent-hook'):result['updates'].append('codex-hooks')
-    except FileNotFoundError:result['codex-hooks']='not configured'
-    except (OSError,ValueError,AttributeError):result['codex-hooks']='configuration unreadable'
+    except FileNotFoundError:result['codex-hooks']=result['requests-codex']='not configured'
+    except (OSError,ValueError,AttributeError):result['codex-hooks']=result['requests-codex']='configuration unreadable'
     for agent in extensions.AGENTS:
         try:result[agent]=extensions.health(agent)
         except (OSError,ValueError):result[agent]='configuration unreadable'
@@ -157,10 +160,11 @@ def backlight_state():
     except (OSError,ValueError,subprocess.SubprocessError):return 'no backlight device'
 
 def worker(p):
-    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
+    store=Store('integrations');names=['claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','requests-codex','usage','requests','osd','notifications'] if p.get('all') else [p['name']]
     enabled=p.get('enabled',False);failures=[]
     for name in names:
         if name in extensions.AGENTS:argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-extension-setup'),name,'--apply']
+        elif name=='requests-codex':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--agent','codex','--apply']
         elif name=='requests':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-request-setup'),'--apply']
         elif name=='usage':argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-usage-setup'),'--apply']
         elif name in ('claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','kimi','grok','codex-hooks'):argv=['/usr/bin/python3','-I',str(ROOT/'scripts/perch-agent-setup'),name,'--apply']
@@ -179,7 +183,7 @@ def worker(p):
     return status
 
 def start(p):
-    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','usage','requests'):raise ValueError('Unknown integration')
+    if not p.get('all') and p.get('name') not in ('notifications','osd','claude','codex','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks','requests-codex','usage','requests'):raise ValueError('Unknown integration')
     if not isinstance(p.get('enabled',False),bool):raise ValueError('Invalid integration setting')
     store=Store('integrations')
     with store.lock():

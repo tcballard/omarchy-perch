@@ -447,3 +447,13 @@ This targets the workspace; it does not select a particular chat tab. VS Code,
 Cursor, Windsurf, Trae, Zed and native-named JetBrains launchers are recognized.
 Generic Java/Electron processes are not guessed. The editor CLI must be on PATH.
 Remote status strips this target along with terminal targets.
+
+### Codex approval responses
+
+The independent **Codex approvals** Setup option adds a `PermissionRequest`
+hook with the same expiring, same-user request transport used by Claude.
+Review/trust it in Codex `/hooks`. Perch shows the pending tool input and waits
+for an explicit **Allow once**, **Deny**, or **Continue in session** choice.
+There are no automatic or remembered decisions. Timeout, a closed panel or an
+unavailable bridge leaves Codex's normal permission flow in control. Other
+policy hooks can still deny a request. Codex question tools are not intercepted.

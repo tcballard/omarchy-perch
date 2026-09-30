@@ -38,3 +38,17 @@ with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,{'XDG_RUNTIME_DI
     try:bridge.request_data(dict(raw,tool_input={'command':'x'*20000}),'b'*32,time.time()+5);assert False
     except ValueError:pass
 print('Request decision schema, complete answers and input bounds passed; socket evidence is reported above.')
+
+codex=bridge.request_data(raw,'a'*32,time.time()+120,'codex')
+assert codex['agent']=='codex'
+assert bridge.decision(codex,{'action':'allow'})=={'hookSpecificOutput':{'hookEventName':'PermissionRequest','decision':{'behavior':'allow'}}}
+assert bridge.decision(codex,{'action':'session'})=={}
+try:bridge.request_data(dict(raw,hook_event_name='PreToolUse',tool_name='AskUserQuestion'),'a'*32,time.time()+120,'codex');raise AssertionError('unsupported Codex questions accepted')
+except ValueError:pass
+import runpy
+setup=runpy.run_path(str(Path(__file__).resolve().parents[1]/'scripts/perch-request-setup'))
+old='{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"keep"}]}]}}'
+new=setup['transform'](old,Path('/owned/request'),False,'codex')
+assert set(json.loads(new)['hooks'])=={'Stop','PermissionRequest'}
+assert json.loads(setup['transform'](new,Path('/owned/request'),True,'codex'))==json.loads(old)
+print('Codex approval schema, explicit fallback and separately owned setup/removal passed.')

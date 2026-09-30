@@ -50,6 +50,11 @@ ColumnLayout {
                         detail: PerchStrings.t("Explicit responses in Perch; tool inputs visible only while a request is pending")
                     },
                     {
+                        id: "requests-codex",
+                        name: PerchStrings.t("Codex approvals"),
+                        detail: PerchStrings.t("Explicit Allow once or Deny; review and trust in Codex /hooks")
+                    },
+                    {
                         id: "usage",
                         name: PerchStrings.t("Claude usage status line"),
                         detail: PerchStrings.t("Opt-in local rate-limit counters; preserves custom status lines")
