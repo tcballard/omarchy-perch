@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.tcballard.perch-notifications",
   "name": "Perch Notifications",
-  "version": "0.1.0-rc.6",
+  "version": "0.0.1",
   "author": "Tom Ballard",
   "license": "MIT",
   "description": "Optional notification inbox for Perch; replaces Omarchy notifications while enabled.",

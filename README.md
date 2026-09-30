@@ -4,7 +4,7 @@
 
 Music, files, meetings, timers and live progress at any edge of your Omarchy desktop. A quiet notch opens into native cards, with an optional strip for your favourite tools and plugins.
 
-**0.1.0-rc.6 — public preview candidate.** Built for people who want to test Perch and help shape it. The current stack is not yet a published release. Start with the [preview guide](PREVIEW.md) for the exact candidate install, a ten-minute test and how to report feedback. Hardware and compositor acceptance remain outstanding; this is not a stable release or full Open Island parity.
+**0.0.1 — public preview candidate.** Built for people who want to test Perch and help shape it. The current stack is not yet a published release. Start with the [preview guide](PREVIEW.md) for the exact candidate install, a ten-minute test and how to report feedback. Hardware and compositor acceptance remain outstanding; this is not a stable release or full Open Island parity.
 
 ![Notch and Plugin Perch, rendered from production QML with fictional data](notch-preview.png)
 

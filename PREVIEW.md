@@ -1,6 +1,6 @@
 # Test the Perch preview
 
-**0.1.0-rc.6 · preview candidate, not yet tagged or released.**
+**0.0.1 · preview candidate, not yet tagged or released.**
 
 Perch puts music, files, timers, meetings and your chosen plugins at the edge of
 Omarchy. This preview also includes optional coding-agent status and selected

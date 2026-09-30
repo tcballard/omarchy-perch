@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0-rc.6 — public preview candidate (unreleased)
+## 0.0.1 — public preview candidate (unreleased)
 
 - Package the current Notch, native plugin drawer and desktop modules as a clearly scoped preview, with a tester guide and structured bug/UX reports.
 - Raise live activity capacity to 32. New attention events can replace old idle/completed rows, then ordinary running work; unresolved requests and attention rows are never evicted. A fully occupied attention queue returns control to the agent session.
@@ -33,7 +33,11 @@
 - Opt-in coordinate-based Open-Meteo current weather and six-hour temperatures, bounded fetching and stale-response rejection.
 - Portable adapter and production-QML interaction tests, plus a clearly labelled fixture render. Live Omarchy acceptance remains outstanding; see MODULES.md.
 
-## 0.1.0-rc.5 — 2026-09-29
+## Earlier development snapshots
+
+The rc labels below describe development history, not published releases. Public preview numbering starts at 0.0.1.
+
+### 0.1.0-rc.5 — 2026-09-29
 
 - Hyprland global shortcut `perch:toggle` opens Perch with keyboard focus on the focused display or closes it. Bind it with `bind = SUPER, P, global, perch:toggle`; nothing is written to Hyprland configuration.
 - Page changes, Settings and compact context changes fade and slide in over 140 ms, matching the expansion timing. Reduced motion disables them. Countdown ticks do not animate.
@@ -44,7 +48,7 @@
 - Helper review fixes: open-ended recurring series now expand from the 30-day window instead of stepping day by day since their first occurrence (a realistic export with hundreds of years-old weekly series went from about 5 s, past the helper deadline on add, to about 0.1 s); quoted timezone IDs and Outlook/Exchange names defined by VTIMEZONE resolve with daylight rules instead of dropping the event; `DURATION` is honoured; alarm sub-components no longer leak titles or links into their event; trailing prose punctuation is stripped from detected meeting links; `calendar-add` parses once. Brightness only ever targets a real backlight (brightnessctl otherwise falls back to keyboard LEDs) and Setup reports “no backlight device”. A first companion install whose enable step fails removes its copy again; another plugin's broken manifest no longer aborts Perch setup. Text previews read the head of files of any size. `perch-task run` keeps the controlling terminal so sudo/ssh/gpg prompts work, and transfers publish on filesystems without hard links. Health tolerates a corrupt job file; setup status is recorded only after the worker started; dotfile-managed (symlinked) `shell.json` is read.
 - Tests cover shortcut toggling, transition settling, no stale offset when a page is set while collapsed, deferred alerts with the age cutoff, timezone/duration/alarm parsing, window-aligned expansion against exhaustive expansion, parse time, large previews, install rollback and a corrupt job file. The Process test stub now emits an exit after a kill, as the real one does.
 
-## 0.1.0-rc.4 — 2026-09-29
+### 0.1.0-rc.4 — 2026-09-29
 
 - Dropdown popups (audio devices, timers, apps, notification filter, display and fullscreen settings) now extend the compositor input region and hold the hover grace while open. Previously a pointer-opened Perch collapsed 220 ms after the pointer moved onto a dropdown, which also closed it.
 - Helper operations queue behind the running job instead of failing with “An operation is already in progress”; identical pending requests collapse.
@@ -56,7 +60,7 @@
 - Tests cover popup tracking, helper queueing, meeting summary rules, all-day parsing, companion drift detection and setup failure messages.
 
 
-## 0.1.0-rc.3 — 2026-09-29
+### 0.1.0-rc.3 — 2026-09-29
 
 - Contextual compact controls, context cycling and header gestures.
 - Persistent file shelf, previews, drag-out and LocalSend handoff.
@@ -70,7 +74,7 @@
 - Portable tests and actual QML fixture rendering pass; hardware/compositor acceptance remains open.
 
 
-## 0.1.0-rc.2 — 29 September 2026
+### 0.1.0-rc.2 — 29 September 2026
 
 - Add an optional notification companion, six-second compact previews, a bounded session inbox, DND, native actions, expiry and stale-action protection. Omarchy clone lifecycle restores the original notification service on companion disable/removal.
 - Add Applications, Omarchy menu, Clipboard, Emoji, Appearance and Settings shortcuts.
