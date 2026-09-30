@@ -426,3 +426,14 @@ alerts, active-work claims or guessed terminal targets. A later hook event
 replaces the matching record with live status. Dismissed sessions stay hidden
 for the current shell session. Disabling discovery removes discovered rows;
 the separate remember-sessions setting controls persistence across restarts.
+
+### WezTerm pane return
+
+Hooks can capture `WEZTERM_PANE` and `WEZTERM_UNIX_SOCKET` when a unique local
+Hyprland terminal is identified. Jump checks the original owned socket's
+identity, terminal process start and live pane list, then uses WezTerm's
+`activate-pane` command. A replaced server or closed pane is rejected.
+Ambiguous multi-window processes receive no guessed target. Inside tmux,
+the tmux route takes precedence. Update installed hooks from Setup after an
+upgrade. Requires WezTerm's `cli list --format json` and `cli activate-pane`
+interfaces; it does not read terminal text or send keystrokes.

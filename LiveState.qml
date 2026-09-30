@@ -42,7 +42,8 @@ Item {
             address: item.target,
             targetPid: item.targetPid || 0,
             targetBoot: item.targetBoot || "",
-            targetTmux: item.targetTmux || null
+            targetTmux: item.targetTmux || null,
+            targetWezterm: item.targetWezterm || null
         }))
             return false;
         jumpBusy = true;

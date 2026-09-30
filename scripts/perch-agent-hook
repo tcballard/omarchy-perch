@@ -69,6 +69,24 @@ def tmux_target(clients):
     return window_target(window, target)
 
 
+def wezterm_target(window):
+    pane, path = os.environ.get('WEZTERM_PANE',''), os.environ.get('WEZTERM_UNIX_SOCKET','')
+    if not re.fullmatch(r'[0-9]{1,12}',pane) or not path.startswith('/') or len(path)>1024:return {}
+    info=os.lstat(path)
+    if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid():return {}
+    result=subprocess.run(['wezterm','cli','list','--format','json'],stdin=subprocess.DEVNULL,
+        capture_output=True,timeout=.25,check=False)
+    if result.returncode or len(result.stdout)>262144:return {}
+    rows=json.loads(result.stdout)
+    if not isinstance(rows,list):return {}
+    matches=[p for p in rows if isinstance(p,dict) and p.get('pane_id')==int(pane)]
+    if len(matches)!=1:return {}
+    target=window_target(window)
+    target['targetWezterm']={'socket':path,'pane':int(pane),'device':str(info.st_dev),
+        'inode':str(info.st_ino),'windowStart':process_start(window['pid'])}
+    return target
+
+
 def window_target(window, tmux=None):
     address = window.get('address', '')
     if not isinstance(address, str) or not re.fullmatch(r'0x[0-9a-fA-F]{1,16}', address):
@@ -93,7 +111,9 @@ def hyprland_target():
             return tmux_target(clients)
         ancestors = set(parent_pids(os.getpid()))
         matches = [c for c in clients if isinstance(c, dict) and c.get('pid') in ancestors]
-        return window_target(matches[0]) if len(matches) == 1 else {}
+        if len(matches) != 1:return {}
+        if os.environ.get('WEZTERM_PANE'):return wezterm_target(matches[0])
+        return window_target(matches[0])
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):
         return {}
 

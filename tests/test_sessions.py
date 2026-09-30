@@ -75,3 +75,12 @@ for rows, expected in [('456 /dev/pts/2 $1',True),('456 /dev/pts/2 $1\n789 /dev/
         assert bool(result) == expected
         if expected:assert result['targetTmux']['pane'] == '%3'
 print('tmux pane/client identities, PID reuse and ambiguous attached-terminal rejection passed.')
+
+wez={'socket':'/tmp/wezterm.sock','pane':3,'device':'1','inode':'2','windowStart':'100'}
+for rows,ino,start,ok in [('[{"pane_id":3}]',2,'100',True),('[]',2,'100',False),('[{"pane_id":3}]',3,'100',False),('[{"pane_id":3}]',2,'999',False)]:
+    with patch.object(sessions.os,'lstat',return_value=SimpleNamespace(st_mode=stat.S_IFSOCK|0o600,st_uid=os.getuid(),st_dev=1,st_ino=ino)),patch.object(sessions,'process_start',return_value=start),patch.object(sessions.shutil,'which',return_value='/usr/bin/wezterm'),patch.object(sessions,'run',side_effect=[rows,'']) as execute:
+        try:sessions.select_wezterm(wez,123);assert ok
+        except ValueError:assert not ok
+        if ok:assert execute.call_args.args[0]==['env','WEZTERM_UNIX_SOCKET=/tmp/wezterm.sock','wezterm','cli','activate-pane','--pane-id','3']
+        else:assert not any('activate-pane' in c.args[0] for c in execute.call_args_list)
+print('WezTerm verifies instance socket, window process start and live pane before fixed-argv activation.')

@@ -38,6 +38,25 @@ def select_tmux(target):
     run(argv + ['switch-client', '-c', client, '-t', pane], timeout=1, limit=4096)
 
 
+def select_wezterm(target, pid):
+    if not isinstance(target,dict):raise ValueError('Invalid WezTerm target')
+    path,pane=target.get('socket'),target.get('pane')
+    if not isinstance(path,str) or not path.startswith('/') or len(path)>1024 or type(pane) is not int or not 0<=pane<10**12:
+        raise ValueError('Invalid WezTerm target')
+    info=os.lstat(path)
+    if (not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid()
+            or str(info.st_dev)!=target.get('device') or str(info.st_ino)!=target.get('inode')
+            or process_start(pid)!=target.get('windowStart')):
+        raise ValueError('That WezTerm instance has changed')
+    if not shutil.which('wezterm'):raise ValueError('WezTerm is unavailable')
+    # env receives a validated name/value argument; no shell is involved.
+    argv=['env','WEZTERM_UNIX_SOCKET='+path,'wezterm','cli']
+    rows=json.loads(run(argv+['list','--format','json'],timeout=.75,limit=262144))
+    if not isinstance(rows,list) or not any(isinstance(p,dict) and p.get('pane_id')==pane for p in rows):
+        raise ValueError('That WezTerm pane is no longer open')
+    run(argv+['activate-pane','--pane-id',str(pane)],timeout=1,limit=4096)
+
+
 def handle(op, payload):
     if op == 'agent-discover':
         from .discovery import discover
@@ -61,6 +80,10 @@ def handle(op, payload):
             and c.get('pid') == payload.get('targetPid') for c in clients
         ):
             raise ValueError('That session target has changed; open it from your terminal')
+    if payload.get('targetWezterm'):
+        if not payload.get('targetPid') or not payload.get('targetBoot'):
+            raise ValueError('Missing WezTerm window identity')
+        select_wezterm(payload['targetWezterm'],payload['targetPid'])
     if payload.get('targetTmux'):
         if not payload.get('targetPid') or not payload.get('targetBoot'):
             raise ValueError('Missing tmux window identity')
