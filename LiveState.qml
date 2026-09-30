@@ -41,6 +41,7 @@ Item {
         if (!jumpJob.run("agent-jump", {
             address: item.target,
             targetPid: item.targetPid || 0,
+            targetStart: item.targetStart || "",
             targetBoot: item.targetBoot || "",
             targetTmux: item.targetTmux || null,
             targetWezterm: item.targetWezterm || null,

@@ -92,6 +92,7 @@ def window_target(window, tmux=None):
     if not isinstance(address, str) or not re.fullmatch(r'0x[0-9a-fA-F]{1,16}', address):
         return {}
     result = {'target':address, 'targetPid':window['pid'],
+        'targetStart':process_start(window['pid']),
         'targetBoot':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}
     if tmux:
         result['targetTmux'] = tmux
@@ -174,7 +175,7 @@ def report(agent, data):
         state = data.get('state')
         if state not in ('running','done','error','waiting'):return None
         detail = {'running':'Working','done':'Turn complete','error':'Agent stopped with an error','waiting':'Needs your attention in the agent'}[state]
-        attention = 'approval' if data.get('attention') == 'approval' else 'attention'
+        attention = data['attention'] if data.get('attention') in ('approval','question') else 'attention'
     elif agent == 'grok':
         session = data.get('sessionId') or data.get('session_id')
         event = data.get('hook_event_name') or data.get('hookEventName')

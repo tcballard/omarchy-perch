@@ -32,10 +32,10 @@ for clients, reply in [('[]', 'ok'), ('{}', 'ok'), ('[{"address":"0xabc123"}]', 
 
 print('Agent session jump validates one Hyprland address and uses fixed argv.')
 boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
-for pid, saved_boot, succeeds in [(123,boot,True),(124,boot,False),(123,'old-boot',False)]:
-    with patch.object(sessions.shutil,'which',return_value='/usr/bin/hyprctl'), patch.object(sessions,'run',side_effect=['[{"address":"0xabc123","pid":123}]','ok']) as execute:
+for pid, saved_boot, start, succeeds in [(123,boot,"100",True),(124,boot,"100",False),(123,"old-boot","100",False),(123,boot,"999",False),(123,boot,"",False)]:
+    with patch.object(sessions,'process_start',return_value='100'), patch.object(sessions.shutil,'which',return_value='/usr/bin/hyprctl'), patch.object(sessions,'run',side_effect=['[{"address":"0xabc123","pid":123}]','ok']) as execute:
         try:
-            sessions.handle('agent-jump', {'address':'0xabc123','targetPid':pid,'targetBoot':saved_boot})
+            sessions.handle('agent-jump', {'address':'0xabc123','targetPid':pid,'targetBoot':saved_boot,'targetStart':start})
             assert succeeds
         except ValueError:
             assert not succeeds

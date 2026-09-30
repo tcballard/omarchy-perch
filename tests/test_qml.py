@@ -37,6 +37,14 @@ from PySide6.QtCore import QObject
 request_state=request_card.findChild(QObject,'request-state');assert request_state is not None
 allow=request_card.findChild(QQuickItem,'request-allow');assert allow is not None
 assert not allow.isEnabled()
+def request_eval(code):
+    e=QQmlExpression(QQmlEngine.contextForObject(request_card),request_card,code)
+    result=e.evaluate()
+    assert not e.hasError(),e.error().toString()
+    return result[0] if isinstance(result,tuple) else result
+request_eval('choose("__proto__","Red, green",true); choose("__proto__","Blue",true); choose("__proto__","Red, green",true)')
+assert request_eval('answers["__proto__"]')=='Blue'
+assert request_eval('choices["__proto__"].length')==1
 import time
 request_state.setProperty('request',{'id':'a'*32,'kind':'approval','tool':'Bash','input':{'command':'printf example'},'cwd':'/work','expiresAt':time.time()+60})
 assert allow.isEnabled()

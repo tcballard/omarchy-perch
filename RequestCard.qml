@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import qs.Commons
+import "RequestPolicy.js" as RequestPolicy
 
 ColumnLayout {
     id: root
@@ -9,6 +10,7 @@ ColumnLayout {
     property color ink: Color.foreground
     property color surface: Color.background
     property var answers: ({})
+    property var choices: ({})
     readonly property bool answersComplete: !state.request || state.request.kind !== "question" || state.request.input.questions.every(function (q) {
         var value = root.answers[q.question];
         return typeof value === "string" && value.trim().length > 0 && value.length <= 2000;
@@ -19,11 +21,14 @@ ColumnLayout {
         requestId: root.requestId
         onResponded: root.responded()
     }
-    onRequestIdChanged: answers = ({})
+    onRequestIdChanged: { answers = ({}); choices = ({}) }
     function answer(question, value) {
-        var next = Object.assign({}, answers);
-        next[question] = value;
-        answers = next;
+        answers = RequestPolicy.put(answers, question, value);
+    }
+    function choose(question, label, multiple) {
+        var values = RequestPolicy.select(choices[question], label, multiple);
+        choices = RequestPolicy.put(choices, question, values);
+        answer(question, values.join(", "));
     }
     spacing: Style.space(10)
     Text {
@@ -95,22 +100,12 @@ ColumnLayout {
                             Layout.fillWidth: true
                             text: modelData.label
                             Accessible.description: modelData.description || ""
-                            selected: questionRow.modelData.multiSelect ? (root.answers[questionRow.modelData.question] || "").split(", ").indexOf(modelData.label) >= 0 : root.answers[questionRow.modelData.question] === modelData.label
+                            selected: Array.isArray(root.choices[questionRow.modelData.question]) && root.choices[questionRow.modelData.question].indexOf(modelData.label) >= 0
                             ink: root.ink
                             surface: root.surface
                             enabled: !state.expired && !state.busy && !state.delivered
                             onClicked: {
-                                var current = root.answers[questionRow.modelData.question] || "";
-                                if (questionRow.modelData.multiSelect) {
-                                    var values = current ? current.split(", ") : [];
-                                    var at = values.indexOf(modelData.label);
-                                    if (at >= 0)
-                                        values.splice(at, 1);
-                                    else
-                                        values.push(modelData.label);
-                                    root.answer(questionRow.modelData.question, values.join(", "));
-                                } else
-                                    root.answer(questionRow.modelData.question, modelData.label);
+                                root.choose(questionRow.modelData.question, modelData.label, questionRow.modelData.multiSelect === true);
                             }
                         }
                     }
@@ -123,7 +118,10 @@ ColumnLayout {
                         palette.base: root.surface
                         palette.placeholderText: Qt.alpha(root.ink, 0.5)
                         enabled: !state.expired && !state.busy && !state.delivered
-                        onTextEdited: root.answer(questionRow.modelData.question, text)
+                        onTextEdited: {
+                            root.choices = RequestPolicy.put(root.choices, questionRow.modelData.question, []);
+                            root.answer(questionRow.modelData.question, text);
+                        }
                     }
                 }
             }

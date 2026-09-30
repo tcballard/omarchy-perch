@@ -114,10 +114,13 @@ def handle(op, payload):
         raise ValueError('That session window is no longer open')
     if payload.get('targetPid') or payload.get('targetBoot'):
         boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
-        if payload.get('targetBoot') != boot or not any(
+        pid=payload.get('targetPid')
+        if (type(pid) is not int or pid<=1 or payload.get('targetBoot') != boot
+                or not re.fullmatch(r'[0-9]{1,24}',str(payload.get('targetStart','')))
+                or process_start(pid)!=payload['targetStart'] or not any(
             isinstance(c, dict) and c.get('address') == address
-            and c.get('pid') == payload.get('targetPid') for c in clients
-        ):
+            and c.get('pid') == pid for c in clients
+        )):
             raise ValueError('That session target has changed; open it from your terminal')
     if payload.get('targetWezterm'):
         if not payload.get('targetPid') or not payload.get('targetBoot'):

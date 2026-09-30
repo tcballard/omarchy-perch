@@ -89,3 +89,5 @@ with patch.object(hook,'hyprland_target',return_value={}):
 r=subprocess.run([sys.executable,str(ROOT/'scripts/perch-agent-hook'),'--perch-hook-v1','codex-hooks'],input='not json',text=True,capture_output=True)
 assert r.returncode==0 and not r.stdout and not r.stderr
 print('Codex lifecycle states, legacy identity compatibility, nonblocking output and subagent isolation passed.')
+with patch.object(hook,'hyprland_target',return_value={}):
+    assert hook.report('opencode',{'session_id':'one','state':'waiting','attention':'question'})['attention']=='question'

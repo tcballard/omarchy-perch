@@ -31,7 +31,7 @@ function normalize(encoded, now) {
         var kind = p.kind === "agent" ? "agent" : "task"
         var target = typeof p.target === "string" && /^0x[0-9a-fA-F]{1,16}$/.test(p.target) ? p.target : ""
         var attention = ["approval", "question"].indexOf(p.attention) >= 0 ? p.attention : "attention"
-        return {requestId:typeof p.requestId === "string" && /^[0-9a-f]{32}$/.test(p.requestId) ? p.requestId : "",id:p.id, title:text(p.title, "Activity", 120), detail:text(p.detail, "", 240), state:p.state, progress:progress, kind:kind, project:text(p.project, "", 100), agent:text(p.agent, "", 40), target:target, targetTmux:tmuxTarget(p.targetTmux), targetWezterm:weztermTarget(p.targetWezterm), targetWorkspace:workspaceTarget(p.targetWorkspace), agentProcess:processTarget(p.agentProcess), targetPid:Number.isInteger(p.targetPid) && p.targetPid > 0 ? p.targetPid : 0, targetBoot:typeof p.targetBoot === "string" && /^[0-9a-f-]{36}$/.test(p.targetBoot) ? p.targetBoot : "", attention:attention, eventKey:text(p.eventKey,"",80), expiresAt:now + ttl * 1000, updatedAt:now}
+        return {requestId:typeof p.requestId === "string" && /^[0-9a-f]{32}$/.test(p.requestId) ? p.requestId : "",id:p.id, title:text(p.title, "Activity", 120), detail:text(p.detail, "", 240), state:p.state, progress:progress, kind:kind, project:text(p.project, "", 100), agent:text(p.agent, "", 40), target:target, targetTmux:tmuxTarget(p.targetTmux), targetWezterm:weztermTarget(p.targetWezterm), targetWorkspace:workspaceTarget(p.targetWorkspace), agentProcess:processTarget(p.agentProcess), targetPid:Number.isInteger(p.targetPid) && p.targetPid > 0 ? p.targetPid : 0, targetStart:typeof p.targetStart === "string" && /^[0-9]{1,24}$/.test(p.targetStart) ? p.targetStart : "", targetBoot:typeof p.targetBoot === "string" && /^[0-9a-f-]{36}$/.test(p.targetBoot) ? p.targetBoot : "", attention:attention, eventKey:text(p.eventKey,"",80), expiresAt:now + ttl * 1000, updatedAt:now}
     } catch (_) { return null }
 }
 function upsert(items, item, now) {
@@ -64,7 +64,7 @@ function recover(records, now) {
         if (!clean) return null
         clean.state = "idle"; clean.detail = "Last seen before shell restart"; clean.progress = -1
         clean.requestId = ""; clean.eventKey = ""; clean.updatedAt = p.updatedAt; clean.expiresAt = p.updatedAt + 86400000
-        if (!clean.targetPid || !clean.targetBoot) clean.target = ""
+        if (!clean.targetPid || !clean.targetBoot || !clean.targetStart) clean.target = ""
         return clean
     }).filter(function(p) { return p !== null })
 }
@@ -94,7 +94,7 @@ function endedProcesses(items, result, now) {
 function snapshot(items) {
     return items.filter(function(p) { return p.kind === "agent" }).slice(0,8).map(function(p) {
         return {id:p.id, kind:"agent", title:p.title, project:p.project, agent:p.agent,
-            target:p.target, targetTmux:tmuxTarget(p.targetTmux), targetWezterm:weztermTarget(p.targetWezterm), targetWorkspace:workspaceTarget(p.targetWorkspace), agentProcess:processTarget(p.agentProcess), targetPid:p.targetPid, targetBoot:p.targetBoot, updatedAt:p.updatedAt}
+            target:p.target, targetTmux:tmuxTarget(p.targetTmux), targetWezterm:weztermTarget(p.targetWezterm), targetWorkspace:workspaceTarget(p.targetWorkspace), agentProcess:processTarget(p.agentProcess), targetPid:p.targetPid, targetStart:p.targetStart, targetBoot:p.targetBoot, updatedAt:p.updatedAt}
     })
 }
 if (typeof module !== "undefined") module.exports = {normalize,upsert,focus,attention,timer,recover,snapshot,discovered,endedProcesses}

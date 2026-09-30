@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'), P=require('../RequestPolicy.js');
+let values=P.select([], 'Red, green', true);
+values=P.select(values,'Blue',true);
+assert.deepEqual(values,['Red, green','Blue']);
+assert.deepEqual(P.select(values,'Red, green',true),['Blue']);
+assert.deepEqual(P.select(values,'Only',false),['Only']);
+const answers=P.put(P.put({},'__proto__','A'),'constructor','B');
+assert.equal(answers.__proto__,'A');assert.equal(answers.constructor,'B');
+assert.equal(Object.getPrototypeOf(answers),null);
+assert.deepEqual(JSON.parse(JSON.stringify(answers)),JSON.parse('{"__proto__":"A","constructor":"B"}'));
+console.log('Question choice identity preserves commas and literal object-property question names.');

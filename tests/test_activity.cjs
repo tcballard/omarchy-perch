@@ -26,7 +26,7 @@ assert.equal(P.entry('{broken'),null);
 assert.equal(P.entry(JSON.stringify({plugins:[{id:'other',secret:'no'},{id:'io.github.tcballard.perch',edge:'right'}]})).edge,'right');
 assert.deepEqual(P.entry('{"plugins":[]}'),{});
 console.log('Activity limits, expiry/priority, timer restoration and scoped preference parsing passed.');
-const remembered={...agent,updatedAt:now,targetPid:123,targetBoot:'12345678-1234-1234-1234-123456789abc',requestId:'a'.repeat(32)};
+const remembered={...agent,updatedAt:now,targetPid:123,targetStart:"100",targetBoot:'12345678-1234-1234-1234-123456789abc',requestId:'a'.repeat(32)};
 const snapshot=A.snapshot([remembered,valid]);
 assert.equal(snapshot.length,1); assert.equal(snapshot[0].requestId,undefined);
 const recovered=A.recover(snapshot,now+1000);
@@ -51,3 +51,6 @@ assert.equal(A.endedProcesses([liveProcess],check,now)[0].state,'idle');
 assert.equal(A.endedProcesses([{...liveProcess,agentProcess:{pid:124,start:'200',boot:'boot'}}],check,now)[0].state,'running');
 assert.equal(A.endedProcesses([{...liveProcess,requestId:'pending'}],check,now)[0].state,'running');
 console.log('Late liveness replies cannot overwrite a replaced process or pending request.');
+
+assert.equal(A.recover([{...snapshot[0],targetStart:""}],now)[0].target,"");
+assert.equal(A.recover(snapshot,now)[0].targetStart,"100");
