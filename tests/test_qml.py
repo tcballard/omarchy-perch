@@ -19,11 +19,113 @@ component=QQmlComponent(engine,QUrl.fromLocalFile(str(root/'ServiceHarness.qml')
 assert not component.isError(), component.errors()
 host=component.create(); assert host is not None, component.errors()
 def evaluate(code):
-    e=QQmlExpression(engine.rootContext(),host,code)
+    e=QQmlExpression(QQmlEngine.contextForObject(host),host,code)
     result=e.evaluate()
     assert not e.hasError(), e.error().toString()
     return result[0] if isinstance(result,tuple) else result
 assert evaluate('service.playerKey')=='player.b'
+assert evaluate('service.desktop.addLink("Docs","https://example.org/docs")') is True
+assert evaluate('service.desktop.links.length') == 1
+assert evaluate('service.desktop.addLink("Bad","file:///etc/passwd")') is False
+assert evaluate('service.desktop.removeLink("https://example.org/docs")') is True
+assert evaluate('service.desktop.links.length') == 0
+
+# Request controls remain disabled until a live record is loaded, and expire locally.
+request_component=QQmlComponent(engine,QUrl.fromLocalFile(str(root.parent/'RequestCard.qml')))
+request_card=request_component.create(); assert request_card is not None,request_component.errors()
+from PySide6.QtCore import QObject
+request_state=request_card.findChild(QObject,'request-state');assert request_state is not None
+allow=request_card.findChild(QQuickItem,'request-allow');assert allow is not None
+assert not allow.isEnabled()
+def request_eval(code):
+    e=QQmlExpression(QQmlEngine.contextForObject(request_card),request_card,code)
+    result=e.evaluate()
+    assert not e.hasError(),e.error().toString()
+    return result[0] if isinstance(result,tuple) else result
+request_eval('choose("__proto__","Red, green",true); choose("__proto__","Blue",true); choose("__proto__","Red, green",true)')
+assert request_eval('answers["__proto__"]')=='Blue'
+assert request_eval('choices["__proto__"].length')==1
+import time
+request_state.setProperty('request',{'id':'a'*32,'kind':'approval','tool':'Bash','input':{'command':'printf example'},'cwd':'/work','expiresAt':time.time()+60})
+assert allow.isEnabled()
+request_state.setProperty('now',time.time()+120)
+assert not allow.isEnabled()
+request_card.deleteLater()
+# Remote receiver is off by default and follows the explicit saved preference.
+assert evaluate('service.codexServer.optedIn') is False
+evaluate('service.codexServer.configure("/tmp/perch-fixture-codex.sock",true)')
+QTest.qWait(10)
+assert evaluate('service.codexServer.optedIn') is True
+observer_job=host.findChild(QObject,'codex-server-job');assert observer_job is not None
+evaluate('service.codexServer.configure("/tmp/perch-fixture-codex.sock",false)')
+e=QQmlExpression(QQmlEngine.contextForObject(observer_job),observer_job,'finish({ok:true,sessions:[{id:"codex.stale",kind:"agent",agent:"Codex",state:"running"}]})')
+e.evaluate();assert not e.hasError(),e.error().toString()
+assert evaluate('service.live.items.some(function(p){return p.id==="codex.stale"})') is False
+assert evaluate('service.codexServer.count')==0
+assert evaluate('service.relay.optedIn') is False
+evaluate('service.preferences.update({remoteStatus:true})')
+assert evaluate('service.relay.optedIn') is True
+evaluate('service.preferences.update({remoteStatus:false})')
+assert evaluate('service.relay.optedIn') is False
+
+# Quiet/DND suppress sound dispatch; bursts are coalesced and settings remain distinct.
+evaluate('service.preferences.update({activitySound:true,timerSound:true,soundPreset:"bell",quietMode:true}); service.queueAlert("Tea",true)')
+assert evaluate('service.alarmQueue.length') == 0
+assert evaluate('service.previewSound()') is False
+evaluate('service.preferences.update({quietMode:false}); service.notifications.dnd=true; service.queueAlert("Tea",true)')
+assert evaluate('service.alarmQueue.length') == 0
+evaluate('service.notifications.dnd=false; service.queueAlert("Build",false); service.queueAlert("Build again",false)')
+assert evaluate('service.alarmQueue.length') == 1
+assert evaluate('service.alarmQueue[0].preset') == 'bell'
+evaluate('service.alarmQueue=[]; service.preferences.update({activitySound:false,timerSound:false})')
+# An identical inbox sync must not resurrect an expired preview.
+evaluate('service.notifications.accept(JSON.stringify({version:1,session:"test",items:[],preview:"New mail",previewKey:"a"}))')
+assert evaluate('service.notifications.preview') == 'New mail'
+from PySide6.QtCore import QObject, QMetaObject
+expiry=host.findChild(QObject,'notification-preview-expiry');assert expiry is not None
+QMetaObject.invokeMethod(expiry,'triggered')
+assert evaluate('service.notifications.preview') == ''
+evaluate('service.notifications.accept(JSON.stringify({version:1,session:"test",items:[],preview:"New mail",previewKey:"a"}))')
+assert evaluate('service.notifications.preview') == ''
+evaluate('service.notifications.accept(JSON.stringify({version:1,session:"test",items:[],preview:"New mail",previewKey:"b"}))')
+assert evaluate('service.notifications.preview') == 'New mail'
+evaluate('service.notifications.accept(JSON.stringify({version:1,session:"test",items:[],preview:"Hidden",dnd:true}))')
+assert evaluate('service.notifications.preview') == ''
+evaluate('service.notifications.dnd=false')
+
+# Repeated status pulses do not reopen a dismissed event; a new turn does.
+for state, key, count in [('running','',0),('done','one',1),('done','one',1),('done','two',2),('waiting','three',3)]:
+    import json
+    payload=json.dumps({'id':'events.test','state':state,'eventKey':key})
+    evaluate('service.live.activity('+json.dumps(payload)+')')
+    assert evaluate('eventCount') == count
+evaluate('service.live.dismiss("events.test")')
+
+# Native card state ignores responses from an older selection and closed views.
+def card_job_eval(code):
+    from PySide6.QtCore import QObject
+    job=host.findChild(QObject,'plugin-card-job')
+    assert job is not None
+    worker=next(child for child in job.children() if child.metaObject().indexOfProperty('command') >= 0)
+    worker.setProperty('running',False)
+    e=QQmlExpression(QQmlEngine.contextForObject(job),job,code)
+    value=e.evaluate()
+    assert not e.hasError(),e.error().toString()
+    return value
+evaluate('service.pluginCards.select("example.first"); service.pluginCards.select("example.second")')
+card_job_eval('finish({ok:true,card:{title:"Old"}})')
+QTest.qWait(20)
+assert evaluate('service.pluginCards.card === null') is True
+assert evaluate('service.pluginCards.selectedId') == 'example.second'
+assert evaluate('service.pluginCards.busy') is True
+card_job_eval('finish({ok:true,card:{title:"Current",revision:"r1"}})')
+assert evaluate('service.pluginCards.card.title') == 'Current'
+evaluate('service.pluginCards.refresh(); service.pluginCards.clear()')
+card_job_eval('finish({ok:true,card:{title:"Late"}})')
+QTest.qWait(20)
+assert evaluate('service.pluginCards.card === null') is True
+assert evaluate('service.pluginCards.selectedId') == ''
+assert evaluate('service.pluginCards.busy') is False
 assert evaluate('service.art')==''
 assert evaluate('service.choose("player.a")')
 assert evaluate('service.playerKey')=='player.a'
@@ -183,17 +285,17 @@ for edge in ['top','bottom','left','right']:
     assert visual_eval('notch.implicitHeight') == (238 if edge in ['left','right'] else 52)
     visual_eval('previewState="playing"')
     assert visual_eval('notch.implicitWidth') == 344
-    assert visual_eval('notch.implicitHeight') == 468
+    assert 220 <= visual_eval('notch.implicitHeight') <= 468
     assert visual_eval('notch.rotation') == 0
 visual_eval('notch.settingsOpen=true')
-assert visual_eval('notch.implicitHeight') == 468
+assert 220 <= visual_eval('notch.implicitHeight') <= 468
 # Settings are a separate view; Escape returns to media before dismissing.
 visual_eval('notch.forceActiveFocus()')
 QTest.keyClick(view, Qt.Key_Escape); QTest.qWait(30)
 assert visual_eval('notch.settingsOpen') is False
 assert visual_eval('notch.expanded') is True
 visual_eval('demoMedia.setState("playing")')
-assert visual_eval('notch.implicitHeight') == 468
+assert 220 <= visual_eval('notch.implicitHeight') <= 468
 assert visual_eval('notch.hasPlayer') is True
 playback = visual.findChild(QQuickItem, 'playback')
 assert playback is not None
@@ -211,7 +313,7 @@ assert visual_eval('notch.surface.r < notch.ink.r') is True
 visual_eval('Color.lightTheme=false')
 assert visual_eval('notch.surface.r < notch.ink.r') is True
 # Navigate each real view using pointer clicks, then verify timer/activities.
-visual_eval('notch.settingsOpen=false; notch.displaySettings={modules:["timer","system","activity","music"]}; demoMedia.setState("playing")')
+visual_eval('notch.settingsOpen=false; notch.displaySettings={layoutMode:"strip",modules:["timer","system","activity","music"]}; demoMedia.setState("playing")')
 def visual_item(item,name):
     if item.objectName() == name and item.isVisible(): return item
     for child in item.childItems():
@@ -231,9 +333,36 @@ visual_eval('demoMedia.live.activity(JSON.stringify({id:"test",state:"waiting",t
 QTest.qWait(60)
 assert visual_eval('notch.liveAttention') is True
 assert visual_eval('notch.live.focused.title') == 'Build needs input'
+assert visual_eval('notch.live.attentionItems.length') == 1
+one_activity_height = visual_eval('notch.implicitHeight')
+assert 220 <= one_activity_height < 468
+visual_eval('demoMedia.live.activity(JSON.stringify({id:"claude.1",state:"waiting",title:"Perch",detail:"Needs permission",kind:"agent",agent:"Claude",project:"perch",target:"0x123"})); notch.page="activity"')
+QTest.qWait(60)
+assert visual_eval('notch.live.attentionItems.length') == 2
+assert one_activity_height < visual_eval('notch.implicitHeight') <= 468
+assert visual_item(visual,'jump-session-claude.1') is not None
+visual_eval('demoMedia.live.dismiss("claude.1")')
 visual_eval('demoMedia.live.dismiss("test"); demoMedia.live.cancel()')
+# Dedicated native event pages fit their content, retain explicit actions and navigate.
+visual_eval('demoMedia.live.activity(JSON.stringify({id:"event.test",state:"waiting",attention:"approval",title:"Perch",detail:"Review a requested tool action",kind:"agent",agent:"Claude",project:"perch",target:"0x123"})); notch.eventId="event.test"; notch.page="event"')
+QTest.qWait(60)
+assert visual_eval('notch.selectedEvent.attention') == 'approval'
+assert 220 <= visual_eval('notch.implicitHeight') < 468
+assert visual_item(visual,'module-tile-music') is None
+assert visual_item(visual,'event-return') is not None
+browse=visual_item(visual,'event-browse'); assert browse is not None
+point=browse.mapToScene(QPointF(browse.width()/2,browse.height()/2)).toPoint()
+QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)
+assert visual_eval('notch.page') == 'activity'
+visual_eval('notch.page="event"; demoMedia.live.activity(JSON.stringify({id:"event.test",state:"done",title:"Perch",detail:"Turn complete"}))')
+QTest.qWait(30)
+assert visual_eval('notch.selectedEvent.state') == 'done'
+assert visual_item(visual,'event-return') is None
+assert visual_item(visual,'event-dismiss') is not None
+visual_eval('notch.page="activity"; demoMedia.live.dismiss("event.test")')
+
 # Load every migrated card, including secondary pages, through the shared host.
-for page in ['music','timer','system','activity','players','lyrics','hub','shelf','calendar','desktop','inbox','setup']:
+for page in ['usage','music','timer','system','activity','players','lyrics','hub','shelf','calendar','desktop','inbox','setup']:
     visual_eval('notch.page='+repr(page)); QTest.qWait(30)
     card = visual_item(visual, 'module-card')
     assert card is not None and card.property('definition') is not None, page
@@ -350,5 +479,164 @@ assert evaluate('service.modules.cpu') == 25
 assert evaluate('service.modules.saveWeather("Test", "", "0", true)') is False
 assert evaluate('service.modules.saveWeather("Test", "51", "-1", true)') is True
 assert evaluate('fakeShell.saved.moduleWeather.latitude') == 51
+# Pinned plugins share the strip but launch only on click, never hover.
+visual_eval('notch.surfaceVisible=true; notch.edge="top"; notch.expanded=true; notch.settingsOpen=false; notch.hoverOpen=true; notch.displaySettings={layoutMode:"strip",modules:["music","plugin:example.notes"]}')
+QTest.qWait(60)
+tile=visible_named(visual,'module-tile-plugin:example.notes'); assert tile is not None
+point=tile.mapToScene(QPointF(tile.width()/2,tile.height()/2)).toPoint()
+QTest.mouseMove(view,point); QTest.qWait(220)
+assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
+QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point); QTest.qWait(60)
+assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
+assert visual_eval('notch.settingsOpen') is False
+assert visual_eval('notch.page') == 'plugin:example.notes'
+assert visual_eval('demoMedia.pluginCards.selectedId') == 'example.notes'
+card_action=visible_named(visual,'plugin-card-action-first'); assert card_action is not None
+card_action.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+assert visual_eval('demoMedia.pluginCards.lastAction') == 'open:0'
+# Opening the existing panel remains an explicit separate action.
+full_open=action_by_text(visual,'Open'); assert full_open is not None
+full_open.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+assert visual_eval('demoMedia.pluginPins.lastOpened') == 'example.notes'
+# Missing/disabled pins survive cleanup and can be removed; no silent launch.
+visual_eval('demoMedia.pluginPins.plugins=[]; notch.settingsOpen=false; demoMedia.pluginPins.lastOpened=""; notch.activateModule("plugin:example.notes",false)')
+assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
+assert visual_eval('demoMedia.pluginCards.selectedId') == 'example.notes'
+assert visual_eval('notch.moduleItems.length') == 2
+visual_eval('notch.page="music"')
+assert visual_eval('demoMedia.pluginCards.selectedId') == ''
+# Sectioned settings use the same controls in wide and constrained panels.
+visual_eval('notch.settingsOpen=true; notch.expanded=true; notch.reducedMotion=true')
+QTest.qWait(50)
+settings=visible_named(visual,'perch-settings'); assert settings is not None
+assert settings.property('wide') is True
+for section in ['display','behavior','alerts','modules','plugins']:
+    button=visible_named(visual,'settings-nav-'+section); assert button is not None
+    button.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+    assert settings.property('section') == section
+settings.setProperty('section','behavior'); QTest.qWait(30)
+toggle=visible_named(visual,'settings-reducedMotion'); assert toggle is not None
+toggle.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+assert visual_eval('notch.displaySettings.reducedMotion') is False
+# Keep the compositor envelope constant while switching cards/settings.
+assert visual_eval('notch.maximumWidth') == 600
+visual_eval('notch.width=344')
+QTest.qWait(30)
+assert settings.property('wide') is False
+for section in ['display','behavior','alerts','modules','plugins']:
+    button=visible_named(visual,'settings-compact-'+section); assert button is not None
+    button.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+    assert settings.property('section') == section
+    assert settings.width() <= 344
+visual_eval('notch.forceActiveFocus()'); QTest.keyClick(view,Qt.Key_Escape)
+assert visual_eval('notch.settingsOpen') is False
+assert visual_eval('notch.maximumWidth') == 600
+# The notch is a quiet compact presentation of the same expanded cards/pins.
+visual_eval('notch.width=Qt.binding(function(){return notch.implicitWidth;}); previewState="compact"; notch.expanded=Qt.binding(function(){return previewState !== "compact";}); notch.settingsOpen=false; notch.displaySettings={layoutMode:"notch",modules:["music","plugin:example.notes","stats","weather"]}; demoMedia.live.items=[]; demoMedia.live.timers=[]; demoMedia.live.cancel(); demoMedia.setState("empty")')
+QTest.qWait(50)
+assert visual_eval('notch.perchMode') is False
+assert visual_eval('notch.implicitWidth') == 100
+assert visual_eval('demoMedia.modules.statsVisible') is False
+assert visual_eval('demoMedia.modules.weatherVisible') is False
+assert visible_named(visual,'module-tile-music') is None
+for edge in ['top','bottom','left','right']:
+    visual_eval('notch.edge='+repr(edge))
+    assert visual_eval('notch.implicitWidth') == (48 if edge in ['left','right'] else 100)
+    assert visual_eval('notch.implicitHeight') == (76 if edge in ['left','right'] else 36)
+visual_eval('notch.edge="top"; demoMedia.setState("playing"); notch.hoverOpen=false')
+assert visual_eval('notch.notchContext.id') == 'music'
+assert visual_eval('notch.implicitWidth') == 210
+notch_button=visible_named(visual,'context-notch'); assert notch_button is not None
+notch_button.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(40)
+assert visual_eval('notch.expanded') is True
+assert visual_eval('notch.page') == 'music'
+assert visible_named(visual,'module-tile-plugin:example.notes') is not None
+# Choosing either presentation preserves pins and shared state.
+visual_eval('notch.settingsOpen=true')
+settings=visible_named(visual,'perch-settings'); settings.setProperty('section','behavior'); QTest.qWait(30)
+button=visible_named(visual,'presentation-perch'); assert button is not None
+button.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
+assert visual_eval('notch.perchMode') is True
+assert visual_eval('notch.moduleItems.indexOf("plugin:example.notes")') == 1
+button=visible_named(visual,'presentation-notch');button.forceActiveFocus();QTest.keyClick(view,Qt.Key_Space);QTest.qWait(30)
+assert visual_eval('notch.perchMode') is False
+assert visual_eval('notch.moduleItems.length') == 4
+
+# Search is shared by built-ins and installed plugins, with real native navigation.
+visual_eval('demoMedia.pluginPins.plugins=[{id:"example.notes",name:"Demo Notes",enabled:true},{id:"example.disabled",name:"Disabled",enabled:false}]; notch.settingsOpen=false; notch.expanded=true; notch.showTools(true)');QTest.qWait(50)
+search=visible_named(visual,'tools-search');assert search is not None and search.hasActiveFocus()
+search.setProperty('text','clipboard');QTest.qWait(30)
+assert visible_named(visual,'tool-open-clipboard') is not None
+QTest.keyClick(view,Qt.Key_Return);QTest.qWait(30)
+assert visual_eval('notch.page') == 'clipboard'
+visual_eval('notch.forceActiveFocus()');QTest.keyClick(view,Qt.Key_K,Qt.ControlModifier);QTest.qWait(30)
+assert visual_eval('notch.page') == 'hub'
+search=visible_named(visual,'tools-search');assert search is not None
+search.setProperty('text','Demo Notes');QTest.qWait(30)
+assert visible_named(visual,'tool-open-plugin:example.notes') is not None
+pin=visible_named(visual,'tool-pin-plugin:example.notes');assert pin is not None
+before=visual_eval('notch.moduleItems.indexOf("plugin:example.notes") >= 0')
+pin.forceActiveFocus();QTest.keyClick(view,Qt.Key_Space);QTest.qWait(30)
+assert visual_eval('notch.moduleItems.indexOf("plugin:example.notes") >= 0') is not before
+search.setProperty('text','nothing matches');QTest.qWait(30)
+assert visible_named(visual,'tool-open-plugin:example.notes') is None
+# Following the light theme retains its actual background, dark-island remains selectable.
+visual_eval('Color.lightTheme=true; notch.displaySettings=Object.assign({},notch.displaySettings,{chromeMode:"theme"})')
+assert visual_eval('notch.surface.r > notch.ink.r') is True
+visual_eval('notch.displaySettings=Object.assign({},notch.displaySettings,{chromeMode:"dark"})')
+assert visual_eval('notch.surface.r < notch.ink.r') is True
+visual_eval('Color.lightTheme=false; notch.reducedMotion=false; notch.page="music"; notch.reducedMotion=true')
+assert visual_eval('notch.pageOpacity') == 1
+assert visual_eval('notch.pageOffset') == 0
+
+# Real keyboard dispatch switches cards only outside Settings.
+visual_eval('notch.expanded=true; notch.settingsOpen=false; notch.displaySettings={modules:["music","timer"],moduleShortcuts:{timer:"Ctrl+Alt+T"}}; notch.page="music"; notch.forceActiveFocus()')
+QTest.keyClick(view,Qt.Key_T,Qt.ControlModifier | Qt.AltModifier);QTest.qWait(30)
+assert visual_eval('notch.page') == 'timer'
+visual_eval('notch.settingsOpen=true; notch.page="music"; notch.forceActiveFocus()')
+QTest.keyClick(view,Qt.Key_T,Qt.ControlModifier | Qt.AltModifier);QTest.qWait(30)
+assert visual_eval('notch.page') == 'music'
+visual_eval('notch.settingsOpen=false')
+recorder_component=QQmlComponent(engine,QUrl.fromLocalFile(str(root.parent/'ShortcutRecorder.qml')))
+recorder=recorder_component.create();assert recorder is not None,recorder_component.errors()
+recorder.setParentItem(visual);recorder.setProperty('visible',True)
+chords=[];recorder.recorded.connect(chords.append)
+recorder.setProperty('recording',True);recorder.forceActiveFocus()
+QTest.keyClick(view,Qt.Key_M,Qt.ControlModifier | Qt.AltModifier)
+assert chords == ['Ctrl+Alt+M'] and not recorder.property('recording')
+recorder.setProperty('recording',True)
+QTest.keyClick(view,Qt.Key_Escape)
+assert not recorder.property('recording') and len(chords)==1
+recorder.deleteLater()
+
+# Language follows the persisted preference, and changes existing UI bindings.
+evaluate('service.preferences.update({language:"zh-CN"})')
+assert evaluate('PerchStrings.language')=='zh-CN'
+assert evaluate('PerchStrings.t("Settings")')=='设置'
+evaluate('service.preferences.update({language:"en"})')
+visual_eval('PerchStrings.language="zh-CN"; notch.width=344; notch.expanded=true; notch.settingsOpen=true');QTest.qWait(30)
+assert visible_named(visual,'settings-compact-behavior').property('text')=='行为'
+visual_eval('PerchStrings.language="en"')
+assert visible_named(visual,'settings-compact-behavior').property('text')=='Behaviour'
+
+# Long question sets scroll independently while decision controls remain visible.
+request_view=QQuickView();request_view.engine().addImportPath(str(root/'stubs'))
+request_view.setSource(QUrl.fromLocalFile(str(root/'NewCardsReview.qml')))
+assert request_view.status()!=QQuickView.Error,request_view.errors()
+request_view.show();QTest.qWait(60)
+question_card=request_view.rootObject().findChild(QQuickItem,'question-review')
+assert question_card is not None
+for name in ('request-allow','request-deny','request-session'):
+    button=question_card.findChild(QQuickItem,name);assert button is not None and button.isVisible()
+    point=button.mapToItem(question_card,QPointF(0,0))
+    assert 0 <= point.y() and point.y()+button.height() <= question_card.height()+1,(name,point.y(),question_card.height())
+scroll=question_card.findChild(QQuickItem,'request-scroll')
+assert scroll.property('contentHeight') > scroll.height()
+send=question_card.findChild(QQuickItem,'request-allow');assert not send.isEnabled()
+question_card.setProperty('answers',{f'Which option should question {i} use?':'Recommended' for i in range(1,5)})
+assert send.isEnabled()
+question_card.setProperty('answers',{'Which option should question 1 use?':'Recommended'})
+assert not send.isEnabled()
+
 assert not messages, '\n'.join(messages)
 print('Production QML: service selection/actions, capability guards, removal/rebinding, empty state, Escape and view settings passed (host stubs).')

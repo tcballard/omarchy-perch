@@ -1,7 +1,9 @@
 # Native Perch modules
 
-The **Module strip** puts up to eight chosen tools at the screen edge and is
-Perch’s only layout. Saved pill configurations automatically use the strip.
+Perch offers two compact presentations: **Notch**, showing one useful context,
+and **Plugin Perch**, keeping up to eight chosen tools at the edge. Both open the
+same cards and pinned plugins. Notch is the default; explicit strip preferences
+remain on Plugin Perch.
 Choose modules in Perch Settings. Drag tiles to reorder them, use Ctrl+arrow keys on a
 focused tile, or use the earlier/later buttons in Settings. At least one module
 stays selected. Unknown/duplicate saved IDs are discarded; an empty/invalid
@@ -10,7 +12,7 @@ selection restores the defaults.
 Hover a tile for 150 ms (when Open on hover is enabled), or click it to open its
 card. Expanded cards retain a horizontal strip for switching tools. The compact
 strip follows the chosen screen edge, with upright labels on left/right edges.
-The strip remains a launcher; old hide-idle and idle-clock settings are ignored.
+Plugin Perch offers native cards from participating plugins and a full-panel launcher fallback; Notch stays quiet when idle. Old hide-idle and idle-clock settings are ignored. See [PLUGIN-CARDS.md](PLUGIN-CARDS.md) for the versioned data-only contract.
 Fullscreen and monitor policies still apply.
 
 ## Contract
@@ -58,8 +60,9 @@ are terminated. No automatic typing/pasting into applications occurs.
 Reads are capped before JSON parsing (4 MiB); image copy is capped at 8 MiB and
 supports PNG/JPEG/WebP. Missing/oversized history and unavailable Wayland copy
 produce visible errors. The built-in Omarchy Clipboard remains the place for
-full image previews, deletion and larger histories. This module shows image
-metadata, not image thumbnails. It refreshes every three seconds only while the
+full image previews, deletion and larger histories. This module shows bounded
+PNG thumbnails (8 MiB and 4096 pixels per dimension); other image formats retain
+their type label. It refreshes every three seconds only while the
 card is visible; results are cleared from module state when the card closes.
 
 ## Stats
@@ -105,3 +108,21 @@ Still requires a live Omarchy session: Wayland clipboard ownership after helper
 exit, typing-focus return, hover switching/dragging on each edge, display scaling,
 fullscreen suppression, and actual weather connectivity. No stable release or
 performance claim follows from portable tests alone.
+
+## Installed plugin pins
+
+In Settings, choose **Pin installed plugins**, then Pin beside an enabled plugin.
+Pins share the eight strip slots and the same drag, keyboard and Settings ordering.
+Click to open its native card; use Open for the full panel. Hover never invokes external plugins. Refresh
+the list after installing, enabling or removing plugins. Disabled/missing pins
+remain removable. Perch never installs, enables or loads another plugin's QML.
+
+Discovery uses the public `omarchy-shell shell listPlugins` command. Only third-party
+panels, overlays, menus and bar widgets are offered. Headless services and replacement
+bars are excluded. Bar widgets without a summonable panel may be rejected by Omarchy;
+Perch reports that error. Each explicit launch rechecks installation and enablement
+before calling `omarchy-shell shell summon ID '{}'` using separate argv arguments.
+Discovery and summon each have a three-second deadline and bounded output.
+No new polling or dependencies are added. Participating plugins expose native
+cards through [PLUGIN-CARDS.md](PLUGIN-CARDS.md); unsupported plugins retain the
+full-panel fallback. This does not relocate existing bar widgets.

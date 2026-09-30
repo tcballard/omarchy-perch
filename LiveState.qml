@@ -12,20 +12,84 @@ Item {
     signal timerFinished(string label)
     property var timerState: Activities.timer(null, now)
     property bool restored: false
+    property var dismissedDiscoveries: []
+    property bool discoveryEnabled: false
     property string error: ""
+    property string actionMessage: ""
+    property bool jumpBusy: false
+    signal sessionOpened
+    signal activityEvent(var item)
     readonly property string timerStatus: timerState.status
     readonly property int remaining: timerStatus === "running" ? Math.max(0, Math.ceil((timerState.deadline - now) / 1000)) : timerStatus === "paused" ? timerState.remaining : 0
     readonly property bool timerActive: timerStatus !== "idle"
     readonly property real timerProgress: timerState.total > 0 ? Math.min(1, remaining / timerState.total) : 0
     readonly property var focused: Activities.focus(items)
+    readonly property var attentionItems: Activities.attention(items)
+    readonly property var displayItems: attentionItems.concat(items.filter(function (item) {
+        return item.state !== "waiting" && item.state !== "error";
+    }).sort(function (a, b) {
+        return b.updatedAt - a.updatedAt;
+    }))
     readonly property bool hasActivity: timers.length > 0 || items.length > 0
     readonly property string clock: Qt.formatTime(new Date(now), "HH:mm")
     readonly property string summary: timerStatus === "done" ? timerState.label + " finished" : focused && (focused.state === "error" || focused.state === "waiting") ? focused.title : timerActive ? Media.time(remaining) + " · " + timerState.label : focused ? focused.title : ""
+    function jumpTo(item) {
+        if (!item || item.kind !== "agent" || (!item.target && !item.targetWorkspace) || jumpBusy)
+            return false;
+        error = "";
+        actionMessage = "";
+        if (!jumpJob.run("agent-jump", {
+            address: item.target,
+            targetPid: item.targetPid || 0,
+            targetStart: item.targetStart || "",
+            targetBoot: item.targetBoot || "",
+            targetTmux: item.targetTmux || null,
+            targetWezterm: item.targetWezterm || null,
+            targetWorkspace: item.targetWorkspace || null
+        }))
+            return false;
+        jumpBusy = true;
+        return true;
+    }
+    function openCodex(item) {
+        if (!item || !item.targetCodex || jumpBusy)
+            return false;
+        error = "";
+        actionMessage = "";
+        if (!jumpJob.run("agent-codex-open", {targetCodex:item.targetCodex}))
+            return false;
+        jumpBusy = true;
+        return true;
+    }
+    function selectZellij(item) {
+        if (!item || !item.targetZellij || jumpBusy)
+            return false;
+        error = "";
+        actionMessage = "";
+        if (!jumpJob.run("agent-zellij-select", {targetZellij:item.targetZellij}))
+            return false;
+        jumpBusy = true;
+        return true;
+    }
+    ToolJob {
+        id: jumpJob
+        timeout: 3000
+        onCompleted: function (op, result) {
+            root.jumpBusy = false;
+            if (!result.ok) {
+                root.error = result.error || "Could not return to that session";
+                return;
+            }
+            root.actionMessage = result.message || "Session focused";
+            root.sessionOpened();
+        }
+    }
     function restore() {
         if (restored || !preferences || !preferences.ready)
             return;
         restored = true;
         now = Date.now();
+        items = preferences.values.rememberSessions ? Activities.recover(preferences.record.recentSessions, now) : [];
         var late = [];
         timers = Array.isArray(preferences.record.timers) ? preferences.record.timers.slice(0, 8).filter(function (t) {
             return t && typeof t === "object";
@@ -53,6 +117,43 @@ Item {
         late.forEach(function (label) {
             root.timerFinished(label);
         });
+        discoveryEnabled = preferences.values.discoverSessions;
+        discoverSessions();
+    }
+    ToolJob {
+        id: livenessJob
+        timeout: 2000
+        onCompleted: function(op, result) {
+            if (!result.ok || !Array.isArray(result.ended)) return;
+            root.items = Activities.endedProcesses(root.items,result,Date.now());
+        }
+    }
+    Timer {
+        interval: 15000
+        repeat: true
+        running: root.items.some(function(item) { return !!item.agentProcess && (item.state === "running" || item.state === "waiting"); })
+        onTriggered: {
+            var records = root.items.filter(function(item) { return !!item.agentProcess && !item.requestId && (item.state === "running" || item.state === "waiting"); }).map(function(item) { return Object.assign({id:item.id},item.agentProcess); });
+            if (records.length) livenessJob.run("agent-liveness",{sessions:records});
+        }
+    }
+    function discoverSessions() {
+        if (preferences && preferences.ready && preferences.values.discoverSessions)
+            discoveryJob.run("agent-discover", {});
+    }
+    ToolJob {
+        id: discoveryJob
+        timeout: 4000
+        onCompleted: function(op, result) {
+            if (result.ok && root.preferences && root.preferences.values.discoverSessions)
+                root.items = Activities.discovered(root.items, result.sessions, Date.now(), root.dismissedDiscoveries);
+        }
+    }
+    Timer {
+        interval: 60000
+        repeat: true
+        running: !!root.preferences && root.preferences.ready && root.preferences.values.discoverSessions
+        onTriggered: root.discoverSessions()
     }
     onPreferencesChanged: restore()
     Connections {
@@ -217,13 +318,57 @@ Item {
         var item = Activities.normalize(encoded, now);
         if (!item)
             return "error: invalid activity";
+        var previous = items.find(function (p) {
+            return p.id === item.id && p.expiresAt > now;
+        });
         var next = Activities.upsert(items, item, now);
         if (!next)
-            return "error: eight activities already active";
+            return "error: activity capacity reached; continue in your agent session";
         items = next;
+        if (["done", "waiting", "error"].indexOf(item.state) >= 0 && (!previous || previous.state !== item.state || previous.attention !== item.attention || (item.eventKey && item.eventKey !== previous.eventKey)))
+            activityEvent(item);
         return "ok";
     }
+    function serverSnapshot(records) {
+        now = Date.now();
+        var result = Activities.serverSnapshot(items, records, now);
+        items = result.items;
+        result.events.forEach(function(item) { root.activityEvent(item); });
+    }
+    function clearServerSessions() {
+        items = items.filter(function(item) { return !item.serverSource; });
+    }
+    onItemsChanged: sessionSave.restart()
+    Timer {
+        id: sessionSave
+        interval: 1500
+        onTriggered: {
+            if (root.preferences && root.preferences.ready)
+                root.preferences.update({
+                    recentSessions: root.preferences.values.rememberSessions ? Activities.snapshot(root.items) : []
+                });
+        }
+    }
+    Connections {
+        target: root.preferences
+        function onValuesChanged() {
+            if (root.discoveryEnabled !== root.preferences.values.discoverSessions) {
+                root.discoveryEnabled = root.preferences.values.discoverSessions;
+                if (!root.discoveryEnabled)
+                    root.items = root.items.filter(function(p) { return !p.discovered; });
+                else root.discoverSessions();
+            }
+            if (!root.preferences.values.rememberSessions) {
+                root.items = root.items.filter(function (p) {
+                    return p.state !== "idle" || (p.discovered && root.preferences.values.discoverSessions) || (p.serverSource && root.preferences.values.codexServerStatus);
+                });
+                if (root.preferences.record.recentSessions && root.preferences.record.recentSessions.length)
+                    sessionSave.restart();
+            }
+        }
+    }
     function dismiss(id) {
+        dismissedDiscoveries = dismissedDiscoveries.concat([id]).slice(-128);
         items = items.filter(function (p) {
             return p.id !== id;
         });

@@ -1,5 +1,13 @@
 # Verification — 29 September 2026
 
+For the current **0.0.1 public preview candidate**, start with [PREVIEW.md](PREVIEW.md).
+The sections below retain historical slice-by-slice evidence; their earlier
+feature limitations are not a statement of the current build. The 0.0.1 local
+suite passes production Qt tests with host stubs. Unix socket round trips are
+skipped where this execution sandbox prohibits sockets; the candidate's CI must
+pass them. Real Omarchy/XPS acceptance remains outstanding.
+
+
 ## Completed in the build environment
 
 - `./tests/run` with Python 3, Node and PySide6 Essentials 6.11.2: passed.
@@ -173,3 +181,60 @@ into another app; missing wl-copy/history; real weather request and failure;
 compact-to-card hover travel and drag on all edges; font/DPI changes; monitor
 switch/unplug; fullscreen sampling suspension and focus return. The development
 branch has not been tagged or validated as a stable release.
+
+## Plugin-pin live checks
+
+Pin two enabled visual plugins in Settings, reorder alongside Music and restart
+the shell. Verify names/order persist. Hover must not open them; click/Enter must
+open their panel with usable keyboard and pointer focus, then Perch must collapse.
+Test both a panel plugin and a bar widget with a panel. Disable/remove a pinned
+plugin in Omarchy, then click its stale tile: expect a visible error, no auto-enable,
+and a removable pin. Refresh settings and confirm disabled/missing status. Check
+all edges, fullscreen policy and a pinned-plugin-only strip. Embedded cards are
+not part of this slice. These live checks have not yet been performed.
+
+## Sectioned panel checks
+
+Production Qt fixtures cover section navigation and keyboard toggles at 600 and
+344 logical pixels, existing dropdown behavior and Escape. SettingsReview.qml
+renders both widths with fictional state. On the XPS, check all sections at your
+normal scale and an increased font/scale: every control must scroll into view,
+section navigation/footer stay accessible, dropdowns remain interactive, and
+the transparent margin still passes clicks through. These live checks are pending.
+
+## Two compact presentations
+
+Check Notch and Plugin Perch under Behaviour. Notch should show one context,
+remain calm when idle/paused, route completed timers correctly, and open the
+same expanded cards and pins. Switch modes and restart; preserve pins/order.
+Verify all four edges and hover/keyboard/focus on the XPS. Portable tests cover
+priority, dimensions, keyboard opening, hidden sampling and mode changes.
+## Native plugin drawer checks
+
+- Install the paired RSS Perch-card candidate, enable RSS Feed, and pin it in Perch. Click the pin: its unread count/headlines should appear inside Perch. Hover must not query or launch it.
+- Use Refresh to read current service state, Refresh feeds to request the provider's existing fetcher, and Read article to open the provider-owned article URL. Open must still launch the full reader with correct focus handoff.
+- Switch pins during a delayed response, close/reopen and move to a built-in tool: no late response may replace another selection. Disable/remove RSS after opening a card; actions must fail without execution. If an article changes, stale actions must request a refresh.
+- Unsupported plugins keep the Open fallback. Verify loading/empty/error/offline states, plain-text rendering, long headlines, keyboard activation, scrolling, scaling and all four edges on XPS.
+- Portable coverage: Python contract/action validation, production QML drawer navigation and keyboard actions, late-response generation checks, RSS provider revision/URL checks. Fictional production render: plugin-drawer-preview.png. Real shell IPC remains a desktop acceptance gate.
+
+## Agent session desktop checks
+
+- Enable the Claude or Codex integration from Setup, start an agent inside a terminal, and confirm Activity shows the project folder. Move to another window, choose **Go to session**, and verify Hyprland returns to the originating terminal and Perch collapses. Repeat from a tmux pane and the terminal used most often; an unmatched client should omit the action rather than guessing.
+- Trigger two attention activities and confirm the compact notch reads “2 need you”, Activity sorts both above running/completed work, and the panel grows without exceeding its normal maximum height.
+- Close a target terminal before clicking Go to session: leave Perch open with a useful error. Repeat after keyboard summon and pointer opening; the keyboard grab must release before a successful window switch. A Hyprland window target does not select a tmux pane or terminal tab.
+
+## Event surfaces and content sizing
+
+Portable tests cover event deduplication and new-turn keys, approval/question mapping, occupied-panel preservation, fullscreen alert policy, event timer cleanup, native card actions and content-dependent height. `tests/EventReview.qml` renders production completion and approval cards with fictional data. Music, timer, activity and provider cards use their content height within the fixed compositor envelope; virtualized utility pages retain a roomy viewport.
+
+Live acceptance: receive an agent event while typing elsewhere, while a plugin drawer is open, with event banners off, and under each fullscreen policy. Verify no automatic keyboard grab, completion timeout/hover extension, attention persistence, resolution/expiry close, and return to the real agent window. Direct approval and text replies remain in the originating agent; the hooks are status-only.
+
+## Everyday surfaces
+
+Portable checks exercise notification priority over playing media, preview expiry across repeated inbox syncs, DND/quiet suppression, sound burst coalescing and allowlisted sound argv. Production-QML interactions cover tool search/Enter/Ctrl+K, plugin pin changes, light-theme contrast and mid-transition reduced motion. `tests/EverydayReview.qml` renders the actual tools and music cards with fictional data.
+
+On Omarchy, verify sound themes contain each selected event, sound preview failures are visible, Quiet mode stops new interruptions while timers continue, and plugin discovery reflects enable/disable after Refresh. Re-run notification companion setup after updating to copy its preview-identity addition; older companions remain compatible but cannot distinguish two identical notification summaries as precisely. Verify Follow Omarchy theme on each display and during a live theme switch.
+
+## Interactive request bridge
+
+Decision-schema, input-bound and question-answer tests run locally. Production-QML tests verify responses are disabled before loading and after expiry. `tests/test_requests.py` additionally exercises real one-shot same-user Unix sockets, timeout cleanup and replay rejection when the environment permits socket creation; this Work execution sandbox prohibits sockets, so that section reports an explicit skip here. CI/Linux and the XPS must run it before release. Live Claude acceptance must cover allow once, deny, question choices/free text, terminal fallback, concurrent requests and shell restart. No test stub is evidence of a real agent permission decision.

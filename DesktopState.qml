@@ -35,6 +35,48 @@ Item {
             })
         });
     }
+    readonly property var links: preferences && Array.isArray(preferences.record.links) ? preferences.record.links.filter(function (p) {
+        return p && typeof p.name === "string" && typeof p.url === "string" && /^https?:\/\/[^\s/@]+(?:[/:?#]|$)/.test(p.url);
+    }).slice(0, 8) : []
+    function addLink(name, url) {
+        name = String(name).trim();
+        url = String(url).trim();
+        if (!name || name.length > 100 || url.length > 2048 || !/^https?:\/\/[^\s/@]+(?:[/:?#]|$)/.test(url)) {
+            error = "Enter a name and an HTTP or HTTPS URL without credentials.";
+            return false;
+        }
+        var next = links.filter(function (p) {
+            return p.url !== url;
+        });
+        if (next.length >= 8) {
+            error = "Eight links are already pinned";
+            return false;
+        }
+        var ok = preferences && preferences.update({
+            links: next.concat([
+                {
+                    name: name,
+                    url: url
+                }
+            ])
+        });
+        error = ok ? "" : preferences ? preferences.error : "Settings unavailable";
+        return ok;
+    }
+    function removeLink(url) {
+        return preferences && preferences.update({
+            links: links.filter(function (p) {
+                return p.url !== url;
+            })
+        });
+    }
+    function openLink(url) {
+        return links.some(function (p) {
+            return p.url === url;
+        }) && workspace && workspace.request("app-link", {
+            url: url
+        });
+    }
     property string error: ""
     readonly property bool busy: job.busy
     readonly property var entries: [

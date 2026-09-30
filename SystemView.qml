@@ -16,7 +16,7 @@ Controls.ScrollView {
         width: parent.width
         spacing: Style.space(10)
         Text {
-            text: "Sound output"
+            text: PerchStrings.t("Sound output")
             color: root.ink
             font.pixelSize: Style.space(14)
             font.bold: true
@@ -37,7 +37,7 @@ Controls.ScrollView {
         RowLayout {
             Layout.fillWidth: true
             PerchAction {
-                text: root.system && root.system.muted ? "Unmute" : "Mute"
+                text: root.system && root.system.muted ? PerchStrings.t("Unmute") : PerchStrings.t("Mute")
                 ink: root.ink
                 surface: root.surface
                 enabled: !!root.system && root.system.audioAvailable
@@ -61,12 +61,12 @@ Controls.ScrollView {
             Layout.fillWidth: true
             Text {
                 Layout.fillWidth: true
-                text: "Microphone"
+                text: PerchStrings.t("Microphone")
                 color: root.ink
                 font.pixelSize: Style.space(13)
             }
             PerchAction {
-                text: root.system && root.system.microphoneMuted ? "Unmute mic" : "Mute mic"
+                text: root.system && root.system.microphoneMuted ? PerchStrings.t("Unmute mic") : PerchStrings.t("Mute mic")
                 ink: root.ink
                 surface: root.surface
                 enabled: !!root.system && root.system.microphoneAvailable === true
@@ -89,7 +89,7 @@ Controls.ScrollView {
         RowLayout {
             Layout.fillWidth: true
             Text {
-                text: "Brightness"
+                text: PerchStrings.t("Brightness")
                 color: root.ink
                 font.pixelSize: Style.space(12)
             }
@@ -108,18 +108,18 @@ Controls.ScrollView {
                     root.work.brightness(value)
             }
             Text {
-                text: root.work && root.work.brightnessValue >= 0 ? root.work.brightnessValue + "%" : "Unavailable"
+                text: root.work && root.work.brightnessValue >= 0 ? root.work.brightnessValue + "%" : PerchStrings.t("Unavailable")
                 color: Qt.alpha(root.ink, 0.6)
                 font.pixelSize: Style.space(10)
             }
         }
         Text {
-            text: root.system && root.system.batteryAvailable ? "Battery · " + root.system.batteryPercent + "% · " + (root.system.charging ? "Charging" : root.system.onBattery ? "On battery" : "Plugged in") : "No battery"
+            text: root.system && root.system.batteryAvailable ? PerchStrings.t("Battery · ") + root.system.batteryPercent + "% · " + (root.system.charging ? PerchStrings.t("Charging") : root.system.onBattery ? PerchStrings.t("On battery") : PerchStrings.t("Plugged in")) : PerchStrings.t("No battery")
             color: root.ink
             font.pixelSize: Style.space(12)
         }
         Text {
-            text: "Bluetooth"
+            text: PerchStrings.t("Bluetooth")
             color: root.ink
             font.pixelSize: Style.space(13)
             font.bold: true
@@ -139,7 +139,7 @@ Controls.ScrollView {
                     font.pixelSize: Style.space(11)
                 }
                 PerchAction {
-                    text: modelData.connected ? "Disconnect" : "Connect"
+                    text: modelData.connected ? PerchStrings.t("Disconnect") : PerchStrings.t("Connect")
                     ink: root.ink
                     surface: root.surface
                     onClicked: root.system.toggleBluetooth(index)
@@ -148,7 +148,7 @@ Controls.ScrollView {
         }
         Text {
             visible: !root.system || !root.system.bluetoothDevices || root.system.bluetoothDevices.length === 0
-            text: "No paired Bluetooth devices"
+            text: PerchStrings.t("No paired Bluetooth devices")
             color: Qt.alpha(root.ink, 0.55)
             font.pixelSize: Style.space(11)
         }

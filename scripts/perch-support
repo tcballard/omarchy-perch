@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Print a local, content-free preview support report. Never uploads data."""
+import json
+import platform
+from pathlib import Path
+import re
+import shutil
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def git(*args):
+    try:
+        result = subprocess.run(['git', '-C', str(ROOT), *args],
+            stdin=subprocess.DEVNULL, capture_output=True, timeout=2, check=False)
+        return result.stdout.decode(errors='replace').strip() if result.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def report():
+    try:
+        version = json.loads((ROOT / 'manifest.json').read_text()).get('version')
+    except (OSError, ValueError):
+        version = None
+    if not isinstance(version, str) or not re.fullmatch(r'[0-9A-Za-z.+-]{1,64}', version):
+        version = 'unavailable'
+    revision = git('rev-parse', 'HEAD')
+    if not revision or not re.fullmatch(r'[0-9a-f]{40,64}', revision):
+        revision = 'unavailable'
+    edits = git('status', '--porcelain', '--untracked-files=no')
+    return {'perch_version': version, 'revision': revision,
+        'tracked_local_edits': None if edits is None else bool(edits),
+        'system': platform.system(), 'kernel': platform.release(),
+        'architecture': platform.machine(), 'python': platform.python_version(),
+        'commands_available': {name: bool(shutil.which(name)) for name in (
+            'omarchy-shell', 'hyprctl', 'wl-copy', 'curl', 'brightnessctl',
+            'canberra-gtk-play', 'notify-send', 'gtk-launch', 'xdg-open',
+            'localsend', 'localsend_app', 'tmux', 'wezterm', 'zellij')},
+        'scope': 'Local version/capability report only; no configuration, user content or logs collected.'}
+
+
+if __name__ == '__main__':
+    print(json.dumps(report(), indent=2))

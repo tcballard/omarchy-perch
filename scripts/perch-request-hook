@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+"""Perch request bridge v1. A short-lived, same-user socket for one explicit decision."""
+import hashlib,json,os,re,secrets,select,signal,socket,stat,struct,subprocess,sys,tempfile,time
+from pathlib import Path
+
+LIMIT=16384
+TOKEN=re.compile(r'^[0-9a-f]{32}$')
+
+def directory():
+    base=Path(os.environ.get('XDG_RUNTIME_DIR',tempfile.gettempdir()))
+    root=base/('perch-requests-'+str(os.getuid()))
+    try:root.mkdir(mode=0o700)
+    except FileExistsError:pass
+    info=root.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)!=0o700:raise ValueError('Unsafe request directory')
+    return root
+
+def read_request(token):
+    if not isinstance(token,str) or not TOKEN.fullmatch(token):raise ValueError('Invalid request identity')
+    path=directory()/(token+'.json')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    with os.fdopen(fd,'rb') as f:
+        info=os.fstat(f.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_size>32768:raise ValueError('Invalid request record')
+        data=json.loads(f.read(32769))
+    if data.get('id')!=token or data.get('expiresAt',0)<=time.time():raise ValueError('Request expired; continue in your agent session')
+    return data
+
+def recv(conn):
+    data=bytearray()
+    while b'\n' not in data:
+        part=conn.recv(4096)
+        if not part:raise ValueError('Request connection closed')
+        data.extend(part)
+        if len(data)>LIMIT:raise ValueError('Response too large')
+    return json.loads(bytes(data).split(b'\n',1)[0])
+
+def decision(data,response):
+    action=response.get('action')
+    if action=='session':return {}
+    if data['kind']=='approval':
+        if action not in ('allow','deny'):raise ValueError('Choose Allow once or Deny')
+        if data.get('agent')=='opencode':return {'response':'once' if action=='allow' else 'reject'}
+        return {'hookSpecificOutput':{'hookEventName':'PermissionRequest','decision':{'behavior':action}}}
+    if action=='deny':return {'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':'User declined to answer in Perch'}}
+    if action!='answer':raise ValueError('Unsupported response')
+    answers=response.get('answers')
+    questions=data['input']['questions']
+    if not isinstance(answers,dict) or set(answers)!=set(q['question'] for q in questions):raise ValueError('Answer every question')
+    if any(not isinstance(v,str) or not v.strip() or len(v)>2000 for v in answers.values()):raise ValueError('Answers must contain 1–2000 characters')
+    return {'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'allow','updatedInput':dict(data['input'],answers=answers)}}
+
+def respond(payload):
+    token=payload.get('id');data=read_request(token)
+    decision(data,payload)
+    path=directory()/(token+'.sock');info=path.lstat()
+    if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid():raise ValueError('Request is unavailable')
+    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
+        conn.settimeout(8);conn.connect(str(path))
+        _,uid,_=struct.unpack('3i',conn.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))
+        if uid!=os.getuid():raise ValueError('Request owner changed')
+        conn.sendall(json.dumps(payload).encode()+b'\n')
+        reply=recv(conn)
+        if reply.get('ok') is not True:raise ValueError(reply.get('error','Request was not accepted'))
+    return {'message':'Response delivered'}
+
+def request_data(raw,token,deadline,agent="claude"):
+    event=raw.get('hook_event_name');tool=raw.get('tool_name');value=raw.get('tool_input')
+    if event not in ('PermissionRequest','PreToolUse') or not isinstance(tool,str) or len(tool)>160 or not isinstance(value,dict):raise ValueError('Unsupported request')
+    if len(json.dumps(value).encode())>LIMIT:raise ValueError('Review large input in the agent session')
+    kind='approval'
+    if agent not in ('claude','codex','opencode') or (agent!='claude' and event!='PermissionRequest'):raise ValueError('Unsupported agent request')
+    if event=='PreToolUse':
+        if tool!='AskUserQuestion':raise ValueError('Unsupported question tool')
+        questions=value.get('questions')
+        if not isinstance(questions,list) or not 1<=len(questions)<=4:raise ValueError('Unsupported question count')
+        seen=set()
+        for q in questions:
+            if not isinstance(q,dict) or not isinstance(q.get('question'),str) or not 1<=len(q['question'])<=1000 or q['question'] in seen:raise ValueError('Invalid question')
+            seen.add(q['question'])
+            opts=q.get('options',[])
+            if not isinstance(opts,list) or len(opts)>8 or any(not isinstance(o,dict) or not isinstance(o.get('label'),str) or len(o['label'])>160 for o in opts):raise ValueError('Unsupported options')
+        kind='question'
+    cwd=raw.get('cwd','')
+    if not isinstance(cwd,str) or len(cwd)>4096:cwd=''
+    return {'id':token,'agent':agent,'kind':kind,'tool':tool,'input':value,'cwd':cwd,'expiresAt':deadline,'pid':os.getpid()}
+
+def publish(payload,verb='activity'):
+    r=subprocess.run(['omarchy-shell','io.github.tcballard.perch',verb,json.dumps(payload) if verb=='activity' else payload],stdin=subprocess.DEVNULL,capture_output=True,timeout=2)
+    return r.returncode==0 and r.stdout.strip()==b'ok'
+
+def serve(raw,timeout=120,agent="claude",deliver=None):
+    root=directory();token=secrets.token_hex(16);deadline=time.time()+timeout
+    data=request_data(raw,token,deadline,agent)
+    # Keep runtime records bounded and clear abandoned records after their deadline.
+    count=0
+    for path in list(root.glob('*.json'))[:32]:
+        try:read_request(path.stem);count+=1
+        except (OSError,ValueError):
+            if TOKEN.fullmatch(path.stem):
+                path.unlink(missing_ok=True);path.with_suffix('.sock').unlink(missing_ok=True)
+    if count>=8:return {}
+    path=root/(token+'.json');sockpath=root/(token+'.sock');activity='request.'+token
+    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as server:
+        server.bind(str(sockpath));os.chmod(sockpath,0o600);server.listen(1)
+        try:
+            fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600)
+            with os.fdopen(fd,'w') as out:json.dump(data,out)
+            if not publish({'id':activity,'kind':'agent','agent':{'codex':'Codex','opencode':'OpenCode'}.get(agent,'Claude'),'state':'waiting','attention':data['kind'],'requestId':token,'title':data['tool'],'detail':'Review in Perch or continue in your session','project':Path(data['cwd']).name,'ttl':timeout}):return {}
+            while time.time()<deadline:
+                server.settimeout(max(.01,deadline-time.time()))
+                try:conn,_=server.accept()
+                except socket.timeout:break
+                with conn:
+                    conn.settimeout(2)
+                    try:
+                        _,uid,_=struct.unpack('3i',conn.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))
+                        if uid!=os.getuid():continue
+                        response=recv(conn)
+                        if response.get('id')!=token or time.time()>=deadline:raise ValueError('Request expired')
+                        result=decision(data,response)
+                        if result and deliver is not None and not deliver(result):
+                            conn.sendall(b'{"ok":false,"error":"Client did not confirm delivery. Continue in your agent session."}\n')
+                            return {}
+                        conn.sendall(b'{"ok":true}\n')
+                        return result
+                    except (OSError,ValueError,TypeError):
+                        try:conn.sendall(b'{"ok":false,"error":"Invalid or expired response"}\n')
+                        except OSError:pass
+            return {}
+        finally:
+            path.unlink(missing_ok=True);sockpath.unlink(missing_ok=True)
+            try:publish(activity,'dismiss')
+            except (OSError,subprocess.SubprocessError):pass
+
+def main():
+    agent='claude'
+    if len(sys.argv)>1:
+        if len(sys.argv)!=3 or sys.argv[1]!='--agent' or sys.argv[2] not in ('codex','opencode'):return
+        agent=sys.argv[2]
+    signal.signal(signal.SIGTERM,lambda *_:sys.exit(0))
+    raw=sys.stdin.buffer.readline(65537) if agent=='opencode' else sys.stdin.buffer.read(65537)
+    if len(raw)>65536:return
+    value=json.loads(raw)
+    if not isinstance(value,dict):return
+    def deliver(result):
+        print(json.dumps(result),flush=True)
+        if not select.select([sys.stdin],[],[],6)[0]:return False
+        try:return json.loads(sys.stdin.buffer.readline(1025)).get('delivered') is True
+        except (ValueError,AttributeError):return False
+    result=serve(value,agent=agent,deliver=deliver if agent=='opencode' else None)
+    if result and agent!='opencode':print(json.dumps(result))
+if __name__=='__main__':
+    try:main()
+    except (OSError,ValueError,TypeError,AttributeError,RecursionError,subprocess.SubprocessError):pass

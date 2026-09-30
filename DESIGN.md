@@ -1,5 +1,9 @@
 # Perch — design and progress
 
+## Agent sessions
+
+Agent hooks enrich the bounded activity model with a project label and an optional Hyprland client address. Attention sessions sort first and determine the quiet notch context. Activity uses a panel sized to its current session count. **Go to session** passes only a validated hexadecimal client address to fixed `hyprctl dispatch focuswindow` arguments, then collapses Perch after success. The address expires with the activity.
+
 29 September 2026. Scope agreed with Tom: an independent music-first notch, keeping the stock bar in place. Existing alternatives were reviewed; Tom explicitly chose to build his own.
 
 - ID: `io.github.tcballard.perch`.
@@ -112,3 +116,56 @@ card loads. Services retain timers, media, files and other state across navigati
 All tools remains a route to unselected modules. The fixed expanded envelope is
 468 logical pixels high; natural-height cards scroll inside the shared host.
 Old pill/hide-idle/idle-clock settings do not restore the removed view.
+
+## Plugin pins — 29 September 2026
+
+Tom requested Perch as a home for installed plugins. First slice: user-selected
+launcher tiles mixed with the eight built-in module slots, using existing
+ordering and persistence. IDs use the `plugin:` prefix and cannot name a path.
+Discovery uses public `omarchy-shell shell listPlugins` IPC, at startup and on
+explicit refresh. Only third-party panel/overlay/menu/bar-widget entries appear;
+services, replacement bars and Perch itself are excluded. Some bar widgets have
+no summonable panel; the host's rejection is shown. No auto-enable or installation.
+
+An explicit click revalidates the target then invokes public `shell summon` with
+an argv array, fixed empty payload, bounded output and deadlines. Hover never
+launches plugins. The self-scoped injected shell API remains untouched. A launch
+releases exclusive keyboard mode, holds leave-grace while pending, and collapses
+Perch on success. Errors remain visible in settings. Missing pins remain removable.
+No arbitrary QML loader, polling loop, new dependency or credential access.
+
+Portable evidence covers catalog filtering, stale enable/removal, malformed IDs,
+real Qt tile clicks/hover and persisted strip rules. Live cross-panel focus and
+plugin-specific summon behavior require XPS verification. Embedded cards and
+a first partner integration are deferred until this launcher path is proven.
+
+## Sectioned panels — 29 September 2026
+
+Tom requested the treatment used in Omarchy Spaces Settings. Reviewed upstream
+SpacesSettings.qml and its 1.1.0 changelog (PR #8): named sections, keyboard
+controls and a stable header/footer. Perch now separates Placement, Behaviour,
+Media & alerts, Your strip and Plugin pins. Reuses Perch theme-bound controls;
+introduces a consistent labelled toggle with explanatory text. Settings requests
+600 logical pixels; below 480 pixels of content width the sidebar becomes wrapped
+section buttons. Each section scrolls independently of the persistent footer.
+No reset-all action is added, so unrelated timer/plugin state cannot be reset.
+
+The compositor envelope uses maximumWidth even on compact/cards; only the masked
+view resizes. Content is bounded to the actual screen-constrained view, preserving
+the responsive path on small/high-scale displays. Shared card titles replace
+duplicated headings in Files, Inbox, Apps and Activity. No new processes/polling.
+Portable Qt checks cover every section at normal/constrained widths, Space-key
+activation and toggle updates, Escape, and existing interactions. Live Wayland
+masking, theme scaling and popup focus still require the XPS.
+
+## Notch and Plugin Perch — 29 September 2026
+
+Tom requested a quiet compact view alongside the useful plugin launcher. The
+Notch is now the default presentation; explicit saved strip preferences retain
+Plugin Perch. Both use the same expanded cards, settings and pins. Priority is
+completed timer, activity needing input/error, selected timer, playing media,
+meeting, notification, then other activity. Idle opens All tools. Exact completed
+timer IDs route into the existing timer card. Collapsed context changes do not
+launch plugins or animate each tick. No new polling; hidden stats/weather tiles
+are suspended in collapsed Notch. Four-edge, keyboard activation and mode/pin
+preservation are exercised in Qt fixtures; live XPS acceptance remains required.

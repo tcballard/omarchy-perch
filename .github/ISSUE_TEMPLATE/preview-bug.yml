@@ -1,0 +1,39 @@
+name: Preview bug
+description: Report something broken in the Perch preview.
+title: "[Preview] "
+body:
+  - type: markdown
+    attributes:
+      value: "Please review attachments for personal data. Do not include credentials, full configs or agent transcripts."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and environment
+      description: Paste the reviewed perch-support output; add Omarchy version, monitor/scale and relevant agent/terminal versions.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include enabled optional integrations and whether this happens every time.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: A screenshot or short recording helps. Does disabling Perch resolve it?
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Preview checks completed
+      description: Which PREVIEW.md checks passed, failed or were not tested?

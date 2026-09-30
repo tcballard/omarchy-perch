@@ -5,11 +5,20 @@ import http.client
 from pathlib import Path
 import sys
 import subprocess
-# The isolated interpreter imports only modules from this checkout and stdlib.
+# Isolated imports use this checkout, stdlib and explicitly optional system packages.
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from perchlib import shelf,calendar,integrations,media,apps,modules
+from perchlib import shelf,calendar,integrations,media,apps,modules,plugins,sessions,cards,usage,requests,updates
 
 def main(op,p):
+    if op=='codex-server-status':
+        from perchlib.codex_server import snapshot
+        return snapshot(p)
+    if op.startswith('request-'):return requests.handle(op,p)
+    if op=='self-update-apply':return updates.apply()
+    if op=='usage':return usage.snapshot()
+    if op.startswith('card-'):return cards.handle(op,p)
+    if op.startswith('plugin-'):return plugins.handle(op,p)
+    if op.startswith('agent-'):return sessions.handle(op,p)
     if op=='module-stats':return modules.stats()
     if op=='module-weather':return modules.weather(p)
     if op=='module-clipboard':return modules.clipboard_list(p)

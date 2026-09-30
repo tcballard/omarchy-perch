@@ -1,5 +1,6 @@
-// Built-in registry only. A saved id can never load a QML path or execute code.
+// Built-in cards and validated plugin launch IDs; never executable paths.
 var catalog = [
+    {id:"usage",title:"AI usage",glyph:"◴",page:"usage"},
     {id:"music", title:"Music", glyph:"♫", page:"music"},
     {id:"timer", title:"Timers", glyph:"◷", page:"timer"},
     {id:"clipboard", title:"Clipboard", glyph:"▤", page:"clipboard"},
@@ -13,7 +14,16 @@ var catalog = [
     {id:"desktop", title:"Apps", glyph:"⊞", page:"desktop"}
 ];
 var defaults = ["music", "timer", "clipboard", "stats", "weather"];
-function get(id) { return catalog.find(function(m) { return m.id === id; }) || null; }
+function pluginId(id) {
+    if (typeof id !== "string" || id.indexOf("plugin:") !== 0) return "";
+    var value = id.slice(7);
+    return value.length <= 160 && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) && value !== "io.github.tcballard.perch" && value.indexOf("omarchy.") !== 0 ? value : "";
+}
+function get(id) {
+    var target = pluginId(id);
+    if (target) return {id:id, title:target, glyph:"◇", page:"plugins", pluginId:target};
+    return catalog.find(function(m) { return m.id === id; }) || null;
+}
 function clean(value) {
     if (!Array.isArray(value)) return defaults.slice();
     var result = [];
@@ -34,4 +44,13 @@ function toggle(value, id) {
     else if (result.length < 8) result.push(id);
     return result;
 }
-if (typeof module !== "undefined") module.exports = {catalog,defaults,get,clean,move,toggle};
+function search(plugins, query) {
+    var rows = catalog.map(function(m) { return {id:m.id,title:m.title,enabled:true,plugin:false}; });
+    rows.push({id:"setup",title:"Setup & health",enabled:true,plugin:false});
+    (Array.isArray(plugins) ? plugins : []).slice(0,64).forEach(function(p) {
+        if (p && pluginId("plugin:" + p.id)) rows.push({id:"plugin:"+p.id,title:p.name || p.id,enabled:p.enabled === true,plugin:true});
+    });
+    var needle = String(query || "").trim().toLowerCase().slice(0,160);
+    return rows.filter(function(r) { return !needle || (r.title + " " + r.id).toLowerCase().indexOf(needle) >= 0; });
+}
+if (typeof module !== "undefined") module.exports = {search,catalog,defaults,get,clean,move,toggle,pluginId};

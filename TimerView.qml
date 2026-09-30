@@ -34,7 +34,7 @@ Controls.ScrollView {
                 Accessible.name: "Selected timer"
             }
             PerchAction {
-                text: root.adding ? "Back" : "New timer"
+                text: root.adding ? PerchStrings.t("Back") : PerchStrings.t("New timer")
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.adding = !root.adding
@@ -42,7 +42,7 @@ Controls.ScrollView {
         }
         Text {
             Layout.fillWidth: true
-            text: root.live && root.live.timerActive ? root.live.timerState.label : "Make time for one thing"
+            text: root.live && root.live.timerActive ? root.live.timerState.label : PerchStrings.t("Make time for one thing")
             textFormat: Text.PlainText
             color: root.ink
             font.pixelSize: Style.space(14)
@@ -51,7 +51,7 @@ Controls.ScrollView {
         Text {
             Layout.fillWidth: true
             visible: !root.adding
-            text: !root.live || !root.live.timerActive ? "25:00" : root.live.timerStatus === "done" ? "Time’s up" : Media.time(root.live.remaining)
+            text: !root.live || !root.live.timerActive ? "25:00" : root.live.timerStatus === "done" ? PerchStrings.t("Time’s up") : Media.time(root.live.remaining)
             color: root.ink
             font.pixelSize: Style.space(40)
             horizontalAlignment: Text.AlignHCenter
@@ -61,7 +61,7 @@ Controls.ScrollView {
             Layout.fillWidth: true
             PerchAction {
                 Layout.fillWidth: true
-                text: root.live && root.live.timerStatus === "done" ? "Done" : root.live && root.live.timerStatus === "paused" ? "Resume" : "Pause"
+                text: root.live && root.live.timerStatus === "done" ? PerchStrings.t("Done") : root.live && root.live.timerStatus === "paused" ? PerchStrings.t("Resume") : PerchStrings.t("Pause")
                 selected: true
                 ink: root.ink
                 surface: root.surface
@@ -76,7 +76,7 @@ Controls.ScrollView {
             }
             PerchAction {
                 Layout.fillWidth: true
-                text: "Cancel"
+                text: PerchStrings.t("Cancel")
                 visible: !!root.live && root.live.timerStatus !== "done"
                 ink: root.ink
                 surface: root.surface
@@ -88,14 +88,14 @@ Controls.ScrollView {
             Layout.fillWidth: true
             PerchAction {
                 Layout.fillWidth: true
-                text: "Snooze 5m"
+                text: PerchStrings.t("Snooze 5m")
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.live.snooze(300)
             }
             PerchAction {
                 Layout.fillWidth: true
-                text: "Repeat"
+                text: PerchStrings.t("Repeat")
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.live.repeatTimer()
@@ -107,7 +107,7 @@ Controls.ScrollView {
             Controls.TextField {
                 id: label
                 Layout.fillWidth: true
-                placeholderText: "Name your timer"
+                placeholderText: PerchStrings.t("Name your timer")
                 maximumLength: 80
                 color: root.ink
                 palette.base: root.surface
@@ -120,7 +120,7 @@ Controls.ScrollView {
                     delegate: PerchAction {
                         required property int modelData
                         Layout.fillWidth: true
-                        text: modelData + " min"
+                        text: modelData + PerchStrings.t(" min")
                         ink: root.ink
                         surface: root.surface
                         enabled: !!root.live
@@ -144,18 +144,18 @@ Controls.ScrollView {
                     Accessible.name: "Custom timer in minutes"
                 }
                 PerchAction {
-                    text: "Start"
+                    text: PerchStrings.t("Start")
                     ink: root.ink
                     surface: root.surface
                     enabled: !!root.live
-                    onClicked: if (root.live.add(minutes.value * 60, label.text || "Timer"))
+                    onClicked: if (root.live.add(minutes.value * 60, label.text || PerchStrings.t("Timer")))
                         root.adding = false
                 }
             }
         }
         Text {
             Layout.fillWidth: true
-            text: root.live ? root.live.error : "Timer service is loading"
+            text: root.live ? root.live.error : PerchStrings.t("Timer service is loading")
             textFormat: Text.PlainText
             visible: text !== ""
             color: root.ink
@@ -164,7 +164,7 @@ Controls.ScrollView {
         }
         Text {
             Layout.fillWidth: true
-            text: "Up to eight timers. Timers continue while Perch is closed. Completion options are in Settings."
+            text: PerchStrings.t("Up to eight timers. Timers continue while Perch is closed. Completion options are in Settings.")
             color: Qt.alpha(root.ink, 0.5)
             wrapMode: Text.WordWrap
             font.pixelSize: Style.space(10)

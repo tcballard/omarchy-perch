@@ -9,7 +9,18 @@ Item {
         id: builtins
         host: root.host
     }
-    readonly property var modules: [clipboard, stats, weather, module_hub, module_shelf, module_calendar, module_setup, module_inbox, module_lyrics, module_desktop, module_timer, module_system, module_activity, module_players, module_music]
+    readonly property var modules: [usage, clipboard, stats, weather, module_hub, module_shelf, module_calendar, module_setup, module_inbox, module_lyrics, module_desktop, module_timer, module_system, module_activity, module_players, module_music]
+    PerchModule {
+        id: usage
+        moduleId: "usage"
+        title: PerchStrings.t("AI usage")
+        compactText: PerchStrings.t("Usage")
+        card: Component {
+            UsageCard {
+                state: root.host.media && root.host.media.usage !== undefined ? root.host.media.usage : null
+            }
+        }
+    }
     function get(id) {
         return modules.find(function (m) {
             return m.moduleId === id;
@@ -18,14 +29,14 @@ Item {
     PerchModule {
         id: clipboard
         moduleId: "clipboard"
-        title: "Clipboard"
-        compactText: "Clipboard"
+        title: PerchStrings.t("Clipboard")
+        compactText: PerchStrings.t("Clipboard")
         state: root.state
         status: !state ? "unavailable" : state.clipboardError ? "error" : state.clipboardBusy ? "loading" : state.clips.length ? "ready" : "empty"
         actions: [
             {
                 id: "refresh",
-                title: "Refresh"
+                title: PerchStrings.t("Refresh")
             }
         ]
         card: Component {
@@ -37,14 +48,14 @@ Item {
     PerchModule {
         id: stats
         moduleId: "stats"
-        title: "System stats"
-        compactText: state && !state.statsError && state.cpu >= 0 ? "CPU " + Math.round(state.cpu) + "%" : "Stats"
+        title: PerchStrings.t("System stats")
+        compactText: state && !state.statsError && state.cpu >= 0 ? "CPU " + Math.round(state.cpu) + "%" : PerchStrings.t("Stats")
         state: root.state
         status: !state ? "unavailable" : state.statsError ? "error" : state.sample ? "ready" : "loading"
         actions: [
             {
                 id: "refresh",
-                title: "Refresh"
+                title: PerchStrings.t("Refresh")
             }
         ]
         card: Component {
@@ -61,14 +72,14 @@ Item {
     PerchModule {
         id: weather
         moduleId: "weather"
-        title: "Weather"
-        compactText: state && state.weather && !state.weatherError ? Math.round(state.weather.temperature) + "°C" : "Weather"
+        title: PerchStrings.t("Weather")
+        compactText: state && state.weather && !state.weatherError ? Math.round(state.weather.temperature) + "°C" : PerchStrings.t("Weather")
         state: root.state
         status: !state ? "unavailable" : !state.weatherEnabled ? "unconfigured" : state.weatherError ? "offline" : state.weather ? "ready" : "loading"
         actions: [
             {
                 id: "refresh",
-                title: "Refresh"
+                title: PerchStrings.t("Refresh")
             }
         ]
         card: Component {
@@ -93,7 +104,7 @@ Item {
     PerchModule {
         id: module_shelf
         moduleId: "shelf"
-        title: "Files"
+        title: PerchStrings.t("Files")
         compactText: title
         state: root.host.media
         card: builtins.shelfCard
@@ -101,15 +112,15 @@ Item {
     PerchModule {
         id: module_calendar
         moduleId: "calendar"
-        title: "Calendar"
-        compactText: root.host.work && root.host.work.meetingSummary ? root.host.work.meetingSummary : "Calendar"
+        title: PerchStrings.t("Calendar")
+        compactText: root.host.work && root.host.work.meetingSummary ? root.host.work.meetingSummary : PerchStrings.t("Calendar")
         state: root.host.media
         card: builtins.calendarCard
     }
     PerchModule {
         id: module_setup
         moduleId: "setup"
-        title: "Setup & health"
+        title: PerchStrings.t("Setup & health")
         compactText: title
         state: root.host.media
         card: builtins.setupCard
@@ -117,8 +128,8 @@ Item {
     PerchModule {
         id: module_inbox
         moduleId: "inbox"
-        title: "Notifications"
-        compactText: root.host.notificationPreview || "Inbox"
+        title: PerchStrings.t("Notifications")
+        compactText: root.host.notificationPreview || PerchStrings.t("Inbox")
         state: root.host.media
         card: builtins.inboxCard
     }
@@ -141,24 +152,24 @@ Item {
     PerchModule {
         id: module_timer
         moduleId: "timer"
-        title: "Timer"
-        compactText: root.host.live && root.host.live.timerActive ? (root.host.live.timerStatus === "done" ? "Finished" : Media.time(root.host.live.remaining)) : "Timers"
+        title: PerchStrings.t("Timer")
+        compactText: root.host.live && root.host.live.timerActive ? (root.host.live.timerStatus === "done" ? "Finished" : Media.time(root.host.live.remaining)) : PerchStrings.t("Timers")
         state: root.host.media
         card: builtins.timerCard
     }
     PerchModule {
         id: module_system
         moduleId: "system"
-        title: "Devices"
-        compactText: root.host.eventBanners && root.host.system && root.host.system.banner ? root.host.system.banner : "Devices"
+        title: PerchStrings.t("Devices")
+        compactText: root.host.displaySettings.systemFeedback !== false && root.host.system && root.host.system.banner ? root.host.system.banner : PerchStrings.t("Devices")
         state: root.host.media
         card: builtins.systemCard
     }
     PerchModule {
         id: module_activity
         moduleId: "activity"
-        title: "Activity"
-        compactText: root.host.live && root.host.live.focused ? root.host.live.focused.title : "Activity"
+        title: PerchStrings.t("Activity")
+        compactText: root.host.live && root.host.live.focused ? root.host.live.focused.title : PerchStrings.t("Activity")
         state: root.host.media
         card: builtins.activityCard
     }
@@ -173,8 +184,8 @@ Item {
     PerchModule {
         id: module_music
         moduleId: "music"
-        title: "Music"
-        compactText: root.host.hasPlayer ? root.host.media.title : "Music"
+        title: PerchStrings.t("Music")
+        compactText: root.host.hasPlayer ? root.host.media.title : PerchStrings.t("Music")
         state: root.host.media
         card: builtins.musicCard
     }

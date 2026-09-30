@@ -3,6 +3,49 @@ import QtQuick
 // Fictional data, available only after an explicit demo summon.
 Item {
     id: root
+    property alias pluginPins: demoPlugins
+    property alias pluginCards: demoCards
+    DemoPluginCardState { id: demoCards }
+    QtObject {
+        id: demoPlugins
+        property var plugins: [
+            {
+                id: "example.notes",
+                name: "Demo Notes",
+                enabled: true
+            },
+            {
+                id: "example.weather",
+                name: "Demo Weather",
+                enabled: false
+            }
+        ]
+        property bool busy: false
+        property bool loaded: true
+        property string error: ""
+        property string message: ""
+        property string lastOpened: ""
+        signal launchFinished(bool success)
+        function refresh() {
+        }
+        function get(id) {
+            return plugins.find(function (p) {
+                return p.id === id;
+            }) || null;
+        }
+        function openPlugin(id) {
+            var p = get(id);
+            if (!p || !p.enabled) {
+                error = "Demo plugin unavailable";
+                launchFinished(false);
+                return true;
+            }
+            lastOpened = id;
+            message = "Demo only: no real plugin opened";
+            launchFinished(true);
+            return true;
+        }
+    }
     property alias modules: moduleFixture
     DemoModuleState {
         id: moduleFixture

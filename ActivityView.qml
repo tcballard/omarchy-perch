@@ -6,19 +6,43 @@ import qs.Commons
 ColumnLayout {
     id: root
     property var live: null
+    signal reviewRequested(string id)
     property color ink: Color.foreground
     property color surface: Color.background
     spacing: Style.space(12)
-    Text {
-        text: "Live activities"
-        color: root.ink
-        font.pixelSize: Style.space(14)
-        font.weight: Font.DemiBold
+    function age(updatedAt) {
+        var seconds = Math.max(0, Math.floor(((root.live ? root.live.now : Date.now()) - updatedAt) / 1000));
+        if (seconds < 10)
+            return PerchStrings.t("now");
+        if (seconds < 60)
+            return seconds + "s";
+        var minutes = Math.floor(seconds / 60);
+        return minutes < 60 ? minutes + "m" : Math.floor(minutes / 60) + "h";
     }
+
+    RowLayout {
+        Layout.fillWidth: true
+        visible: !!root.live && root.live.attentionItems.length > 0
+        spacing: Style.space(8)
+        Rectangle {
+            implicitWidth: Style.space(8)
+            implicitHeight: implicitWidth
+            radius: implicitWidth / 2
+            color: "#f2b84b"
+        }
+        Text {
+            Layout.fillWidth: true
+            text: root.live && root.live.attentionItems.length === 1 ? PerchStrings.t("1 needs your attention") : (root.live ? root.live.attentionItems.length : 0) + PerchStrings.t(" need your attention")
+            color: root.ink
+            font.pixelSize: Style.space(12)
+            font.weight: Font.DemiBold
+        }
+    }
+
     Text {
         Layout.fillWidth: true
         visible: !root.live || !root.live.items.length
-        text: "Builds, downloads, backups.\nLet your scripts report their progress here."
+        text: PerchStrings.t("Builds, downloads, backups.\nLet your scripts report their progress here.")
         color: Qt.alpha(root.ink, 0.6)
         font.pixelSize: Style.space(12)
         wrapMode: Text.WordWrap
@@ -26,22 +50,23 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: !root.live || !root.live.items.length
-        text: "Connect a script using Perch’s activity command. See the README for examples."
+        text: PerchStrings.t("Connect a script using Perch’s activity command. See the README for examples.")
         color: Qt.alpha(root.ink, 0.45)
         font.pixelSize: Style.space(11)
         wrapMode: Text.WordWrap
     }
     Controls.ScrollView {
         Layout.fillWidth: true
-        Layout.preferredHeight: Style.space(232)
+        Layout.preferredHeight: Math.min(Style.space(280), activityRows.implicitHeight)
         visible: !!root.live && root.live.items.length > 0
         clip: true
         contentWidth: availableWidth
         ColumnLayout {
+            id: activityRows
             width: parent.width
             spacing: Style.space(8)
             Repeater {
-                model: root.live ? root.live.items : []
+                model: root.live ? root.live.displayItems : []
                 delegate: Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
@@ -57,6 +82,31 @@ ColumnLayout {
                             margins: Style.space(11)
                         }
                         spacing: Style.space(7)
+                        PerchAction {
+                            visible: !!modelData.requestId
+                            text: PerchStrings.t("Review request")
+                            ink: root.ink
+                            surface: root.surface
+                            onClicked: root.reviewRequested(modelData.id)
+                        }
+                        PerchAction {
+                            objectName: "open-codex-" + modelData.id
+                            visible: modelData.kind === "agent" && !!modelData.targetCodex
+                            text: PerchStrings.t("Open in Codex desktop")
+                            enabled: !!root.live && !root.live.jumpBusy
+                            ink: root.ink
+                            surface: root.surface
+                            onClicked: root.live.openCodex(modelData)
+                        }
+                        PerchAction {
+                            objectName: "select-zellij-" + modelData.id
+                            visible: modelData.kind === "agent" && !!modelData.targetZellij
+                            text: PerchStrings.t("Select Zellij pane")
+                            enabled: !!root.live && !root.live.jumpBusy
+                            ink: root.ink
+                            surface: root.surface
+                            onClicked: root.live.selectZellij(modelData)
+                        }
                         RowLayout {
                             Layout.fillWidth: true
                             Text {
@@ -67,6 +117,14 @@ ColumnLayout {
                                 color: root.ink
                                 font.pixelSize: Style.space(12)
                                 font.weight: Font.DemiBold
+                            }
+                            Text {
+                                visible: modelData.kind === "agent" && modelData.agent !== ""
+                                text: modelData.agent.toUpperCase()
+                                textFormat: Text.PlainText
+                                color: Qt.alpha(root.ink, 0.48)
+                                font.pixelSize: Style.space(9)
+                                font.letterSpacing: 0.8
                             }
                             NotchButton {
                                 glyph: "close"
@@ -85,6 +143,15 @@ ColumnLayout {
                             font.pixelSize: Style.space(11)
                             wrapMode: Text.Wrap
                         }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: modelData.project !== ""
+                            text: modelData.project
+                            textFormat: Text.PlainText
+                            elide: Text.ElideMiddle
+                            color: Qt.alpha(root.ink, 0.48)
+                            font.pixelSize: Style.space(10)
+                        }
                         Rectangle {
                             Layout.fillWidth: true
                             visible: modelData.progress >= 0
@@ -98,14 +165,36 @@ ColumnLayout {
                                 color: root.ink
                             }
                         }
-                        Text {
-                            text: modelData.state === "waiting" ? "Needs attention" : modelData.state === "error" ? "Failed" : modelData.state === "done" ? "Complete" : "In progress"
-                            color: Qt.alpha(root.ink, 0.5)
-                            font.pixelSize: Style.space(10)
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text {
+                                Layout.fillWidth: true
+                                text: (modelData.state === "idle" ? PerchStrings.t("Last seen") : modelData.state === "waiting" ? PerchStrings.t("Needs attention") : modelData.state === "error" ? PerchStrings.t("Failed") : modelData.state === "done" ? PerchStrings.t("Complete") : PerchStrings.t("In progress")) + " · " + root.age(modelData.updatedAt)
+                                color: Qt.alpha(root.ink, 0.5)
+                                font.pixelSize: Style.space(10)
+                            }
+                            PerchAction {
+                                objectName: "jump-session-" + modelData.id
+                                visible: modelData.kind === "agent" && (modelData.target !== "" || !!modelData.targetWorkspace)
+                                text: root.live && root.live.jumpBusy ? PerchStrings.t("Opening…") : modelData.targetWorkspace ? PerchStrings.t("Open workspace") : PerchStrings.t("Go to session")
+                                enabled: !!root.live && !root.live.jumpBusy
+                                ink: root.ink
+                                surface: root.surface
+                                onClicked: root.live.jumpTo(modelData)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+    Text {
+        Layout.fillWidth: true
+        visible: !!root.live && (root.live.error !== "" || root.live.actionMessage !== "")
+        text: root.live ? (root.live.error || root.live.actionMessage) : ""
+        textFormat: Text.PlainText
+        color: root.live && root.live.error ? "#e47b76" : Qt.alpha(root.ink, 0.6)
+        font.pixelSize: Style.space(10)
+        wrapMode: Text.WordWrap
     }
 }

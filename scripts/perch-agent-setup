@@ -13,6 +13,11 @@ import tomllib
 START = '# BEGIN PERCH NOTIFY v1\n'
 END = '# END PERCH NOTIFY v1\n'
 EVENTS = ['UserPromptSubmit', 'PostToolUse', 'Notification', 'Stop', 'SessionEnd']
+GEMINI_EVENTS = ['BeforeAgent','AfterTool','AfterAgent','Notification','SessionEnd']
+CODEX_EVENTS = ['UserPromptSubmit','PreToolUse','PostToolUse','PermissionRequest','Stop','SessionEnd','Interrupt']
+GROK_EVENTS = ['UserPromptSubmit','PostToolUse','Notification','Stop','SessionEnd','StopCancelled','StopFailure']
+KIMI_EVENTS = ['TurnStarted','PostToolUse','PermissionRequest','PermissionResult','Stop','SessionEnd','Interrupt','StopFailure']
+CURSOR_EVENTS = ['beforeSubmitPrompt','postToolUse','stop','sessionEnd']
 
 
 def read(path):
@@ -40,7 +45,30 @@ def atomic(path, text, mode=0o600):
             os.unlink(tmp)
 
 
-def transform(agent, old, adapter, remove):
+def kimi_block(adapter):
+    command = shlex.join(['python3', str(adapter), '--perch-hook-v1', 'kimi'])
+    return '# BEGIN PERCH KIMI v1\n' + ''.join(
+        '[[hooks]]\nevent = ' + json.dumps(event) + '\ncommand = ' + json.dumps(command) + '\ntimeout = 3\n'
+        for event in KIMI_EVENTS) + '# END PERCH KIMI v1\n'
+
+
+def transform_kimi(old, adapter, remove):
+    parsed = tomllib.loads(old)
+    if not isinstance(parsed.get('hooks', []), list):raise ValueError('Unrecognized Kimi hooks')
+    block = kimi_block(adapter)
+    start, end = '# BEGIN PERCH KIMI v1', '# END PERCH KIMI v1'
+    if start in old or end in old:
+        if old.count(block) != 1 or old.count(start) != 1 or old.count(end) != 1:
+            raise ValueError('Perch Kimi block was edited; no changes made')
+        result = old.replace(block, '', 1) if remove else old
+    elif remove:result = old
+    else:result = old + ('\n' if old and not old.endswith('\n') else '') + block
+    tomllib.loads(result)
+    return result
+
+
+def transform(agent, old, adapter, remove, standalone=False):
+    if agent == 'kimi':return transform_kimi(old,adapter,remove)
     argv = ['python3', str(adapter), '--perch-hook-v1', agent]
     if agent == 'codex':
         parsed = tomllib.loads(old)
@@ -57,17 +85,37 @@ def transform(agent, old, adapter, remove):
             result = block + old
         tomllib.loads(result)
         return result
+    if agent not in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','grok','codex-hooks'):raise ValueError('Unsupported agent')
     data = json.loads(old) if old.strip() else {}
     if not isinstance(data, dict):
-        raise ValueError('Claude settings must be a JSON object')
-    if data.get('disableAllHooks') and not remove:
-        raise ValueError('Claude hooks are disabled; Perch will not override that preference.')
+        raise ValueError('Agent settings must be a JSON object')
+    if (data.get('disableAllHooks') or data.get('allowManagedHooksOnly') or data.get('hooksDisabled')) and not remove:
+        raise ValueError('Agent hooks are disabled; Perch will not override that preference.')
+    if standalone:
+        data = {'hooks':data}
     result = copy.deepcopy(data)
     hooks = result.setdefault('hooks', {})
     if not isinstance(hooks, dict):
-        raise ValueError('Claude hooks must be an object')
+        raise ValueError('Agent hooks must be an object')
     command = shlex.join(argv)
-    for event in EVENTS:
+    if agent == 'cursor':
+        if result.get('version',1) != 1:raise ValueError('Unsupported Cursor hooks version')
+        if not remove:result.setdefault('version',1)
+        for event in CURSOR_EVENTS:
+            entries=hooks.get(event,[])
+            if not isinstance(entries,list) or not all(isinstance(h,dict) for h in entries):raise ValueError('Invalid Cursor hook entries')
+            kept=[h for h in entries if h.get('command') != command or h.get('type','command') != 'command']
+            if not remove:kept.append({'command':command,'timeout':3})
+            if kept:hooks[event]=kept
+            else:hooks.pop(event,None)
+        if not hooks:result.pop('hooks',None)
+        return old if result == data else json.dumps(result,indent=2)+'\n'
+    if agent == 'gemini' and not remove:
+        if hooks.get('enabled') is False or (isinstance(data.get('tools'),dict) and data['tools'].get('enableHooks') is False):
+            raise ValueError('Gemini hooks are disabled; no changes made')
+        disabled=hooks.get('disabled',[])
+        if isinstance(disabled,list) and ('perch-status' in disabled or command in disabled):raise ValueError('Perch hook is disabled; no changes made')
+    for event in GEMINI_EVENTS if agent == 'gemini' else GROK_EVENTS if agent == 'grok' else CODEX_EVENTS if agent == 'codex-hooks' else EVENTS:
         groups = hooks.get(event, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get('hooks'), list) for g in groups):
             raise ValueError(f'Unrecognized {event} hook configuration; no changes made.')
@@ -80,30 +128,55 @@ def transform(agent, old, adapter, remove):
             elif not group['hooks']:
                 remaining.append(group)
         if not remove:
-            remaining.append({'hooks': [{'type': 'command', 'command': command, 'timeout': 2}]})
+            remaining.append({'hooks': [{'type': 'command', 'command': command, 'timeout': 3000 if agent == 'gemini' else 3, **({'name':'perch-status'} if agent == 'gemini' else {})}]})
         if remaining:
             hooks[event] = remaining
         else:
             hooks.pop(event, None)
     if not hooks:
         result.pop('hooks', None)
-    return old if result == data else json.dumps(result, indent=2, ensure_ascii=False) + '\n'
+    return old if result == data else json.dumps(result.get('hooks', {}) if standalone else result, indent=2, ensure_ascii=False) + '\n'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('agent', choices=['claude', 'codex'])
+    parser.add_argument('agent', choices=['claude', 'codex', 'gemini', 'cursor','qwen','qoder','factory','codebuddy','kimi','grok','codex-hooks'])
     parser.add_argument('--remove', action='store_true')
     parser.add_argument('--apply', action='store_true', help='Write the previewed changes and a dated backup')
     args = parser.parse_args()
     home = Path.home()
     adapter = home / '.local/share/omarchy-perch/perch-agent-hook'
     config_dir = Path(os.environ.get('CODEX_HOME', home / '.codex')) if args.agent == 'codex' else Path(os.environ.get('CLAUDE_CONFIG_DIR', home / '.claude'))
-    path = config_dir / ('config.toml' if args.agent == 'codex' else 'settings.json')
+    if args.agent in ('gemini','cursor','qwen','qoder','factory','codebuddy','grok','codex-hooks'):config_dir = home / ('.'+args.agent)
+    path = config_dir / ('config.toml' if args.agent == 'codex' else 'hooks.json' if args.agent == 'cursor' else 'settings.json')
+    if args.agent == 'kimi':path = Path(os.environ.get('KIMI_CODE_HOME', home/'.kimi-code'))/'config.toml'
+    if args.agent == 'grok':path = Path(os.environ.get('GROK_HOME',home/'.grok'))/'hooks/perch-status.json'
+    if args.agent == 'codex-hooks':
+        config_dir = Path(os.environ.get('CODEX_HOME', home/'.codex'))
+        config = tomllib.loads(read(config_dir/'config.toml'))
+        features = config.get('features', {})
+        policy = config.get('hooks', {})
+        if not args.remove and (features.get('hooks',features.get('codex_hooks',True)) is False or config.get('allow_managed_hooks_only') or policy.get('allow_managed_hooks_only')):
+            raise ValueError('Codex hooks are disabled or managed-only; no changes made')
+        path = config_dir/'hooks.json'
+    standalone = False
+    if args.agent == 'factory':
+        settings = json.loads(read(path) or '{}')
+        if not isinstance(settings,dict):raise ValueError('Invalid Factory settings')
+        if not args.remove and (settings.get('hooksDisabled') or settings.get('disableAllHooks') or settings.get('allowManagedHooksOnly')):
+            raise ValueError('Factory hooks are disabled or managed-only; no changes made')
+        # Preserve the legacy source when it is active instead of shadowing it.
+        direct = config_dir / 'hooks.json'
+        if direct.exists() or 'hooks' not in settings:
+            legacy = config_dir / 'hooks/hooks.json'
+            if not direct.exists() and legacy.exists():
+                raise ValueError('Migrate legacy Factory hooks with /hooks first; no changes made')
+            path, standalone = direct, True
     old = read(path)
-    new = transform(args.agent, old, adapter, args.remove)
+    new = transform(args.agent, old, adapter, args.remove, standalone)
+
     print(('Remove' if args.remove else 'Install') + f' Perch {args.agent} hooks in {path}')
-    print('Reports only generic status and a hashed session identifier. Existing unrelated settings/hooks are preserved.')
+    print('Reports generic status, project folder name and a local Hyprland window target. Existing unrelated settings/hooks are preserved.')
     if not args.apply:
         print('Preview only. Add --apply to write changes. No configuration contents are printed.')
         return
@@ -123,6 +196,8 @@ def main():
             atomic(backup, old)
             print(f'Backup: {backup}')
         atomic(path, new)
+    if args.agent == 'codex-hooks':print('Review and trust the new or changed hooks in Codex /hooks. Perch does not change trust or policy.')
+    if args.agent == 'codebuddy':print('Review the external hook changes in CodeBuddy /hooks before they take effect.')
     print('Done. Restart the agent to load its hooks. Managed restrictions are never overridden.')
 
 if __name__ == '__main__':

@@ -16,14 +16,9 @@ Controls.ScrollView {
     ColumnLayout {
         width: root.availableWidth
         spacing: Style.space(8)
+
         Text {
-            text: "Your desktop"
-            color: root.ink
-            font.pixelSize: Style.space(14)
-            font.weight: Font.DemiBold
-        }
-        Text {
-            text: "Quick access to Omarchy"
+            text: PerchStrings.t("Quick access to Omarchy")
             color: Qt.alpha(root.ink, 0.55)
             font.pixelSize: Style.space(11)
         }
@@ -37,11 +32,11 @@ Controls.ScrollView {
                 Layout.fillWidth: true
                 model: root.work ? root.work.apps : []
                 textRole: "name"
-                displayText: count ? currentText : "No installed apps loaded"
-                Accessible.name: "Application to launch or pin"
+                displayText: count ? currentText : PerchStrings.t("No installed apps loaded")
+                Accessible.name: PerchStrings.t("Application to launch or pin")
             }
             PerchAction {
-                text: "Open"
+                text: PerchStrings.t("Open")
                 ink: root.ink
                 surface: root.surface
                 enabled: !!root.work && apps.currentIndex >= 0 && !root.work.busy
@@ -51,7 +46,7 @@ Controls.ScrollView {
                     root.launched()
             }
             PerchAction {
-                text: "Pin"
+                text: PerchStrings.t("Pin")
                 ink: root.ink
                 surface: root.surface
                 enabled: !!root.desktop && !!root.work && apps.currentIndex >= 0
@@ -84,10 +79,66 @@ Controls.ScrollView {
             delegate: PerchAction {
                 required property var modelData
                 Layout.fillWidth: true
-                text: "Unpin · " + modelData.name
+                text: PerchStrings.t("Unpin · ") + modelData.name
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.desktop.unpin(modelData.id)
+            }
+        }
+        Text {
+            text: PerchStrings.t("Pinned links")
+            color: root.ink
+            font.pixelSize: Style.space(12)
+        }
+        Controls.TextField {
+            id: linkName
+            objectName: "link-name"
+            Layout.fillWidth: true
+            placeholderText: PerchStrings.t("Name")
+            maximumLength: 100
+            color: root.ink
+            palette.base: root.surface
+        }
+        Controls.TextField {
+            id: linkUrl
+            objectName: "link-url"
+            Layout.fillWidth: true
+            placeholderText: "https://…"
+            maximumLength: 2048
+            color: root.ink
+            palette.base: root.surface
+        }
+        PerchAction {
+            objectName: "link-add"
+            text: PerchStrings.t("Pin link")
+            enabled: !!root.desktop && typeof root.desktop.addLink === "function"
+            ink: root.ink
+            surface: root.surface
+            onClicked: if (root.desktop.addLink(linkName.text, linkUrl.text)) {
+                linkName.clear();
+                linkUrl.clear();
+            }
+        }
+        Repeater {
+            model: root.desktop && root.desktop.links !== undefined ? root.desktop.links : []
+            delegate: RowLayout {
+                required property var modelData
+                Layout.fillWidth: true
+                PerchAction {
+                    Layout.fillWidth: true
+                    text: modelData.name
+                    ink: root.ink
+                    surface: root.surface
+                    onClicked: if (root.desktop.openLink(modelData.url))
+                        root.launched()
+                }
+                PerchAction {
+                    text: PerchStrings.t("Unpin")
+                    Accessible.name: "Unpin " + modelData.name
+                    ink: root.ink
+                    surface: root.surface
+                    onClicked: root.desktop.removeLink(modelData.url)
+                }
             }
         }
         Text {

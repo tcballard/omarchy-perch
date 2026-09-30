@@ -39,6 +39,11 @@ for event, state in [('UserPromptSubmit','running'),('Stop','done'),('PostToolUs
     result=hook.report('claude',{'session_id':'secret-session','hook_event_name':event,'prompt':'secret prompt','tool_input':{'token':'secret'}})
     assert result['state'] == state
     assert 'secret' not in json.dumps(result)
+original_target=hook.hyprland_target
+hook.hyprland_target=lambda: {'target':'0xabc123'}
+session=hook.report('claude',{'session_id':'session','hook_event_name':'UserPromptSubmit','cwd':'/home/tom/code/perch'})
+assert session['title']=='perch' and session['project']=='perch' and session['target']=='0xabc123' and session['kind']=='agent'
+hook.hyprland_target=original_target
 assert hook.report('claude',{'session_id':'s','hook_event_name':'Notification','notification_type':'auth_success'}) is None
 assert hook.report('claude',{'session_id':'s','hook_event_name':'Notification','notification_type':'permission_prompt'})['state']=='waiting'
 assert hook.report('codex',{'thread-id':'s','type':'approval-requested'}) is None
@@ -122,3 +127,11 @@ with tempfile.TemporaryDirectory() as directory:
     assert outcome.returncode!=0 and not osd.exists(),outcome.stderr
     assert run('perch-notifications-setup','--kind','osd','--apply').returncode==0 and osd.exists()
 print('rc2: reversible setup, owned edits, notifier preservation, silent hooks and status-only payloads passed.')
+
+approval=hook.report('claude',{'session_id':'s','hook_event_name':'Notification','notification_type':'permission_prompt'})
+question=hook.report('claude',{'session_id':'s','hook_event_name':'Notification','notification_type':'elicitation_dialog'})
+assert approval['attention']=='approval' and question['attention']=='question'
+a={'thread-id':'s','type':'agent-turn-complete','turn-id':'one'}
+b=dict(a, **{'turn-id':'two'})
+assert hook.report('codex',a)['eventKey']==hook.report('codex',a)['eventKey']
+assert hook.report('codex',a)['eventKey']!=hook.report('codex',b)['eventKey']

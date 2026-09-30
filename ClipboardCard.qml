@@ -12,7 +12,7 @@ ColumnLayout {
     Controls.TextField {
         objectName: "clipboard-search"
         Layout.fillWidth: true
-        placeholderText: "Search recent clipboard previews…"
+        placeholderText: PerchStrings.t("Search recent clipboard previews…")
         text: root.state ? root.state.query : ""
         maximumLength: 120
         color: root.ink
@@ -62,15 +62,29 @@ ColumnLayout {
                 radius: Style.space(6)
                 color: Qt.alpha(root.ink, parent.hovered || results.activeFocus && results.currentIndex === parent.index ? 0.15 : 0.06)
             }
-            contentItem: Text {
-                text: modelData.preview
-                textFormat: Text.PlainText
-                color: root.ink
-                font.pixelSize: Style.space(11)
-                wrapMode: Text.WrapAnywhere
-                maximumLineCount: 2
-                elide: Text.ElideRight
-                verticalAlignment: Text.AlignVCenter
+            contentItem: RowLayout {
+                Image {
+                    visible: !!modelData.image
+                    source: modelData.image || ""
+                    Layout.preferredWidth: visible ? Style.space(48) : 0
+                    Layout.preferredHeight: Style.space(44)
+                    sourceSize.width: 96
+                    sourceSize.height: 96
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    cache: false
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: modelData.preview
+                    textFormat: Text.PlainText
+                    color: root.ink
+                    font.pixelSize: Style.space(11)
+                    wrapMode: Text.WrapAnywhere
+                    maximumLineCount: 2
+                    elide: Text.ElideRight
+                    verticalAlignment: Text.AlignVCenter
+                }
             }
             onClicked: root.state.copyClip(modelData.id)
         }
@@ -79,7 +93,7 @@ ColumnLayout {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         textFormat: Text.PlainText
-        text: !root.state ? "Clipboard unavailable" : root.state.clipboardError || root.state.copyMessage || (root.state.clipboardBusy ? "Reading…" : root.state.clips.length ? "Select to copy; then paste in your app. History is owned by Omarchy." : "No matching entries. History is owned by Omarchy.")
+        text: !root.state ? PerchStrings.t("Clipboard unavailable") : root.state.clipboardError || root.state.copyMessage || (root.state.clipboardBusy ? PerchStrings.t("Reading…") : root.state.clips.length ? PerchStrings.t("Select to copy; then paste in your app. History is owned by Omarchy.") : PerchStrings.t("No matching entries. History is owned by Omarchy."))
         color: Qt.alpha(root.ink, 0.65)
         font.pixelSize: Style.space(10)
     }

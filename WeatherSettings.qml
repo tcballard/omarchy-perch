@@ -12,7 +12,7 @@ ColumnLayout {
     Controls.TextField {
         id: location
         Layout.fillWidth: true
-        placeholderText: "Location label"
+        placeholderText: PerchStrings.t("Location label")
         maximumLength: 80
         text: root.state ? root.state.weatherConfig.name || "" : ""
         color: root.ink
@@ -22,7 +22,7 @@ ColumnLayout {
         Controls.TextField {
             id: latitude
             Layout.fillWidth: true
-            placeholderText: "Latitude"
+            placeholderText: PerchStrings.t("Latitude")
             maximumLength: 12
             text: root.state && root.state.weatherConfig.latitude !== undefined ? String(root.state.weatherConfig.latitude) : ""
             color: root.ink
@@ -31,7 +31,7 @@ ColumnLayout {
         Controls.TextField {
             id: longitude
             Layout.fillWidth: true
-            placeholderText: "Longitude"
+            placeholderText: PerchStrings.t("Longitude")
             maximumLength: 12
             text: root.state && root.state.weatherConfig.longitude !== undefined ? String(root.state.weatherConfig.longitude) : ""
             color: root.ink
@@ -41,20 +41,20 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
-        text: "Enabling sends these coordinates to api.open-meteo.com. No automatic location lookup. Updates every 15 minutes while visible."
+        text: PerchStrings.t("Enabling sends these coordinates to api.open-meteo.com. No automatic location lookup. Updates every 15 minutes while visible.")
         color: root.ink
         font.pixelSize: Style.space(11)
     }
     RowLayout {
         PerchAction {
-            text: "Save & enable"
+            text: PerchStrings.t("Save & enable")
             ink: root.ink
             surface: root.surface
             onClicked: if (root.state)
                 root.state.saveWeather(location.text, latitude.text, longitude.text, true)
         }
         PerchAction {
-            text: "Disable"
+            text: PerchStrings.t("Disable")
             ink: root.ink
             surface: root.surface
             onClicked: if (root.state)

@@ -12,7 +12,7 @@ Every comparison category has an implementation or an explicit platform boundary
 | Calendar | Local/synced ICS agenda, meeting countdown, Join, timezone-aware daily/weekly recurrence and exceptions | Account OAuth/sync is external; complex recurrence is reported partial |
 | Music | MPRIS seek/player controls, optional bounded remote covers, local synchronized lyrics/reader | Player capabilities vary; no lyrics-provider account or audio visualizer |
 | Timers | Eight named timers, persistence, repeat/snooze, sound/notification options, fullscreen policy | Wall-clock changes matter; sound requires helper; suspend/device checks live |
-| Activities | Build command, byte-progress download/copy adapters; existing generic IPC and agent hooks | Explicit producer jobs; no automatic browser-download interception; Codex completion-only |
+| Activities | Build command, byte-progress download/copy adapters; project-labelled agent sessions, attention queue and Hyprland window return | Explicit producer jobs; no automatic browser-download interception; Codex completion-only; no approval response bridge |
 | Displays | Pinned/focused monitor, per-display edge/width/offset/fullscreen settings | One surface on one selected monitor; unplug/DPI/compositor behavior live |
 | Applications | Installed application picker, eight pins, supported desktop menus | Desktop entries depend on installed apps; no arbitrary shell commands from incoming activity data |
 | Evidence/performance | Production QML tests/render, bounded helper tests, lifecycle tests, diagnostics runner | No invented FPS, battery-life or latency numbers; whole-shell diagnostics need real session |

@@ -12,5 +12,23 @@ assert.equal(m.get('file:///tmp/bad.qml'), null);
 console.log('Native module registry bounds, allowlist, reorder and last-item preservation passed.');
 
 const prefs = require("../PreferencesPolicy.js");
-assert.equal(prefs.clean({layoutMode:"pill"}).layoutMode,"strip");
-assert.equal(prefs.clean({}).layoutMode,"strip");
+assert.equal(prefs.clean({layoutMode:"pill"}).layoutMode,"notch");
+assert.equal(prefs.clean({}).layoutMode,"notch");
+
+assert.deepEqual(m.clean(['music','plugin:example.notes','plugin:../bad','plugin:omarchy.lock','plugin:io.github.tcballard.perch']),['music','plugin:example.notes']);
+assert.deepEqual(m.move(['music','plugin:example.notes'],'plugin:example.notes',0),['plugin:example.notes','music']);
+assert.equal(m.pluginId('plugin:example.notes;id'),'');
+
+const search=require('../ModulePolicy.js').search;
+assert.equal(search([{id:'example.rss',name:'RSS Feed',enabled:true}], 'rss')[0].id,'plugin:example.rss');
+assert.equal(search([{id:'example.disabled',name:'Disabled',enabled:false}], 'disabled')[0].enabled,false);
+assert.equal(search([{id:'../../bad',name:'Bad',enabled:true}], 'bad').length,0);
+assert.equal(search([], 'clipboard')[0].id,'clipboard');
+assert.equal(search([], 'no matches').length,0);
+const S=require('../ShortcutPolicy.js');
+assert.deepEqual(S.clean({music:'Ctrl+Alt+M',timer:'Ctrl+Alt+M',stats:'Ctrl+Q'},['music','timer','stats']),{music:'Ctrl+Alt+M'});
+assert.equal(S.assign({music:'Ctrl+Alt+M'},['music','timer'],'timer','Ctrl+Alt+M'),null);
+assert.deepEqual(S.assign({music:'Ctrl+Alt+M'},['music'],'music',''),{});
+assert.equal(S.assign({},['music'],'bad','Ctrl+Alt+B'),null);
+assert.equal(S.assign({},['music'],'music','Meta+M'),null);
+console.log('Module shortcut schema, duplicates, removal and reserved keys passed.');

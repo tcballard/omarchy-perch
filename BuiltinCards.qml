@@ -9,85 +9,13 @@ Item {
     id: cards
     required property var host
     property Component hubCard: Component {
-        Item {
-            property color ink
-            property color surface
-            Controls.ScrollView {
-                anchors.fill: parent
-                contentWidth: availableWidth
-                clip: true
-                GridLayout {
-                    width: parent.width
-                    columns: 2
-                    rowSpacing: Style.space(10)
-                    columnSpacing: Style.space(10)
-                    Repeater {
-                        model: [
-                            {
-                                id: "music",
-                                label: "Music"
-                            },
-                            {
-                                id: "timer",
-                                label: "Timers"
-                            },
-                            {
-                                id: "system",
-                                label: "Devices"
-                            },
-                            {
-                                id: "clipboard",
-                                label: "Clipboard"
-                            },
-                            {
-                                id: "stats",
-                                label: "System stats"
-                            },
-                            {
-                                id: "weather",
-                                label: "Weather"
-                            },
-                            {
-                                id: "shelf",
-                                label: "File shelf"
-                            },
-                            {
-                                id: "calendar",
-                                label: "Calendar"
-                            },
-                            {
-                                id: "desktop",
-                                label: "Desktop"
-                            },
-                            {
-                                id: "inbox",
-                                label: "Notifications"
-                            },
-                            {
-                                id: "setup",
-                                label: "Setup & health"
-                            },
-                            {
-                                id: "activity",
-                                label: "Live activities"
-                            }
-                        ]
-                        delegate: PerchAction {
-                            required property var modelData
-                            Layout.fillWidth: true
-                            implicitHeight: Style.space(54)
-                            text: modelData.label
-                            ink: cards.host.ink
-                            surface: cards.host.surface
-                            onClicked: cards.host.page = modelData.id
-                        }
-                    }
-                }
-            }
+        ToolsView {
+            host: cards.host
         }
     }
     property Component shelfCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             ShelfView {
@@ -110,7 +38,7 @@ Item {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                text: cards.host.work ? (cards.host.work.busy ? "Working…" : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
+                text: cards.host.work ? (cards.host.work.busy ? PerchStrings.t("Working…") : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
@@ -122,6 +50,7 @@ Item {
     }
     property Component calendarCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             CalendarView {
@@ -144,7 +73,7 @@ Item {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                text: cards.host.work ? (cards.host.work.busy ? "Working…" : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
+                text: cards.host.work ? (cards.host.work.busy ? PerchStrings.t("Working…") : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
@@ -156,9 +85,12 @@ Item {
     }
     property Component setupCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             SetupView {
+                codexServer: cards.host.media && cards.host.media.codexServer !== undefined ? cards.host.media.codexServer : null
+                relay: cards.host.media && cards.host.media.relay !== undefined ? cards.host.media.relay : null
                 anchors {
                     left: parent.left
                     right: parent.right
@@ -177,7 +109,7 @@ Item {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                text: cards.host.work ? (cards.host.work.busy ? "Working…" : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
+                text: cards.host.work ? (cards.host.work.busy ? PerchStrings.t("Working…") : cards.host.work.error || cards.host.work.message) : "Demo: integration unavailable"
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
@@ -189,6 +121,7 @@ Item {
     }
     property Component inboxCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             InboxView {
@@ -202,6 +135,7 @@ Item {
     }
     property Component lyricsCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {
@@ -223,6 +157,7 @@ Item {
     }
     property Component desktopCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             DesktopView {
@@ -238,6 +173,7 @@ Item {
     }
     property Component timerCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             TimerView {
@@ -251,6 +187,7 @@ Item {
     }
     property Component systemCard: Component {
         Item {
+            implicitHeight: Style.space(304)
             property color ink
             property color surface
             SystemView {
@@ -265,6 +202,7 @@ Item {
     }
     property Component activityCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {
@@ -272,6 +210,10 @@ Item {
                 contentWidth: availableWidth
                 clip: true
                 ActivityView {
+                    onReviewRequested: id => {
+                        cards.host.eventId = id;
+                        cards.host.page = "event";
+                    }
                     width: parent.width
                     live: cards.host.live
                     ink: cards.host.ink
@@ -282,6 +224,7 @@ Item {
     }
     property Component playersCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {
@@ -300,6 +243,7 @@ Item {
     }
     property Component musicCard: Component {
         Item {
+            implicitHeight: children.length ? children[0].implicitHeight : 0
             property color ink
             property color surface
             Controls.ScrollView {
@@ -359,7 +303,7 @@ Item {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: cards.host.hasPlayer ? cards.host.media.artist : "Play music or a video.\nYour controls will appear here."
+                                text: cards.host.hasPlayer ? cards.host.media.artist : PerchStrings.t("Play music or a video.\nYour controls will appear here.")
                                 textFormat: Text.PlainText
                                 color: Qt.alpha(cards.host.ink, 0.55)
                                 font.family: Style.font.family
@@ -376,13 +320,13 @@ Item {
                         spacing: Style.space(10)
                         Text {
                             Layout.fillWidth: true
-                            text: cards.host.playing ? "Playing" : "Paused"
+                            text: cards.host.playing ? PerchStrings.t("Playing") : PerchStrings.t("Paused")
                             color: Qt.alpha(cards.host.ink, 0.45)
                             font.pixelSize: Style.space(10)
                         }
                         NotchButton {
                             glyph: "previous"
-                            label: "Previous track"
+                            label: PerchStrings.t("Previous track")
                             ink: cards.host.ink
                             surface: cards.host.surface
                             enabled: cards.host.hasPlayer && cards.host.media.canPrevious
@@ -391,7 +335,7 @@ Item {
                         NotchButton {
                             objectName: "playback"
                             glyph: cards.host.playing ? "pause" : "play"
-                            label: cards.host.playing ? "Pause" : "Play"
+                            label: cards.host.playing ? PerchStrings.t("Pause") : PerchStrings.t("Play")
                             prominent: true
                             ink: cards.host.ink
                             surface: cards.host.surface
@@ -400,7 +344,7 @@ Item {
                         }
                         NotchButton {
                             glyph: "next"
-                            label: "Next track"
+                            label: PerchStrings.t("Next track")
                             ink: cards.host.ink
                             surface: cards.host.surface
                             enabled: cards.host.hasPlayer && cards.host.media.canNext
@@ -412,7 +356,7 @@ Item {
                         NotchButton {
                             visible: cards.host.hasPlayer
                             glyph: "players"
-                            label: "Switch player"
+                            label: PerchStrings.t("Switch player")
                             ink: cards.host.ink
                             surface: cards.host.surface
                             onClicked: cards.host.page = "players"
@@ -465,14 +409,14 @@ Item {
                         }
                         RowLayout {
                             PerchAction {
-                                text: "Load lyrics"
+                                text: PerchStrings.t("Load lyrics")
                                 ink: cards.host.ink
                                 surface: cards.host.surface
                                 enabled: cards.host.hasPlayer && !cards.host.demo
                                 onClicked: cards.host.openLyrics()
                             }
                             PerchAction {
-                                text: "Read lyrics"
+                                text: PerchStrings.t("Read lyrics")
                                 ink: cards.host.ink
                                 surface: cards.host.surface
                                 enabled: !!cards.host.media && !!cards.host.media.lyrics && cards.host.media.lyrics.length > 0

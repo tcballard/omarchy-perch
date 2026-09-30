@@ -1,21 +1,258 @@
 #!/usr/bin/env python3
 """Best-effort, status-only Claude Code / Codex hook. Always succeeds silently."""
+# Also supports the documented Gemini CLI and Cursor status event formats.
 import hashlib
 import json
+import os
+import re
+import socket
+import stat
+from pathlib import Path
 import subprocess
 import sys
 
 LIMIT = 65536
 
+def parent_pids(pid):
+    result = []
+    for _ in range(32):
+        try:
+            stat = Path(f'/proc/{pid}/stat').read_text()
+            tail = stat[stat.rfind(')') + 2:].split()
+            pid = int(tail[1])
+        except (OSError, ValueError, IndexError):
+            break
+        if pid <= 1:
+            break
+        result.append(pid)
+    return result
+
+def process_start(pid):
+    raw = Path(f'/proc/{pid}/stat').read_text()
+    return raw[raw.rfind(')') + 2:].split()[19]
+
+
+def tmux_target(clients):
+    value, pane = os.environ.get('TMUX', ''), os.environ.get('TMUX_PANE', '')
+    if not value or not re.fullmatch(r'%[0-9]+', pane):
+        return {}
+    path = value.rsplit(',', 2)[0]
+    info = os.lstat(path)
+    if not os.path.isabs(path) or not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
+        return {}
+    def query(*args):
+        result = subprocess.run(['tmux', '-S', path, *args], stdin=subprocess.DEVNULL,
+            capture_output=True, timeout=.25, check=False)
+        if result.returncode or len(result.stdout) > 65536:
+            raise ValueError('tmux query failed')
+        return result.stdout.decode().strip()
+    pane_pid, session = query('display-message', '-p', '-t', pane, '#{pane_pid} #{session_id}').split()
+    pane_pid = int(pane_pid)
+    if pane_pid not in parent_pids(os.getpid()):
+        return {}
+    candidates = []
+    for line in query('list-clients', '-F', '#{client_pid} #{client_tty} #{session_id}').splitlines():
+        pid, tty, attached = line.split()
+        if attached != session:
+            continue
+        pid = int(pid)
+        ancestors = set([pid] + parent_pids(pid))
+        for window in clients:
+            if isinstance(window, dict) and window.get('pid') in ancestors:
+                candidates.append((window, {'socket':path, 'pane':pane, 'panePid':pane_pid,
+                    'paneStart':process_start(pane_pid), 'client':tty, 'clientPid':pid,
+                    'clientStart':process_start(pid)}))
+    # Multiple attached terminals are ambiguous: never select one arbitrarily.
+    if len(candidates) != 1:
+        return {}
+    window, target = candidates[0]
+    return window_target(window, target)
+
+
+def wezterm_target(window):
+    pane, path = os.environ.get('WEZTERM_PANE',''), os.environ.get('WEZTERM_UNIX_SOCKET','')
+    if not re.fullmatch(r'[0-9]{1,12}',pane) or not path.startswith('/') or len(path)>1024:return {}
+    info=os.lstat(path)
+    if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid():return {}
+    result=subprocess.run(['wezterm','cli','list','--format','json'],stdin=subprocess.DEVNULL,
+        capture_output=True,timeout=.25,check=False)
+    if result.returncode or len(result.stdout)>262144:return {}
+    rows=json.loads(result.stdout)
+    if not isinstance(rows,list):return {}
+    matches=[p for p in rows if isinstance(p,dict) and p.get('pane_id')==int(pane)]
+    if len(matches)!=1:return {}
+    target=window_target(window)
+    target['targetWezterm']={'socket':path,'pane':int(pane),'device':str(info.st_dev),
+        'inode':str(info.st_ino),'windowStart':process_start(window['pid'])}
+    return target
+
+
+def window_target(window, tmux=None):
+    address = window.get('address', '')
+    if not isinstance(address, str) or not re.fullmatch(r'0x[0-9a-fA-F]{1,16}', address):
+        return {}
+    result = {'target':address, 'targetPid':window['pid'],
+        'targetStart':process_start(window['pid']),
+        'targetBoot':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}
+    if tmux:
+        result['targetTmux'] = tmux
+    return result
+
+
+def hyprland_target():
+    # A Zellij server may outlive its creating terminal; that ancestor is not
+    # evidence of the currently attached desktop window.
+    if os.environ.get('ZELLIJ_SESSION_NAME') and not os.environ.get('TMUX'):return {}
+    if not os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        return {}
+    try:
+        completed = subprocess.run(['hyprctl', '-j', 'clients'], stdin=subprocess.DEVNULL,
+            capture_output=True, timeout=.25, check=False)
+        if completed.returncode or len(completed.stdout) > 262144:
+            return {}
+        clients = json.loads(completed.stdout)
+        if os.environ.get('TMUX'):
+            return tmux_target(clients)
+        ancestors = set(parent_pids(os.getpid()))
+        matches = [c for c in clients if isinstance(c, dict) and c.get('pid') in ancestors]
+        if len(matches) != 1:return {}
+        if os.environ.get('WEZTERM_PANE'):return wezterm_target(matches[0])
+        return window_target(matches[0])
+    except (OSError, ValueError, TypeError, subprocess.SubprocessError):
+        return {}
+
+def zellij_target():
+    session,pane=os.environ.get('ZELLIJ_SESSION_NAME',''),os.environ.get('ZELLIJ_PANE_ID','')
+    if os.environ.get('TMUX') or os.environ.get('PERCH_RELAY_SOCKET'):return {}
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,79}',session) or not re.fullmatch(r'[0-9]{1,10}',pane) or int(pane)>=2**32:return {}
+    for pid in parent_pids(os.getpid()):
+        try:
+            binary=os.readlink(f'/proc/{pid}/exe')
+            if Path(binary).name!='zellij':continue
+            with open(f'/proc/{pid}/cmdline','rb') as stream:args=stream.read(4096).decode().split('\0')
+            if '--server' not in args:continue
+            path=Path(args[args.index('--server')+1])
+            if not path.is_absolute() or len(str(path))>1024 or path.name!=session or len(path.parents)<2:continue
+            info=path.lstat();exe=Path(f'/proc/{pid}/exe').stat();disk=Path(binary).stat()
+            if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid() or (exe.st_dev,exe.st_ino)!=(disk.st_dev,disk.st_ino):continue
+            return {'targetZellij':{'session':session,'pane':int(pane),'socket':str(path),
+                'device':str(info.st_dev),'inode':str(info.st_ino),'serverPid':pid,'serverStart':process_start(pid),
+                'boot':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),'binary':binary,
+                'binaryDevice':str(exe.st_dev),'binaryInode':str(exe.st_ino)}}
+        except (OSError,ValueError,IndexError):continue
+    return {}
+
+IDE_COMMANDS = {'code':'code','code-insiders':'code-insiders','cursor':'cursor','windsurf':'windsurf',
+    'trae':'trae','zed':'zed','zed-editor':'zed','idea':'idea','webstorm':'webstorm',
+    'pycharm':'pycharm','goland':'goland','clion':'clion','rubymine':'rubymine',
+    'phpstorm':'phpstorm','rider':'rider','rustrover':'rustrover'}
+
+
+def workspace_target(data):
+    cwd=data.get('cwd')
+    if not isinstance(cwd,str) or not cwd.startswith('/') or len(cwd)>1024 or not Path(cwd).is_dir():return {}
+    try:
+        for pid in parent_pids(os.getpid()):
+            try:name=Path(os.readlink(f'/proc/{pid}/exe')).name.lower()
+            except OSError:continue
+            command=IDE_COMMANDS.get(name)
+            if command:
+                return {'targetWorkspace':{'app':command,'path':cwd,'pid':pid,'start':process_start(pid),
+                    'boot':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}}
+    except (OSError,ValueError,IndexError):pass
+    return {}
+
+
+def agent_process(agent):
+    names={'claude':('claude',),'codex':('codex',),'gemini':('gemini',),'cursor':('cursor','cursor-agent'),
+        'qwen':('qwen',),'qoder':('qoder','qodercli'),'factory':('droid',),'codebuddy':('codebuddy',),
+        'kimi':('kimi',),'grok':('grok',),'opencode':('opencode',),'pi':('pi',),'omp':('omp',)}
+    packages={'claude':'/@anthropic-ai/claude-code/','codex':'/@openai/codex/',
+        'gemini':'/@google/gemini-cli/','qwen':'/@qwen-code/qwen-code/',
+        'pi':'/@earendil-works/pi-coding-agent/','omp':'/@oh-my-pi/pi-coding-agent/'}
+    for pid in parent_pids(os.getpid()):
+        try:
+            with open(f'/proc/{pid}/cmdline','rb') as stream:args=stream.read(4096).split(b'\0')[:3]
+            paths=[v.decode('utf-8',errors='replace') for v in args if v.startswith(b'/')]
+            name=Path(os.readlink(f'/proc/{pid}/exe')).name.lower()
+            match=name in names.get(agent,()) or any(Path(v).name in names.get(agent,()) or (packages.get(agent) and packages[agent] in v) for v in paths)
+            if match:return {'agentProcess':{'pid':pid,'start':process_start(pid),
+                'boot':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}}
+        except (OSError,ValueError,IndexError):continue
+    return {}
+
+
+def project_name(data):
+    cwd = data.get('cwd') if isinstance(data, dict) else None
+    if not isinstance(cwd, str) or not cwd or len(cwd) > 4096:
+        return ''
+    name = Path(cwd).name
+    return name[:100] if name not in ('', '.', '/') else cwd[:100]
+
+def codex_target(session):
+    if not isinstance(session,str) or not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}',session):return {}
+    if os.environ.get('PERCH_RELAY_SOCKET'):return {}
+    try:
+        reply=subprocess.run(['xdg-mime','query','default','x-scheme-handler/codex'],
+            stdin=subprocess.DEVNULL,capture_output=True,timeout=.25,check=False)
+        handler=reply.stdout.decode().strip()
+        if reply.returncode or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,240}\.desktop',handler):return {}
+        return {'targetCodex':{'thread':session.lower(),'handler':handler}}
+    except (OSError,ValueError,subprocess.SubprocessError):return {}
+
 def report(agent, data):
     if not isinstance(data, dict):
         return None
-    if agent == 'codex':
-        if data.get('type') != 'agent-turn-complete':
-            return None
-        session = data.get('thread-id')
-        state, detail = 'done', 'Turn complete'
-    elif agent == 'claude':
+    if agent == 'codex-hooks':agent = 'codex'
+    attention = 'attention'
+    if agent in ('pi','omp','opencode'):
+        session = data.get('session_id')
+        state = data.get('state')
+        if state not in ('running','done','error','waiting'):return None
+        detail = {'running':'Working','done':'Turn complete','error':'Agent stopped with an error','waiting':'Needs your attention in the agent'}[state]
+        attention = data['attention'] if data.get('attention') in ('approval','question') else 'attention'
+    elif agent == 'grok':
+        session = data.get('sessionId') or data.get('session_id')
+        event = data.get('hook_event_name') or data.get('hookEventName')
+        event = {'user_prompt_submit':'UserPromptSubmit','post_tool_use':'PostToolUse',
+            'notification':'Notification','stop':'Stop','session_end':'SessionEnd',
+            'stop_cancelled':'StopCancelled','stop_failure':'StopFailure'}.get(event,event)
+        states = {'UserPromptSubmit':('running','Working'),'PostToolUse':('running','Working'),
+            'Stop':('done','Turn complete'),'SessionEnd':('done','Session ended'),
+            'StopCancelled':('done','Turn cancelled'),'StopFailure':('error','Agent stopped with an error')}
+        if event == 'Notification':
+            kind = data.get('notificationType') or data.get('notification_type')
+            if kind not in ('permission_prompt','idle_prompt','elicitation_dialog'):return None
+            state,detail = 'waiting','Needs your attention in Grok'
+            attention = 'approval' if kind == 'permission_prompt' else 'question'
+        elif event in states:state,detail=states[event]
+        else:return None
+    elif agent == 'kimi':
+        session = data.get('session_id')
+        event = data.get('hook_event_name')
+        states = {'TurnStarted':('running','Working'), 'PostToolUse':('running','Working'),
+            'PermissionRequest':('waiting','Needs your approval in Kimi'),
+            'PermissionResult':('running','Working'), 'Stop':('done','Turn complete'),
+            'SessionEnd':('done','Session ended'), 'Interrupt':('done','Turn cancelled'),
+            'StopFailure':('error','Agent stopped with an error')}
+        if event not in states:return None
+        state, detail = states[event]
+        if event == 'PermissionRequest':attention = 'approval'
+    elif agent == 'codex':
+        if data.get('type') == 'agent-turn-complete':
+            session = data.get('thread-id')
+            state, detail = 'done', 'Turn complete'
+        else:
+            session = data.get('session_id')
+            event = data.get('hook_event_name')
+            states = {'UserPromptSubmit':('running','Working'), 'PreToolUse':('running','Working'),
+                'PostToolUse':('running','Working'), 'PermissionRequest':('waiting','Needs your approval in Codex'),
+                'Stop':('done','Turn complete'), 'SessionEnd':('done','Session ended'),
+                'Interrupt':('done','Turn cancelled')}
+            if event not in states:return None
+            state,detail = states[event]
+            if event == 'PermissionRequest':attention = 'approval'
+    elif agent in ('claude','qwen','qoder','factory','codebuddy'):
         session = data.get('session_id')
         event = data.get('hook_event_name')
         states = {'UserPromptSubmit': ('running', 'Working'),
@@ -25,18 +262,58 @@ def report(agent, data):
         if event == 'Notification':
             if data.get('notification_type') not in ('permission_prompt', 'idle_prompt', 'elicitation_dialog'):
                 return None
-            state, detail = 'waiting', 'Needs your attention in Claude Code'
+            attention = 'approval' if data.get('notification_type') == 'permission_prompt' else 'question'
+            state, detail = 'waiting', 'Needs your attention in ' + {'claude':'Claude Code','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy','pi':'Pi','omp':'Oh My Pi','opencode':'OpenCode','kimi':'Kimi','grok':'Grok'}[agent]
         elif event in states:
             state, detail = states[event]
         else:
             return None
+    elif agent == 'gemini':
+        session = data.get('session_id')
+        event = data.get('hook_event_name')
+        states = {'BeforeAgent': ('running','Working'), 'AfterTool': ('running','Working'),
+                  'AfterAgent': ('done','Turn complete'), 'SessionEnd': ('done','Session ended')}
+        if event == 'Notification' and data.get('notification_type') == 'ToolPermission':
+            state,detail,attention = 'waiting','Needs your attention in Gemini CLI','approval'
+        elif event in states:
+            state,detail = states[event]
+        else:return None
+    elif agent == 'cursor':
+        session = data.get('conversation_id') or data.get('session_id')
+        event = data.get('hook_event_name')
+        if event in ('beforeSubmitPrompt','postToolUse'):
+            state,detail = 'running','Working'
+        elif event in ('stop','sessionEnd'):
+            status = data.get('status') or data.get('reason')
+            state = 'error' if status == 'error' else 'done'
+            detail = 'Agent stopped with an error' if state == 'error' else 'Turn cancelled' if status == 'aborted' else 'Session ended' if event == 'sessionEnd' else 'Turn complete'
+        else:return None
+        roots=data.get('workspace_roots')
+        if isinstance(roots,list) and roots and isinstance(roots[0],str):data=dict(data,cwd=roots[0])
     else:
         return None
     if not isinstance(session, str) or not session or len(session) > 4096:
         return None
     key = hashlib.sha256(session.encode()).hexdigest()[:20]
-    return {'id': agent + '.' + key, 'title': 'Codex' if agent == 'codex' else 'Claude Code',
-            'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600}
+    label = {'claude':'Claude','codex':'Codex','gemini':'Gemini','cursor':'Cursor','qwen':'Qwen Code','qoder':'Qoder','factory':'Factory Droid','codebuddy':'CodeBuddy','pi':'Pi','omp':'Oh My Pi','opencode':'OpenCode','kimi':'Kimi','grok':'Grok'}[agent]
+    return {'id': agent + '.' + key, 'title': project_name(data) or label,
+            'state': state, 'detail': detail, 'ttl': 30 if state == 'done' else 3600,
+            'kind': 'agent', 'agent': label,
+            'project': project_name(data), **hyprland_target(), **zellij_target(), **workspace_target(data), **agent_process(agent), **(codex_target(session) if agent=='codex' else {}), 'attention': attention,
+            'eventKey': hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:32]}
+
+
+def send_relay(path,payload):
+    if not os.path.isabs(path) or len(path)>100:raise ValueError('Invalid relay socket')
+    info=os.lstat(path)
+    if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)&0o077:raise ValueError('Unsafe relay socket')
+    source=os.environ.get('PERCH_REMOTE_NAME','remote')
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,39}',source):raise ValueError('Invalid remote name')
+    allowed={k:payload[k] for k in ('id','state','title','project','agent','eventKey') if k in payload}
+    encoded=json.dumps({'source':source,'event':allowed}).encode()+b'\n'
+    if len(encoded)>8192:raise ValueError('Relay message too large')
+    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
+        conn.settimeout(.75);conn.connect(path);conn.sendall(encoded);conn.recv(128)
 
 def main():
     # A stable marker makes setup/removal ownership exact, not substring based.
@@ -47,14 +324,16 @@ def main():
         if len(sys.argv) != 4:
             return
         raw = sys.argv[3]
-    elif agent == 'claude' and len(sys.argv) == 3:
+    elif agent in ('claude','gemini','cursor','qwen','qoder','factory','codebuddy','pi','omp','opencode','kimi','grok','codex-hooks') and len(sys.argv) == 3:
         raw = sys.stdin.buffer.read(LIMIT + 1)
     else:
         return
     if len(raw) > LIMIT:
         return
     payload = report(agent, json.loads(raw))
-    if payload:
+    if payload and os.environ.get('PERCH_RELAY_SOCKET'):
+        send_relay(os.environ['PERCH_RELAY_SOCKET'],payload)
+    elif payload:
         subprocess.run(['omarchy-shell', 'io.github.tcballard.perch', 'activity', json.dumps(payload)],
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                        timeout=1, check=False)
@@ -64,3 +343,8 @@ if __name__ == '__main__':
         main()
     except (ValueError, TypeError, OSError, RecursionError, subprocess.SubprocessError):
         pass
+
+    finally:
+        # Status-only observers never return permission decisions, follow-ups or prompt content.
+        if len(sys.argv) >= 3 and sys.argv[2] in ('gemini','cursor'):
+            print('{"continue":true}' if sys.argv[2] == 'cursor' else '{}')

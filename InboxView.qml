@@ -32,14 +32,11 @@ ColumnLayout {
     spacing: Style.space(8)
     RowLayout {
         Layout.fillWidth: true
-        Text {
-            text: "Notifications"
-            color: root.ink
-            font.pixelSize: Style.space(14)
+        Item {
             Layout.fillWidth: true
         }
         PerchAction {
-            text: "Refresh"
+            text: PerchStrings.t("Refresh")
             ink: root.ink
             surface: root.surface
             enabled: !!root.inbox && !root.inbox.busy
@@ -49,7 +46,7 @@ ColumnLayout {
     RowLayout {
         visible: !!root.inbox && root.inbox.connected
         PerchAction {
-            text: root.inbox && root.inbox.dnd ? "DND on" : "DND off"
+            text: root.inbox && root.inbox.dnd ? PerchStrings.t("DND on") : PerchStrings.t("DND off")
             selected: !!root.inbox && root.inbox.dnd
             ink: root.ink
             surface: root.surface
@@ -60,7 +57,7 @@ ColumnLayout {
             Layout.fillWidth: true
         }
         PerchAction {
-            text: "Clear all"
+            text: PerchStrings.t("Clear all")
             ink: root.ink
             surface: root.surface
             enabled: !!root.inbox && root.inbox.items.length > 0 && !root.inbox.busy
@@ -70,7 +67,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: !root.inbox || !root.inbox.connected || root.inbox.error !== ""
-        text: root.inbox && root.inbox.error ? root.inbox.error : "Enable the optional notification companion to bring previews and history into Perch. See the setup guide."
+        text: root.inbox && root.inbox.error ? root.inbox.error : PerchStrings.t("Enable the optional notification companion to bring previews and history into Perch. See the setup guide.")
         textFormat: Text.PlainText
         wrapMode: Text.WordWrap
         color: Qt.alpha(root.ink, 0.6)
@@ -78,7 +75,7 @@ ColumnLayout {
     }
     Text {
         visible: !!root.inbox && root.inbox.connected && root.inbox.items.length === 0
-        text: "You're all caught up"
+        text: PerchStrings.t("You're all caught up")
         color: Qt.alpha(root.ink, 0.6)
         font.pixelSize: Style.space(13)
     }
@@ -89,13 +86,13 @@ ColumnLayout {
             surface: root.surface
             onPopupToggled: open => root.popupToggled(open)
             Layout.fillWidth: true
-            model: ["All applications"].concat(root.apps)
+            model: [PerchStrings.t("All applications")].concat(root.apps)
             currentIndex: root.apps.indexOf(root.appFilter) + 1
             onActivated: index => root.appFilter = index === 0 ? "" : root.apps[index - 1]
             Accessible.name: "Filter notifications by app"
         }
         PerchAction {
-            text: root.inbox && root.inbox.blocked && root.inbox.blocked.indexOf(root.appFilter) >= 0 ? "Unmute app" : "Mute app"
+            text: root.inbox && root.inbox.blocked && root.inbox.blocked.indexOf(root.appFilter) >= 0 ? PerchStrings.t("Unmute app") : PerchStrings.t("Mute app")
             visible: root.appFilter !== ""
             enabled: !!root.inbox && root.inbox.connected && !root.inbox.busy
             ink: root.ink
@@ -103,7 +100,7 @@ ColumnLayout {
             onClicked: root.inbox.block(root.appFilter, root.inbox.blocked.indexOf(root.appFilter) < 0)
         }
         PerchAction {
-            text: "Read"
+            text: PerchStrings.t("Read")
             Accessible.name: "Mark all notifications read"
             enabled: !!root.inbox && root.inbox.connected && !root.inbox.busy
             ink: root.ink
@@ -146,14 +143,14 @@ ColumnLayout {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: modelData.app || "Notification"
+                                text: modelData.app || PerchStrings.t("Notification")
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 color: Qt.alpha(root.ink, 0.5)
                                 font.pixelSize: Style.space(10)
                             }
                             PerchAction {
-                                text: "Dismiss"
+                                text: PerchStrings.t("Dismiss")
                                 ink: root.ink
                                 surface: root.surface
                                 enabled: !!root.inbox && root.inbox.connected && !root.inbox.busy
@@ -185,7 +182,7 @@ ColumnLayout {
                                 id: reply
                                 Layout.fillWidth: true
                                 maximumLength: 1000
-                                placeholderText: "Reply to this notification"
+                                placeholderText: PerchStrings.t("Reply to this notification")
                                 text: root.drafts[notificationCard.modelData.key] || ""
                                 onTextEdited: root.draft(notificationCard.modelData.key, text)
                                 color: root.ink
@@ -193,7 +190,7 @@ ColumnLayout {
                                 Accessible.name: "Notification reply"
                             }
                             PerchAction {
-                                text: "Send"
+                                text: PerchStrings.t("Send")
                                 ink: root.ink
                                 surface: root.surface
                                 enabled: reply.text.trim() !== "" && !!root.inbox && !root.inbox.busy
@@ -210,7 +207,7 @@ ColumnLayout {
                                 model: modelData.actions
                                 delegate: PerchAction {
                                     required property var modelData
-                                    text: modelData.label || "Open"
+                                    text: modelData.label || PerchStrings.t("Open")
                                     ink: root.ink
                                     surface: root.surface
                                     enabled: !!root.inbox && root.inbox.connected && !root.inbox.busy

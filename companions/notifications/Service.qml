@@ -101,6 +101,7 @@ Item {
                 blocked: blocked,
                 error: history.error,
                 preview: preview,
+                previewKey: previewKey,
                 items: rows
             })])) {
             dirty = true;

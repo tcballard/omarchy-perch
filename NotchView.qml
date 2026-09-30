@@ -6,22 +6,55 @@ import qs.Commons
 import "MediaPolicy.js" as Policy
 import "EdgePolicy.js" as Edges
 import "ModulePolicy.js" as Modules
+import "NotchPolicy.js" as NotchPolicy
+import "ShortcutPolicy.js" as Shortcuts
 
 FocusScope {
     id: root
     property var media: null
+    readonly property var pluginState: media && media.pluginPins !== undefined ? media.pluginPins : null
+    readonly property var cardState: media && media.pluginCards !== undefined ? media.pluginCards : null
+    signal pluginLaunchRequested(string id)
     property bool surfaceVisible: true
     readonly property var moduleState: media && media.modules !== undefined ? media.modules : null
     readonly property var moduleItems: Modules.clean(displaySettings.modules)
+    readonly property var moduleShortcuts: Shortcuts.clean(displaySettings.moduleShortcuts, moduleItems)
     readonly property bool stripVertical: Edges.vertical(edge)
     readonly property real stripLength: Style.space(46 * moduleItems.length + 8)
-    readonly property real compactWidth: stripVertical ? Style.space(52) : stripLength
-    readonly property real compactHeight: stripVertical ? stripLength : Style.space(52)
-    readonly property real bodyTop: Style.space(116)
+    readonly property bool perchMode: displaySettings.layoutMode === "strip"
+    readonly property var notchContext: NotchPolicy.context(media, displaySettings)
+    readonly property real compactWidth: perchMode ? (stripVertical ? Style.space(52) : stripLength) : Style.space(stripVertical ? 48 : notchContext.id === "idle" ? 100 : 210)
+    readonly property real compactHeight: perchMode ? (stripVertical ? stripLength : Style.space(52)) : Style.space(stripVertical ? 76 : 36)
+    readonly property real bodyTop: Style.space(page === "event" ? 58 : 116)
+    property string eventId: ""
+    readonly property var selectedEvent: live && eventId ? live.items.find(function (item) {
+        return item.id === root.eventId && item.state !== "running";
+    }) || null : null
+    signal eventEnded
+    onSelectedEventChanged: if (page === "event" && expanded && !selectedEvent)
+        eventEnded()
     function activateModule(id, pointer) {
         var descriptor = Modules.get(id);
         if (!descriptor)
             return;
+        if (descriptor.pluginId) {
+            if (pointer)
+                return;
+            if (cardState) {
+                settingsOpen = false;
+                page = id;
+                cardState.select(descriptor.pluginId);
+                if (!expanded)
+                    expandRequested();
+                return;
+            }
+            settingsView.section = "plugins";
+            settingsOpen = true;
+            if (!expanded)
+                expandRequested();
+            pluginLaunchRequested(descriptor.pluginId);
+            return;
+        }
         settingsOpen = false;
         page = descriptor.page;
         if (!expanded)
@@ -32,11 +65,67 @@ FocusScope {
         state: root.moduleState
         host: root
     }
+    PerchModule {
+        id: pluginCardDefinition
+        moduleId: root.page
+        title: root.cardState && root.cardState.card ? root.cardState.card.title : root.pluginState && root.pluginState.get(Modules.pluginId(root.page)) ? root.pluginState.get(Modules.pluginId(root.page)).name : PerchStrings.t("Plugin drawer")
+        actions: [
+            {
+                id: "refresh",
+                title: PerchStrings.t("Refresh"),
+                enabled: !!root.cardState && !root.cardState.busy
+            },
+            {
+                id: "open",
+                title: PerchStrings.t("Open"),
+                enabled: !root.cardState || !root.cardState.busy
+            }
+        ]
+        card: Component {
+            PluginDrawerCard {
+                state: root.cardState
+            }
+        }
+    }
+    PerchModule {
+        id: eventDefinition
+        moduleId: "event"
+        title: !root.selectedEvent ? PerchStrings.t("Activity") : root.selectedEvent.state === "done" ? PerchStrings.t("Complete") : root.selectedEvent.state === "error" ? PerchStrings.t("Something needs attention") : root.selectedEvent.attention === "approval" ? PerchStrings.t("Permission needed") : root.selectedEvent.attention === "question" ? PerchStrings.t("Input needed") : PerchStrings.t("Needs your attention")
+        card: Component {
+            Item {
+                property color ink
+                property color surface
+                implicitHeight: eventBody.implicitHeight
+                Controls.ScrollView {
+                    anchors.fill: parent
+                    clip: true
+                    contentWidth: availableWidth
+                    ActivityEventCard {
+                        id: eventBody
+                        width: parent.width
+                        item: root.selectedEvent
+                        live: root.live
+                        ink: root.ink
+                        surface: root.surface
+                        onBrowseRequested: root.page = "activity"
+                        onDismissRequested: root.collapseRequested()
+                        onResponded: root.collapseRequested()
+                    }
+                }
+            }
+        }
+    }
+    Binding {
+        target: root.media && root.media.usage !== undefined ? root.media.usage : null
+        property: "active"
+        when: !!root.media && root.media.usage !== undefined
+        value: root.expanded && root.surfaceVisible && !root.settingsOpen && root.page === "usage"
+    }
     Binding {
         target: root.moduleState
         property: "statsVisible"
         when: !!root.moduleState
-        value: root.surfaceVisible && (!root.settingsOpen && root.moduleItems.indexOf("stats") >= 0 || root.expanded && !root.settingsOpen && root.page === "stats")
+        value: root.surfaceVisible && ((root.perchMode || root.expanded) && !root.settingsOpen && root.moduleItems.indexOf("stats") >= 0 || root.expanded && !root.settingsOpen && root.page === "stats")
     }
     Binding {
         target: root.moduleState
@@ -48,7 +137,7 @@ FocusScope {
         target: root.moduleState
         property: "weatherVisible"
         when: !!root.moduleState
-        value: root.surfaceVisible && (!root.settingsOpen && root.moduleItems.indexOf("weather") >= 0 || root.expanded && !root.settingsOpen && root.page === "weather")
+        value: root.surfaceVisible && ((root.perchMode || root.expanded) && !root.settingsOpen && root.moduleItems.indexOf("weather") >= 0 || root.expanded && !root.settingsOpen && root.page === "weather")
     }
     property string page: "music"
     property bool showClock: true
@@ -68,7 +157,7 @@ FocusScope {
     signal dropReceived(var urls)
     readonly property var inbox: media && media.notifications !== undefined ? media.notifications : null
     readonly property var desktop: media && media.desktop !== undefined ? media.desktop : null
-    readonly property string notificationPreview: inbox ? inbox.preview : ""
+    readonly property string notificationPreview: inbox && !inbox.dnd && !displaySettings.quietMode && displaySettings.notificationPreviews !== false ? inbox.preview : ""
     property int pageOrder: 0
     readonly property real pageOffset: pageSlide.x
     readonly property real pageOpacity: pages.opacity
@@ -83,6 +172,8 @@ FocusScope {
         pageEnter.restart();
     }
     onPageChanged: {
+        if (!Modules.pluginId(page) && cardState)
+            cardState.clear();
         var order = pageSequence.indexOf(page);
         enterPage(order >= pageOrder);
         pageOrder = Math.max(0, order);
@@ -104,6 +195,11 @@ FocusScope {
     readonly property bool liveAttention: !!(live && (live.timerStatus === "done" || (live.focused && (live.focused.state === "waiting" || live.focused.state === "error"))))
     property bool expanded: false
     property bool reducedMotion: false
+    onReducedMotionChanged: if (reducedMotion) {
+        pageEnter.stop();
+        pages.opacity = 1;
+        pageSlide.x = 0;
+    }
     property bool demo: false
     property bool settingsOpen: false
     property bool hideIdle: false
@@ -116,10 +212,11 @@ FocusScope {
     readonly property string caption: hasPlayer ? media.title : "Ready when you are"
     // Use the darker of the theme's foreground/background for notch chrome.
     readonly property bool lightTheme: (Color.background.r + Color.background.g + Color.background.b) > (Color.foreground.r + Color.foreground.g + Color.foreground.b)
-    readonly property color surface: lightTheme ? Color.foreground : Color.background
-    readonly property color ink: lightTheme ? Color.background : Color.foreground
-    readonly property real expandedWidth: Math.max(preferredWidth, stripLength)
-    readonly property real expandedHeight: Style.space(468)
+    readonly property color surface: displaySettings.chromeMode === "theme" ? Color.background : lightTheme ? Color.foreground : Color.background
+    readonly property color ink: displaySettings.chromeMode === "theme" ? Color.foreground : lightTheme ? Color.background : Color.foreground
+    readonly property real maximumWidth: Math.max(preferredWidth, stripLength, Style.space(600))
+    readonly property real expandedWidth: settingsOpen ? maximumWidth : Math.max(preferredWidth, stripLength)
+    readonly property real expandedHeight: settingsOpen ? maximumHeight : Math.min(maximumHeight, Math.max(Style.space(220), bodyTop + Style.space(16) + displayedCard.contentHeight))
     readonly property real maximumHeight: Style.space(468)
     implicitWidth: expanded ? expandedWidth : compactWidth
     implicitHeight: expanded ? expandedHeight : compactHeight
@@ -128,20 +225,63 @@ FocusScope {
     signal expandRequested
     signal collapseRequested
     signal settingsChanged(bool hideIdle, bool reducedMotion, bool edgeAttached)
-    onSettingsOpenChanged: enterPage(settingsOpen)
+    onSettingsOpenChanged: {
+        enterPage(settingsOpen);
+    }
     onExpandedChanged: {
+        if (expanded && cardState && Modules.pluginId(page) && cardState.selectedId !== Modules.pluginId(page))
+            cardState.select(Modules.pluginId(page));
         if (!expanded) {
+            if (cardState)
+                cardState.clear();
             settingsOpen = false;
             popupOpen = false;
+        }
+    }
+    onSurfaceVisibleChanged: if (!surfaceVisible && cardState)
+        cardState.clear()
+    Connections {
+        target: root.live
+        function onSessionOpened() {
+            root.collapseRequested();
         }
     }
     Keys.onEscapePressed: {
         if (settingsOpen)
             settingsOpen = false;
+        else if (page === "event")
+            collapseRequested();
+        else if (Modules.pluginId(page))
+            page = "hub";
         else if (page !== "music")
             page = "music";
         else
             collapseRequested();
+    }
+    function showTools(focusSearch) {
+        settingsOpen = false;
+        page = "hub";
+        if (focusSearch)
+            Qt.callLater(function () {
+                displayedCard.focusSearch();
+            });
+    }
+    Keys.onPressed: event => {
+        if (expanded && !settingsOpen && event.modifiers === (Qt.ControlModifier | Qt.AltModifier) && !event.isAutoRepeat) {
+            var chord = "Ctrl+Alt+" + String.fromCharCode(event.key);
+            var id = moduleItems.find(function (id) {
+                return root.moduleShortcuts[id] === chord;
+            });
+            if (id) {
+                activateModule(id, false);
+                event.accepted = true;
+                return;
+            }
+        }
+        if (expanded && event.key === Qt.Key_K && (event.modifiers & Qt.ControlModifier)) {
+            showTools(true);
+            event.accepted = true;
+        }
     }
     function openLyrics() {
         lyricsPicker.open();
@@ -180,7 +320,7 @@ FocusScope {
         y: Style.space(4)
         width: parent.width - Style.space(160)
         height: Style.space(34)
-        enabled: root.expanded
+        enabled: root.expanded && !root.settingsOpen
         property real startX: 0
         onPressed: mouse => {
             startX = mouse.x;
@@ -189,7 +329,11 @@ FocusScope {
         onReleased: mouse => {
             root.interactionActive = false;
             if (Math.abs(mouse.x - startX) > 35) {
-                var pages = root.moduleItems;
+                var pages = root.moduleItems.filter(function (id) {
+                    return !Modules.pluginId(id);
+                });
+                if (!pages.length)
+                    return;
                 var i = pages.indexOf(root.page);
                 root.page = pages[(i + (mouse.x < startX ? 1 : pages.length - 1) + pages.length) % pages.length];
             }
@@ -212,11 +356,28 @@ FocusScope {
             y: root.edge === "bottom" ? parent.height - height : 1
         }
     }
+    ContextNotch {
+        objectName: "context-notch"
+        anchors.fill: parent
+        visible: !root.perchMode && !root.expanded
+        context: root.notchContext
+        vertical: root.stripVertical
+        hoverOpen: root.hoverOpen
+        ink: root.ink
+        surface: root.surface
+        onOpenRequested: {
+            if (root.notchContext.timerId && root.live && root.live.chooseTimer)
+                root.live.chooseTimer(root.notchContext.timerId);
+            root.page = root.notchContext.page;
+            root.expandRequested();
+        }
+    }
     ModuleStrip {
         anchors.fill: parent
-        visible: !root.expanded
+        visible: root.perchMode && !root.expanded
         items: root.moduleItems
         registry: moduleRegistry
+        pluginState: root.pluginState
         vertical: root.stripVertical
         hoverOpen: root.hoverOpen
         ink: root.ink
@@ -227,8 +388,8 @@ FocusScope {
     }
     Item {
         id: content
-        width: root.expandedWidth
-        height: root.expandedHeight
+        width: Math.min(root.expandedWidth, root.width)
+        height: Math.min(root.expandedHeight, root.height)
         x: root.edge === "right" ? root.width - width : root.edge === "left" ? 0 : (root.width - width) / 2
         y: root.edge === "bottom" ? root.height - height : 0
         opacity: root.expanded ? 1 : 0
@@ -252,17 +413,18 @@ FocusScope {
             spacing: Style.space(4)
             Text {
                 Layout.fillWidth: true
-                text: root.settingsOpen ? "Perch settings" : root.demo ? "Perch / demo" : "Perch"
+                text: root.settingsOpen ? PerchStrings.t("Perch settings") : root.demo ? "Perch / demo" : "Perch"
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
                 color: Qt.alpha(root.ink, 0.55)
                 font.family: Style.font.family
-                font.pixelSize: Style.space(10)
+                font.pixelSize: Style.space(root.settingsOpen ? 16 : 10)
+                font.bold: root.settingsOpen
             }
             NotchButton {
                 objectName: "open-inbox"
                 glyph: "bell"
-                label: "Notifications"
+                label: PerchStrings.t("Notifications")
                 ink: root.ink
                 surface: root.surface
                 onClicked: {
@@ -273,31 +435,30 @@ FocusScope {
             NotchButton {
                 objectName: "open-desktop"
                 glyph: "desktop"
-                label: "Files, calendar, desktop and setup"
+                label: PerchStrings.t("All tools and plugins")
                 ink: root.ink
                 surface: root.surface
                 onClicked: {
-                    root.settingsOpen = false;
-                    root.page = "hub";
+                    root.showTools(false);
                 }
             }
             NotchButton {
                 glyph: "settings"
-                label: root.settingsOpen ? "Back to player" : "Settings"
+                label: root.settingsOpen ? PerchStrings.t("Back to card") : PerchStrings.t("Settings")
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.settingsOpen = !root.settingsOpen
             }
             NotchButton {
                 glyph: "close"
-                label: "Collapse Perch"
+                label: PerchStrings.t("Collapse Perch")
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.collapseRequested()
             }
         }
         ModuleStrip {
-            visible: !root.settingsOpen
+            visible: !root.settingsOpen && root.page !== "event"
             x: Style.space(4)
             y: Style.space(45)
             width: parent.width - Style.space(8)
@@ -305,6 +466,7 @@ FocusScope {
             slot: (width - Style.space(8)) / root.moduleItems.length
             items: root.moduleItems
             registry: moduleRegistry
+            pluginState: root.pluginState
             selectedId: root.page
             ink: root.ink
             surface: root.surface
@@ -338,213 +500,35 @@ FocusScope {
                 }
             }
             ModuleCard {
+                id: displayedCard
                 objectName: "module-card"
                 visible: !root.settingsOpen
                 x: Style.space(18)
                 y: root.bodyTop
                 width: parent.width - Style.space(36)
                 height: parent.height - root.bodyTop - Style.space(16)
-                definition: visible ? moduleRegistry.get(root.page) : null
+                definition: visible ? (root.page === "event" ? eventDefinition : Modules.pluginId(root.page) ? pluginCardDefinition : moduleRegistry.get(root.page)) : null
                 ink: root.ink
                 surface: root.surface
-                onActionRequested: id => moduleRegistry.action(root.page, id)
+                onActionRequested: function (id) {
+                    if (Modules.pluginId(root.page)) {
+                        if (id === "open")
+                            root.pluginLaunchRequested(Modules.pluginId(root.page));
+                        else if (root.cardState)
+                            root.cardState.refresh();
+                    } else
+                        moduleRegistry.action(root.page, id);
+                }
             }
-            Controls.ScrollView {
+            SettingsView {
+                id: settingsView
+                objectName: "perch-settings"
                 visible: root.settingsOpen
                 x: Style.space(18)
-                y: Style.space(54)
+                y: Style.space(50)
                 width: parent.width - Style.space(36)
-                height: parent.height - Style.space(70)
-                clip: true
-                contentWidth: availableWidth
-                ColumnLayout {
-                    width: parent.width
-                    spacing: Style.space(14)
-                    Text {
-                        text: "Display"
-                        color: root.ink
-                        font.pixelSize: Style.space(12)
-                    }
-                    PerchCombo {
-                        objectName: "monitor-choice"
-                        ink: root.ink
-                        surface: root.surface
-                        onPopupToggled: open => root.popupOpen = open
-                        Layout.fillWidth: true
-                        model: ["Follow focused display"].concat(root.displayNames)
-                        currentIndex: Math.max(0, root.displayNames.indexOf(root.displaySettings.monitor || "") + 1)
-                        onActivated: index => root.preferenceChanged("monitor", index === 0 ? "" : root.displayNames[index - 1])
-                    }
-                    Controls.CheckBox {
-                        Layout.fillWidth: true
-                        text: "Save placement separately for each display"
-                        checked: root.displaySettings.perDisplay === true
-                        palette.windowText: root.ink
-                        onToggled: root.preferenceChanged("perDisplay", checked)
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Panel width"
-                            color: root.ink
-                            font.pixelSize: Style.space(11)
-                        }
-                        Controls.SpinBox {
-                            from: 304
-                            to: 544
-                            stepSize: 40
-                            value: root.displaySettings.panelWidth || 344
-                            palette.text: root.ink
-                            palette.buttonText: root.ink
-                            palette.base: root.surface
-                            palette.button: root.surface
-                            onValueModified: root.preferenceChanged("panelWidth", value)
-                        }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Extra edge spacing"
-                            color: root.ink
-                            font.pixelSize: Style.space(11)
-                        }
-                        Controls.SpinBox {
-                            from: 0
-                            to: 64
-                            stepSize: 4
-                            value: root.displaySettings.edgeOffset || 0
-                            palette.text: root.ink
-                            palette.buttonText: root.ink
-                            palette.base: root.surface
-                            palette.button: root.surface
-                            onValueModified: root.preferenceChanged("edgeOffset", value)
-                        }
-                    }
-                    Text {
-                        text: "During fullscreen"
-                        color: root.ink
-                        font.pixelSize: Style.space(11)
-                    }
-                    PerchCombo {
-                        ink: root.ink
-                        surface: root.surface
-                        onPopupToggled: open => root.popupOpen = open
-                        Layout.fillWidth: true
-                        model: ["Hide Perch", "Show completed timers only", "Keep Perch visible"]
-                        currentIndex: Math.max(0, ["hide", "alerts", "show"].indexOf(root.displaySettings.fullscreenPolicy || "hide"))
-                        onActivated: index => root.preferenceChanged("fullscreenPolicy", ["hide", "alerts", "show"][index])
-                    }
-                    Controls.CheckBox {
-                        Layout.fillWidth: true
-                        text: "Timer completion sound"
-                        checked: root.displaySettings.timerSound === true
-                        palette.windowText: root.ink
-                        onToggled: root.preferenceChanged("timerSound", checked)
-                    }
-                    Controls.CheckBox {
-                        Layout.fillWidth: true
-                        text: "Timer desktop notifications"
-                        checked: root.displaySettings.timerNotifications === true
-                        palette.windowText: root.ink
-                        onToggled: root.preferenceChanged("timerNotifications", checked)
-                    }
-                    Controls.CheckBox {
-                        Layout.fillWidth: true
-                        text: "Fetch remote cover artwork"
-                        checked: root.displaySettings.remoteArtwork === true
-                        palette.windowText: root.ink
-                        onToggled: root.preferenceChanged("remoteArtwork", checked)
-                    }
-                    Text {
-                        text: "Screen edge"
-                        color: root.ink
-                        font.family: Style.font.family
-                        font.pixelSize: Style.space(12)
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Style.space(4)
-                        Repeater {
-                            model: ["top", "bottom", "left", "right"]
-                            delegate: Controls.Button {
-                                required property string modelData
-                                objectName: "edge-" + modelData
-                                Layout.fillWidth: true
-                                implicitHeight: Style.space(34)
-                                text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                                Accessible.name: "Use " + modelData + " screen edge"
-                                background: Rectangle {
-                                    radius: Style.space(7)
-                                    color: root.edge === modelData ? root.ink : Qt.alpha(root.ink, parent.hovered ? 0.14 : 0.06)
-                                    border.width: parent.visualFocus ? 1 : 0
-                                    border.color: root.ink
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    color: root.edge === modelData ? root.surface : root.ink
-                                    font.pixelSize: Style.space(11)
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                onClicked: root.edgeRequested(modelData)
-                            }
-                        }
-                    }
-                    Repeater {
-                        model: ["Reduce motion", "Attach flush to screen edge", "Open on hover", "Volume and power banners"]
-                        delegate: Controls.CheckBox {
-                            required property int index
-                            required property string modelData
-                            Layout.fillWidth: true
-                            implicitHeight: Style.space(30)
-                            text: modelData
-                            checked: index === 0 ? root.reducedMotion : index === 1 ? root.edgeAttached : index === 2 ? root.hoverOpen : root.eventBanners
-                            indicator: Rectangle {
-                                x: parent.width - width
-                                y: (parent.height - height) / 2
-                                width: Style.space(28)
-                                height: Style.space(16)
-                                radius: height / 2
-                                color: parent.checked ? root.ink : Qt.alpha(root.ink, 0.18)
-                                border.width: parent.visualFocus ? 1 : 0
-                                border.color: root.ink
-                                Rectangle {
-                                    x: parent.parent.checked ? parent.width - width - 3 : 3
-                                    y: 3
-                                    width: parent.height - 6
-                                    height: width
-                                    radius: width / 2
-                                    color: parent.parent.checked ? root.surface : root.ink
-                                }
-                            }
-                            contentItem: Text {
-                                text: parent.text
-                                color: root.ink
-                                font.family: Style.font.family
-                                font.pixelSize: Style.space(11)
-                                verticalAlignment: Text.AlignVCenter
-                                rightPadding: Style.space(36)
-                            }
-                            onToggled: root.preferenceChanged(["reducedMotion", "edgeAttached", "hoverOpen", "eventBanners"][index], checked)
-                        }
-                    }
-                    ModuleSettings {
-                        Layout.fillWidth: true
-                        items: root.moduleItems
-                        ink: root.ink
-                        surface: root.surface
-                        onChanged: order => root.preferenceChanged("modules", order)
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        text: root.settingsError || (root.demo ? "Preferences apply to Perch, including demo." : "Saved automatically in Omarchy settings.")
-                        color: Qt.alpha(root.ink, 0.4)
-                        font.pixelSize: Style.space(10)
-                    }
-                }
+                height: parent.height - Style.space(66)
+                host: root
             }
         }
     }

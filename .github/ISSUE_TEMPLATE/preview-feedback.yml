@@ -1,0 +1,27 @@
+name: Preview usability feedback
+description: Tell us what felt useful, confusing or slow.
+title: "[Feedback] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Perch version / commit
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What were you trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: What worked, and what got in the way?
+      description: Include your preferred layout, input method and display scale. Review screenshots for personal content.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: What would improve it?

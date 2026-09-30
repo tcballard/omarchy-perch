@@ -6,6 +6,8 @@ import qs.Commons
 ColumnLayout {
     id: root
     property var work: null
+    property var relay: null
+    property var codexServer: null
     property color ink: Color.foreground
     property color surface: Color.background
     property bool confirmRemove: false
@@ -13,13 +15,13 @@ ColumnLayout {
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true
-            text: "Make Perch yours"
+            text: PerchStrings.t("Make Perch yours")
             color: root.ink
             font.pixelSize: Style.space(14)
             font.bold: true
         }
         PerchAction {
-            text: "Check"
+            text: PerchStrings.t("Check")
             ink: root.ink
             surface: root.surface
             enabled: !!root.work && !root.work.busy
@@ -28,7 +30,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Choose what Perch handles. Notifications and system feedback replace their built-in counterparts; disabling restores them."
+        text: PerchStrings.t("Choose what Perch handles. Notifications and system feedback replace their built-in counterparts; disabling restores them.")
         wrapMode: Text.WordWrap
         color: Qt.alpha(root.ink, 0.6)
         font.pixelSize: Style.space(11)
@@ -44,24 +46,104 @@ ColumnLayout {
             Repeater {
                 model: [
                     {
+                        id: "requests",
+                        name: PerchStrings.t("Claude approvals & questions"),
+                        detail: PerchStrings.t("Explicit responses in Perch; tool inputs visible only while a request is pending")
+                    },
+                    {
+                        id: "requests-codex",
+                        name: PerchStrings.t("Codex approvals"),
+                        detail: PerchStrings.t("Explicit Allow once or Deny; review and trust in Codex /hooks")
+                    },
+                    {
+                        id: "usage",
+                        name: PerchStrings.t("Claude usage status line"),
+                        detail: PerchStrings.t("Opt-in local rate-limit counters; preserves custom status lines")
+                    },
+                    {
                         id: "notifications",
-                        name: "Notifications",
-                        detail: "Inbox, replies and persistent history"
+                        name: PerchStrings.t("Notifications"),
+                        detail: PerchStrings.t("Inbox, replies and persistent history")
                     },
                     {
                         id: "osd",
-                        name: "System feedback",
-                        detail: "One set of volume and brightness overlays"
+                        name: PerchStrings.t("System feedback"),
+                        detail: PerchStrings.t("One set of volume and brightness overlays")
                     },
                     {
                         id: "claude",
                         name: "Claude Code",
-                        detail: "Working, attention and completion"
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "gemini",
+                        name: "Gemini CLI",
+                        detail: PerchStrings.t("Working, permission attention and completion; respond in Gemini")
+                    },
+                    {
+                        id: "cursor",
+                        name: "Cursor",
+                        detail: PerchStrings.t("Working, completion and errors; local desktop sessions")
+                    },
+                    {
+                        id: "qwen",
+                        name: "Qwen Code",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "qoder",
+                        name: "Qoder CLI",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "factory",
+                        name: "Factory Droid",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "codebuddy",
+                        name: "CodeBuddy Code",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "pi",
+                        name: "Pi",
+                        detail: PerchStrings.t("Working and completion; local extension")
+                    },
+                    {
+                        id: "omp",
+                        name: "Oh My Pi",
+                        detail: PerchStrings.t("Working and completion; local extension")
+                    },
+                    {
+                        id: "opencode",
+                        name: "OpenCode (v1 plugin API)",
+                        detail: PerchStrings.t("Working, permission and question attention; local extension")
+                    },
+                    {
+                        id: "opencode-requests",
+                        name: "OpenCode approvals",
+                        detail: PerchStrings.t("Allow once or deny through the v1 client; questions stay in the session")
+                    },
+                    {
+                        id: "grok",
+                        name: "Grok Build",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "kimi",
+                        name: "Kimi Code",
+                        detail: PerchStrings.t("Working, attention and completion")
+                    },
+                    {
+                        id: "codex-hooks",
+                        name: "Codex lifecycle",
+                        detail: PerchStrings.t("Working, approval attention and completion; review and trust in Codex /hooks")
                     },
                     {
                         id: "codex",
-                        name: "Codex",
-                        detail: "Turn completion only"
+                        name: "Codex notify (legacy)",
+                        detail: PerchStrings.t("Turn completion only")
                     }
                 ]
                 delegate: ColumnLayout {
@@ -78,7 +160,7 @@ ColumnLayout {
                         }
                         PerchAction {
                             readonly property bool outdated: !!root.work && Array.isArray(root.work.health.updates) && root.work.health.updates.indexOf(entry.modelData.id) >= 0
-                            text: outdated ? "Update now" : "Update"
+                            text: outdated ? PerchStrings.t("Update now") : PerchStrings.t("Update")
                             selected: outdated
                             visible: !!root.work && root.work.health[entry.modelData.id] === "enabled"
                             enabled: !!root.work && !root.work.busy && !(root.work.health.job && root.work.health.job.status === "working")
@@ -88,7 +170,7 @@ ColumnLayout {
                         }
                         PerchAction {
                             readonly property string state: root.work && root.work.health[entry.modelData.id] !== undefined ? root.work.health[entry.modelData.id] : "not checked"
-                            text: state === "enabled" ? "Disable" : "Enable"
+                            text: state === "enabled" ? PerchStrings.t("Disable") : PerchStrings.t("Enable")
                             enabled: !!root.work && !root.work.busy && !(root.work.health.job && root.work.health.job.status === "working")
                             ink: root.ink
                             surface: root.surface
@@ -122,12 +204,93 @@ ColumnLayout {
             }
             PerchAction {
                 Layout.fillWidth: true
-                text: root.confirmRemove ? "Confirm: restore defaults and remove hooks" : "Prepare Perch for removal"
+                text: PerchStrings.t("Check and update Perch")
+                enabled: !!root.work && !root.work.busy && root.work.health.selfUpdate === "available" && !(root.work.health.job && root.work.health.job.status === "working")
+                ink: root.ink
+                surface: root.surface
+                onClicked: root.work.updatePerch()
+            }
+            PerchToggle {
+                Layout.fillWidth: true
+                text: PerchStrings.t("Automatically update Perch")
+                description: PerchStrings.t("Every six hours through Omarchy; clean default-branch installs only")
+                checked: !!root.work && !!root.work.preferences && root.work.preferences.values.autoUpdate
+                enabled: !!root.work && root.work.health.selfUpdate === "available"
+                ink: root.ink
+                surface: root.surface
+                onToggled: root.work.setAutoUpdate(checked)
+            }
+            PerchToggle {
+                Layout.fillWidth: true
+                text: PerchStrings.t("Receive remote agent status")
+                description: PerchStrings.t("Optional SSH socket forwarding. Status only; permissions stay in the remote session.")
+                checked: !!root.relay && root.relay.optedIn
+                enabled: !!root.relay
+                ink: root.ink
+                surface: root.surface
+                onToggled: root.relay.setEnabled(checked)
+            }
+            Text {
+                Layout.fillWidth: true
+                text: PerchStrings.t("Codex server status")
+                color: root.ink
+                font.pixelSize: Style.space(12)
+            }
+            Text {
+                Layout.fillWidth: true
+                text: PerchStrings.t("Read an existing private local control socket every five seconds. Permissions stay in Codex. Requires python-websockets 15 or newer.")
+                wrapMode: Text.Wrap
+                color: Qt.alpha(root.ink, 0.6)
+                font.pixelSize: Style.space(10)
+            }
+            Controls.TextField {
+                id: codexSocket
+                Layout.fillWidth: true
+                text: root.codexServer ? root.codexServer.socketPath : ""
+                placeholderText: PerchStrings.t("Absolute control socket path")
+                maximumLength: 1024
+                color: root.ink
+                palette.base: root.surface
+                palette.placeholderText: Qt.alpha(root.ink, 0.5)
+            }
+            PerchAction {
+                Layout.fillWidth: true
+                text: root.codexServer && root.codexServer.optedIn ? PerchStrings.t("Stop reading Codex status") : PerchStrings.t("Read Codex status")
+                enabled: !!root.codexServer && (root.codexServer.optedIn || codexSocket.text.startsWith("/"))
+                ink: root.ink
+                surface: root.surface
+                onClicked: root.codexServer.configure(codexSocket.text, !root.codexServer.optedIn)
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: !!root.codexServer && root.codexServer.optedIn
+                text: root.codexServer ? root.codexServer.error || (root.codexServer.busy ? PerchStrings.t("Checking Codex status…") : root.codexServer.count + PerchStrings.t(" loaded sessions")) : ""
+                textFormat: Text.PlainText
+                wrapMode: Text.WrapAnywhere
+                color: Qt.alpha(root.ink, 0.6)
+                font.pixelSize: Style.space(10)
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: !!root.relay && root.relay.optedIn
+                text: root.relay ? root.relay.error || root.relay.endpoint || PerchStrings.t("Starting receiver…") : ""
+                textFormat: Text.PlainText
+                wrapMode: Text.WrapAnywhere
+                color: Qt.alpha(root.ink, 0.6)
+                font.pixelSize: Style.space(10)
+            }
+            PerchAction {
+                Layout.fillWidth: true
+                text: root.confirmRemove ? PerchStrings.t("Confirm: restore defaults and remove hooks") : PerchStrings.t("Prepare Perch for removal")
                 ink: root.ink
                 surface: root.surface
                 enabled: !!root.work && !root.work.busy
                 onClicked: {
                     if (root.confirmRemove) {
+                        if (root.relay)
+                            root.relay.setEnabled(false);
+                        if (root.codexServer)
+                            root.codexServer.configure(root.codexServer.socketPath, false);
                         root.work.removeIntegrations();
                         root.confirmRemove = false;
                     } else
@@ -136,7 +299,7 @@ ColumnLayout {
             }
             Text {
                 Layout.fillWidth: true
-                text: "Run this before disabling or removing Perch. Saved files, calendars and history are retained; shelf originals are never deleted."
+                text: PerchStrings.t("Run this before disabling or removing Perch. Saved files, calendars and history are retained; shelf originals are never deleted.")
                 wrapMode: Text.WordWrap
                 color: Qt.alpha(root.ink, 0.5)
                 font.pixelSize: Style.space(10)

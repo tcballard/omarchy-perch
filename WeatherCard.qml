@@ -9,27 +9,27 @@ ColumnLayout {
     property color surface: Color.background
     function condition(code) {
         if (code === 0)
-            return "Clear sky";
+            return PerchStrings.t("Clear sky");
         if (code <= 3)
-            return "Cloudy";
+            return PerchStrings.t("Cloudy");
         if (code <= 48)
-            return "Fog";
+            return PerchStrings.t("Fog");
         if (code <= 67)
-            return "Rain or drizzle";
+            return PerchStrings.t("Rain or drizzle");
         if (code <= 77)
-            return "Snow";
+            return PerchStrings.t("Snow");
         if (code <= 82)
-            return "Rain showers";
+            return PerchStrings.t("Rain showers");
         if (code <= 86)
-            return "Snow showers";
-        return "Thunderstorms";
+            return PerchStrings.t("Snow showers");
+        return PerchStrings.t("Thunderstorms");
     }
     spacing: Style.space(10)
     Text {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         textFormat: Text.PlainText
-        text: root.state && root.state.weatherEnabled ? root.state.weatherConfig.name || "Selected location" : "Choose Configure to enable weather for a location."
+        text: root.state && root.state.weatherEnabled ? root.state.weatherConfig.name || PerchStrings.t("Selected location") : PerchStrings.t("Choose Configure to enable weather for a location.")
         color: root.ink
         font.pixelSize: Style.space(14)
     }
@@ -41,7 +41,7 @@ ColumnLayout {
     }
     Text {
         visible: !!root.state && !!root.state.weather
-        text: visible ? "Wind " + root.state.weather.wind + " km/h" : ""
+        text: visible ? PerchStrings.t("Wind ") + root.state.weather.wind + " km/h" : ""
         color: root.ink
         font.pixelSize: Style.space(12)
     }
@@ -69,7 +69,7 @@ ColumnLayout {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         textFormat: Text.PlainText
-        text: !root.state ? "Weather unavailable" : root.state.weatherError + (root.state.weather && root.state.weatherError ? " Showing previous data." : "") || (root.state.weatherBusy ? "Updating…" : root.state.weatherUpdated ? "Updated " + new Date(root.state.weatherUpdated).toLocaleTimeString() : "")
+        text: !root.state ? PerchStrings.t("Weather unavailable") : root.state.weatherError + (root.state.weather && root.state.weatherError ? PerchStrings.t(" Showing previous data.") : "") || (root.state.weatherBusy ? PerchStrings.t("Updating…") : root.state.weatherUpdated ? PerchStrings.t("Updated ") + new Date(root.state.weatherUpdated).toLocaleTimeString() : "")
         color: Qt.alpha(root.ink, 0.65)
         font.pixelSize: Style.space(11)
     }
@@ -77,7 +77,7 @@ ColumnLayout {
         Layout.fillHeight: true
     }
     Text {
-        text: "Weather: Open-Meteo · CC BY 4.0"
+        text: PerchStrings.t("Weather: Open-Meteo · CC BY 4.0")
         color: Qt.alpha(root.ink, 0.55)
         font.pixelSize: Style.space(10)
     }

@@ -15,10 +15,44 @@ Item {
     property var shell: null
     property var manifest: null
     property var service: null
+    property bool automaticEvent: false
+    function showActivityEvent(item) {
+        if (expanded || demo || !eventBanners || !item || !effectiveScreen || fullscreen && fullscreenPolicy === "hide")
+            return;
+        var payload = JSON.stringify({
+            pointer: true,
+            page: "event",
+            eventId: item.id,
+            automatic: true
+        });
+        if (shell)
+            shell.summon("io.github.tcballard.perch", payload);
+        else
+            open(payload);
+    }
+    function stopAutomaticEvent() {
+        automaticEvent = false;
+        eventTimer.stop();
+    }
+    Connections {
+        target: root.service ? root.service.live : null
+        function onActivityEvent(item) {
+            root.showActivityEvent(item);
+        }
+    }
     property bool opened: false
     property bool expanded: false
     property bool keyboardMode: false
     property bool focusPrimed: false
+    readonly property bool sessionJumpPending: !!(media && media.live && media.live.jumpBusy)
+    onSessionJumpPendingChanged: if (sessionJumpPending)
+        prepareSessionJump()
+    function prepareSessionJump() {
+        keyboardMode = false;
+        focusPrimed = false;
+        focusPrimeTimer.stop();
+        leaveTimer.stop();
+    }
     property bool hideIdle: false
     property bool reducedMotion: false
     property bool edgeAttached: false
@@ -33,6 +67,8 @@ Item {
     property bool showClock: true
     property bool hoverOpen: true
     property bool eventBanners: true
+    onEventBannersChanged: if (!eventBanners && automaticEvent)
+        collapse()
     function applyPreferences() {
         if (!service || !service.preferences.ready)
             return;
@@ -62,13 +98,15 @@ Item {
         edgeAttached = p.edgeAttached;
         showClock = p.showClock;
         hoverOpen = p.hoverOpen;
-        eventBanners = p.eventBanners;
+        eventBanners = p.eventBanners && !p.quietMode;
     }
     function savePreference(key, value) {
         if (!service)
             return false;
         var patch = {};
-        if (perDisplay && effectiveScreen && ["edge", "panelWidth", "edgeOffset", "fullscreenPolicy"].indexOf(key) >= 0) {
+        if (key === "eventBanners" && service.preferences.record.systemFeedback === undefined)
+            patch.systemFeedback = service.preferences.values.systemFeedback;
+        if (perDisplay && effectiveScreen && ["edge", "panelWidth", "edgeOffset", "fullscreenPolicy", "chromeMode"].indexOf(key) >= 0) {
             var profiles = Object.assign({}, service.preferences.record.displayProfiles || {});
             var profile = Object.assign({}, profiles[effectiveScreen.name] || {});
             profile[key] = value;
@@ -95,9 +133,11 @@ Item {
     readonly property var effectiveScreen: targetScreen && screens.indexOf(targetScreen) !== -1 ? targetScreen : screens.length ? screens[0] : null
     readonly property var monitor: effectiveScreen ? Hyprland.monitorFor(effectiveScreen) : null
     readonly property bool fullscreen: !!(monitor && monitor.activeWorkspace && monitor.activeWorkspace.hasFullscreen)
-    readonly property bool shown: effectiveScreen !== null && (!fullscreen || fullscreenPolicy === "show" || fullscreenPolicy === "alerts" && media && media.live.timers && media.live.timers.some(function (t) {
-            return t.status === "done";
-        }))
+    readonly property bool shown: effectiveScreen !== null && (!fullscreen || fullscreenPolicy === "show" || fullscreenPolicy === "alerts" && (automaticEvent || media && media.live.timers && media.live.timers.some(function (t) {
+                return t.status === "done";
+            })))
+    onShownChanged: if (!shown && expanded)
+        collapse()
     // Compact surface is present on startup; expanded state is host-managed.
     function open(encoded) {
         var p = Policy.payload(encoded || "{}");
@@ -108,17 +148,34 @@ Item {
                 break;
             }
         }
-        if (fullscreen && fullscreenPolicy !== "show") {
+        var event = p.page === "event" && service && service.live ? service.live.items.find(function (item) {
+            return item.id === p.eventId && item.state !== "running";
+        }) : null;
+        var automatic = !!event && p.automatic === true && p.pointer === true && p.demo !== true;
+        if (automatic && (expanded || !eventBanners))
+            return;
+        if (fullscreen && fullscreenPolicy !== "show" && !(automatic && fullscreenPolicy === "alerts")) {
             collapse();
             return;
         }
+        stopAutomaticEvent();
+        if (view.page === "event")
+            view.page = "activity";
         demo = p.demo === true;
         fixture.setState(p.state);
         keyboardMode = p.pointer !== true;
         opened = true;
         expanded = true;
-        if (["music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup", "clipboard", "stats", "weather"].indexOf(p.page) >= 0)
+        if (["usage", "music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup", "clipboard", "stats", "weather"].indexOf(p.page) >= 0)
             view.page = p.page;
+        if (event && !demo) {
+            view.settingsOpen = false;
+            view.eventId = event.id;
+            view.page = "event";
+            automaticEvent = automatic;
+            if (automatic && event.state === "done")
+                eventTimer.restart();
+        }
         focusPrimed = false;
         if (keyboardMode)
             focusPrimeTimer.restart();
@@ -143,6 +200,7 @@ Item {
         edgeRemapTimer.restart();
     }
     function close() {
+        stopAutomaticEvent();
         opened = false;
         expanded = false;
         keyboardMode = false;
@@ -155,6 +213,23 @@ Item {
         close();
         if (shell)
             shell.hide("io.github.tcballard.perch");
+    }
+    function launchPlugin(id) {
+        if (!media || !media.pluginPins || media.pluginPins.busy)
+            return;
+        keyboardMode = false;
+        focusPrimed = false;
+        view.interactionActive = true;
+        if (!media.pluginPins.openPlugin(id))
+            view.interactionActive = false;
+    }
+    Connections {
+        target: root.media && root.media.pluginPins !== undefined ? root.media.pluginPins : null
+        function onLaunchFinished(success) {
+            view.interactionActive = false;
+            if (success)
+                root.collapse();
+        }
     }
     function toggle() {
         if (expanded)
@@ -172,7 +247,7 @@ Item {
         else
             open(payload);
     }
-    onFullscreenChanged: if (fullscreen && fullscreenPolicy !== "show")
+    onFullscreenChanged: if (fullscreen && fullscreenPolicy !== "show" && !(automaticEvent && fullscreenPolicy === "alerts"))
         collapse()
     onEffectiveScreenChanged: {
         if (expanded)
@@ -188,9 +263,9 @@ Item {
         onPressed: root.toggle()
     }
     HyprlandFocusGrab {
-        active: root.shown && root.expanded && root.keyboardMode && root.focusPrimed && !view.interactionActive
+        active: root.shown && root.expanded && root.keyboardMode && root.focusPrimed && !view.interactionActive && !root.sessionJumpPending
         windows: [notchWindow]
-        onCleared: if (!root.edgeRemapping && !remapGuard.remapping && !view.interactionActive)
+        onCleared: if (!root.edgeRemapping && !remapGuard.remapping && !view.interactionActive && !root.sessionJumpPending)
             root.collapse()
     }
     Timer {
@@ -212,15 +287,43 @@ Item {
         id: fixture
     }
     Timer {
+        id: eventTimer
+        interval: 8000
+        onTriggered: {
+            if (!root.automaticEvent)
+                return;
+            if (hover.hovered || view.interactionActive || root.sessionJumpPending)
+                restart();
+            else
+                root.collapse();
+        }
+    }
+    Timer {
         id: leaveTimer
         interval: 220
-        onTriggered: if (!root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive && !view.popupOpen)
+        onTriggered: if (!root.automaticEvent && !root.edgeRemapping && !root.keyboardMode && !hover.hovered && !view.interactionActive && !view.popupOpen && !root.sessionJumpPending)
             root.collapse()
     }
     // Dropdown popups sit outside the masked item; a closed popup with the
     // pointer already outside must still start the leave grace.
     Connections {
         target: view
+        function onSelectedEventChanged() {
+            if (!root.automaticEvent)
+                return;
+            if (!view.selectedEvent || view.selectedEvent.state !== "done")
+                eventTimer.stop();
+            else if (!eventTimer.running)
+                eventTimer.restart();
+        }
+        function onPageChanged() {
+            if (view.page !== "event")
+                root.stopAutomaticEvent();
+        }
+        function onSettingsOpenChanged() {
+            if (view.settingsOpen)
+                root.stopAutomaticEvent();
+        }
         function onPopupOpenChanged() {
             if (!view.popupOpen && !hover.hovered && root.expanded && !root.keyboardMode)
                 leaveTimer.restart();
@@ -254,7 +357,7 @@ Item {
             right: root.edge === "right" ? root.edgeInset : 0
         }
         // Fixed compositor surface: animate only the masked item inside it.
-        implicitWidth: Math.min(view.expandedWidth, root.effectiveScreen ? root.effectiveScreen.width - Style.space(24) : view.expandedWidth)
+        implicitWidth: Math.min(view.maximumWidth, root.effectiveScreen ? root.effectiveScreen.width - Style.space(24) : view.maximumWidth)
         implicitHeight: Math.min(Math.max(view.maximumHeight, view.compactHeight), root.effectiveScreen ? root.effectiveScreen.height - Style.space(24) : view.maximumHeight)
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
@@ -323,8 +426,15 @@ Item {
                 root.setEdge(value);
             }
             demo: root.demo
+            onPluginLaunchRequested: id => root.launchPlugin(id)
             onExpandRequested: root.reveal(true)
             onCollapseRequested: root.collapse()
+            onEventEnded: {
+                if (root.automaticEvent)
+                    root.collapse();
+                else
+                    view.page = "activity";
+            }
             onSettingsChanged: function (hideIdle, reducedMotion, edgeAttached) {
                 if (root.service && root.service.preferences.update({
                     hideIdle: hideIdle,
