@@ -231,6 +231,10 @@ Item {
                 root.collapse();
         }
     }
+    Connections {
+        target: root.media && root.media.pluginCards !== undefined ? root.media.pluginCards : null
+        function onHandoffRequested() { root.collapse(); }
+    }
     function toggle() {
         if (expanded)
             collapse();

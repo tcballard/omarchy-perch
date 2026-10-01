@@ -338,7 +338,10 @@ pub fn normalize_card(v: &Value) -> Result<Value> {
         if !token(&a["id"]) || !ids.insert(a["id"].clone()) {
             return err("Invalid or duplicate card action");
         };
-        Ok(json!({"id":a["id"],"label":clean(label,40)}))
+        if a.get("handoff").is_some_and(|v| !v.is_boolean()) {
+            return err("Invalid card handoff");
+        }
+        Ok(json!({"id":a["id"],"label":clean(label,40),"handoff":a["handoff"]==true}))
     };
     let actions = actions
         .iter()

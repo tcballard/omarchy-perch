@@ -7,6 +7,8 @@ fn bounded_card_actions_and_revisions() {
     let card = desktop::normalize_card(&base).unwrap();
     assert_eq!(card["title"], "Reader News");
     assert_eq!(card["rows"][0]["detail"], "");
+    let handoff = desktop::normalize_card(&json!({"version":1,"revision":"r1","status":"ready","title":"Postcard","actions":[{"id":"region","label":"Region","handoff":true}]})).unwrap();
+    assert_eq!(handoff["actions"][0]["handoff"], true);
     for patch in [
         json!({"version":true}),
         json!({"revision":"invalid space"}),
@@ -14,6 +16,7 @@ fn bounded_card_actions_and_revisions() {
         json!({"actions":[{"id":"x","label":"x"},{"id":"x","label":"y"}]}),
         json!({"rows":[{"id":"story","title":"one"},{"id":"story","title":"two"}]}),
         json!({"actions":null}),
+        json!({"actions":[{"id":"region","label":"Region","handoff":"yes"}]}),
         json!({"title":4}),
     ] {
         let mut v = base.clone();
