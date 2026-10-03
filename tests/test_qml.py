@@ -487,24 +487,16 @@ point=tile.mapToScene(QPointF(tile.width()/2,tile.height()/2)).toPoint()
 QTest.mouseMove(view,point); QTest.qWait(220)
 assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
 QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point); QTest.qWait(60)
-assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
-assert visual_eval('notch.settingsOpen') is False
-assert visual_eval('notch.page') == 'plugin:example.notes'
-assert visual_eval('demoMedia.pluginCards.selectedId') == 'example.notes'
-card_action=visible_named(visual,'plugin-card-action-first'); assert card_action is not None
-card_action.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
-assert visual_eval('demoMedia.pluginCards.lastAction') == 'open:0'
-# Opening the existing panel remains an explicit separate action.
-full_open=action_by_text(visual,'Open'); assert full_open is not None
-full_open.forceActiveFocus(); QTest.keyClick(view,Qt.Key_Space); QTest.qWait(30)
 assert visual_eval('demoMedia.pluginPins.lastOpened') == 'example.notes'
-# Missing/disabled pins survive cleanup and can be removed; no silent launch.
-visual_eval('demoMedia.pluginPins.plugins=[]; notch.settingsOpen=false; demoMedia.pluginPins.lastOpened=""; notch.activateModule("plugin:example.notes",false)')
-assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
-assert visual_eval('demoMedia.pluginCards.selectedId') == 'example.notes'
-assert visual_eval('notch.moduleItems.length') == 2
-visual_eval('notch.page="music"')
+assert visual_eval('notch.settingsOpen') is False
 assert visual_eval('demoMedia.pluginCards.selectedId') == ''
+# Missing and disabled pins lead to management without probing or launching.
+for plugins in ['[]', '[{id:"example.notes",name:"Demo Notes",enabled:false}]']:
+    visual_eval('demoMedia.pluginPins.plugins='+plugins+'; notch.settingsOpen=false; demoMedia.pluginPins.lastOpened=""; notch.activateModule("plugin:example.notes",false)')
+    assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
+    assert visual_eval('demoMedia.pluginCards.selectedId') == ''
+    assert visual_eval('notch.settingsOpen') is True
+    assert visual_eval('notch.moduleItems.length') == 2
 # Sectioned settings use the same controls in wide and constrained panels.
 visual_eval('notch.settingsOpen=true; notch.expanded=true; notch.reducedMotion=true')
 QTest.qWait(50)
@@ -580,6 +572,17 @@ pin.forceActiveFocus();QTest.keyClick(view,Qt.Key_Space);QTest.qWait(30)
 assert visual_eval('notch.moduleItems.indexOf("plugin:example.notes") >= 0') is not before
 search.setProperty('text','nothing matches');QTest.qWait(30)
 assert visible_named(visual,'tool-open-plugin:example.notes') is None
+# Arrow navigation skips disabled matches, wraps, and launches on Enter.
+search.setProperty('text','example.');search.forceActiveFocus();QTest.qWait(30)
+visual_eval('demoMedia.pluginPins.lastOpened=""')
+QTest.keyClick(view,Qt.Key_Down);QTest.keyClick(view,Qt.Key_Down)
+QTest.keyClick(view,Qt.Key_Return);QTest.qWait(30)
+assert visual_eval('demoMedia.pluginPins.lastOpened') == 'example.notes'
+assert visual_eval('demoMedia.pluginCards.selectedId') == ''
+search.setProperty('text','Disabled');search.forceActiveFocus();QTest.qWait(30)
+visual_eval('demoMedia.pluginPins.lastOpened=""')
+QTest.keyClick(view,Qt.Key_Up);QTest.keyClick(view,Qt.Key_Return);QTest.qWait(30)
+assert visual_eval('demoMedia.pluginPins.lastOpened') == ''
 # Following the light theme retains its actual background, dark-island remains selectable.
 visual_eval('Color.lightTheme=true; notch.displaySettings=Object.assign({},notch.displaySettings,{chromeMode:"theme"})')
 assert visual_eval('notch.surface.r > notch.ink.r') is True

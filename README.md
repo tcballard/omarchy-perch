@@ -11,7 +11,7 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 ## What you get
 
 - **Tools at the edge:** configurable tiles open their native cards; live labels show music, timer countdowns and module status. Header swipes cycle selected tools. Four edges, monitor pinning, per-display width/offset/edge/fullscreen preferences, reduced motion.
-- **Plugin drawer:** pin installed visual plugins alongside built-in tools; click to read a participating plugin's native card inside Perch, or choose Open for its full panel. Reorder in the strip or Settings. Installation and enablement stay with Omarchy. [Card contract](PLUGIN-CARDS.md) · [fixture preview](plugin-drawer-preview.png).
+- **Plugin drawer:** pin installed visual plugins alongside built-in tools; click to open the plugin’s existing panel through Omarchy. Plugins need no Perch-specific changes. Reorder in the strip or Settings. Installation and enablement stay with Omarchy.
 - **Music:** native MPRIS controls, seeking, player selection, local artwork, optional bounded HTTPS artwork, local `.lrc` synchronized lyrics and a full lyrics reader.
 - **File shelf:** up to 32 persistent file/folder references, drag in/out, small text/image previews, open, reveal and LocalSend handoff. Removing a reference never deletes its original.
 - **Meetings:** agenda, imminent meeting countdown and explicit Join from up to eight local `.ics` files, including files maintained by a calendar sync tool. The compact countdown covers the 15 minutes before a timed meeting and its first 10 minutes; all-day entries stay in the agenda only.
@@ -69,7 +69,7 @@ omarchy-shell shell summon io.github.tcballard.perch '{"page":"timer"}'
 
 ## Controls
 
-**All tools** opens a searchable list of built-in tools and installed plugins, including unpinned ones. Open a card or pin it from the same row. Disabled plugins stay labelled and cannot open. **Ctrl+K**, while Perch is open, moves to tool search; Enter opens a sole enabled result. Escape from a plugin card returns to All tools.
+**All tools** opens a searchable list of built-in tools and installed plugins, including unpinned ones. Open a card or pin it from the same row. Disabled plugins stay labelled and cannot open. **Ctrl+K**, while Perch is open, moves to tool search; Up/Down selects enabled results and Enter opens the selection (or a sole enabled result). Missing or disabled pins open plugin settings so you can manage them.
 
 Under **Placement**, choose Dark island or Follow Omarchy theme; the latter uses the active theme’s foreground/background, including light themes. Appearance can be saved per display. **Alerts & sound** separates activity cards, notification previews, device feedback and sound preferences. Quiet mode pauses automatic activity cards, notification previews, timer notifications and Perch sounds while timers and inbox history continue. Inbox DND also silences Perch sounds. Choose Complete, Message or Bell and preview it explicitly; missing sound support is reported in Settings. Activity sound bursts are coalesced.
 

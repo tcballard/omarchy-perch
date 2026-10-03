@@ -1,15 +1,15 @@
-# Native Plugin Perch cards (v1)
+# Experimental Plugin Perch card protocol (v1)
+
+This protocol is retained for existing experiments, but is not used when opening
+plugins from pins or All tools. Those paths launch the existing plugin through
+Omarchy. Integrations belong in Perch and must use interfaces apps already expose;
+third-party maintainers do not need to implement this protocol.
 
 A selected installed plugin can provide a native card inside Perch. The provider
 owns its state, polling and actions; Omarchy owns installation, enablement and
 permissions. Perch renders bounded plain-text data with its existing QML controls.
 It never imports another plugin's QML, executes a supplied command or follows a
 supplied URL. This contract does not move arbitrary bar widgets out of the bar.
-
-Click a pinned plugin to open its card. **Refresh** reads the provider's current
-snapshot; **Open** launches its full panel. A plugin without this optional
-contract shows an unavailable-card message and retains the Open fallback.
-Hover does not invoke plugins. No new background polling is added.
 
 ## Provider IPC
 

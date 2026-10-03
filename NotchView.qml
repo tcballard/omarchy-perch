@@ -40,18 +40,16 @@ FocusScope {
         if (descriptor.pluginId) {
             if (pointer)
                 return;
-            if (cardState) {
-                settingsOpen = false;
-                page = id;
-                cardState.select(descriptor.pluginId);
+            // Installed plugins use the host's existing launcher. Never probe
+            // third-party plugins for a Perch-specific IPC contract.
+            var plugin = pluginState ? pluginState.get(descriptor.pluginId) : null;
+            if (!plugin || !plugin.enabled) {
+                settingsView.section = "plugins";
+                settingsOpen = true;
                 if (!expanded)
                     expandRequested();
                 return;
             }
-            settingsView.section = "plugins";
-            settingsOpen = true;
-            if (!expanded)
-                expandRequested();
             pluginLaunchRequested(descriptor.pluginId);
             return;
         }
