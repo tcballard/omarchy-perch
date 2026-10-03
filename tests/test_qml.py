@@ -126,6 +126,26 @@ QTest.qWait(20)
 assert evaluate('service.pluginCards.card === null') is True
 assert evaluate('service.pluginCards.selectedId') == ''
 assert evaluate('service.pluginCards.busy') is False
+# A capture handoff closes the view before dispatch, retaining a validated
+# request in the service even when the selection is cleared by panel close.
+evaluate('service.pluginCards.select("tahayvr.postcard")')
+card_job_eval('finish({ok:true,card:{revision:"capture-v1",actions:[{id:"region",handoff:true}],rows:[]}})')
+assert evaluate('service.pluginCards.act("invented")') is False
+assert evaluate('service.pluginCards.act("region")') is True
+assert evaluate('service.pluginCards.pendingHandoff.action') == 'region'
+assert evaluate('service.pluginCards.act("region")') is False
+evaluate('service.pluginCards.clear()')
+QTest.qWait(300)
+import json
+card_job=host.findChild(QObject,'plugin-card-job')
+card_worker=next(child for child in card_job.children() if child.metaObject().indexOfProperty('command') >= 0)
+handoff_command=card_worker.property('command').toVariant()
+assert handoff_command[1] == 'card-action'
+assert json.loads(handoff_command[2])['id'] == 'tahayvr.postcard'
+assert json.loads(handoff_command[2])['action'] == 'region'
+assert evaluate('service.pluginCards.card === null') is True
+card_job_eval('finish({ok:true,card:{title:"Too late"}})')
+assert evaluate('service.pluginCards.card === null') is True
 assert evaluate('service.art')==''
 assert evaluate('service.choose("player.a")')
 assert evaluate('service.playerKey')=='player.a'

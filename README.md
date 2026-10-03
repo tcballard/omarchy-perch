@@ -22,6 +22,13 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 - **Live activities:** bounded IPC, real build/download/copy adapters and optional status integrations for 13 agent clients. Separate Claude, Codex and OpenCode request bridges support explicit approval responses; Claude also supports question answers. Sessions group attention first, offer optional discovery/recovery and return to verified windows, tmux/WezTerm panes or editor workspaces.
 - **Setup:** integration status, explicit enable/disable, optional system-feedback companion to replace stock OSD, dependency reporting and coordinated integration removal.
 
+**Postcard in Perch:** install and enable a Postcard build with its `perchCard`
+integration, refresh the plugin list, then pin Postcard in Perch settings. The
+card offers region, window, screen, selected-code and delayed screen captures.
+Capture actions close Perch before calling Postcard; Postcard owns the capture
+picker, editor and output. The standalone Postcard bar widget can be removed
+from your bar separately. Older Postcard builds still show the generic launcher.
+
 The compact view prioritizes finished timers and activities needing attention, then new notification previews, device feedback, imminent meetings, running timers and music. When activity cards are enabled, new completion or attention events open a dedicated card only while Perch is collapsed, without taking keyboard focus. Open tools and settings stay in place. Completion cards close after eight seconds (extended while hovered); attention cards remain until dismissed, resolved or expired. Fullscreen defaults to hidden; Settings also offers timer/activity alerts or always show.
 
 ## Install or update
