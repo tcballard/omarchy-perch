@@ -10,6 +10,29 @@ ColumnLayout {
     property color ink: Color.foreground
     property color surface: Color.background
     readonly property var results: Modules.search(root.host && root.host.pluginState ? root.host.pluginState.plugins : [], search.text)
+    property int selectedIndex: -1
+    onResultsChanged: selectedIndex = -1
+    function moveSelection(direction) {
+        if (!results.length) return;
+        var index = selectedIndex < 0 ? (direction > 0 ? -1 : 0) : selectedIndex;
+        for (var count = 0; count < results.length; count++) {
+            index = (index + direction + results.length) % results.length;
+            if (results[index].enabled) {
+                selectedIndex = index;
+                var row = resultRows.itemAt(index);
+                if (row && scroll.contentItem) {
+                    var top = row.y;
+                    var bottom = top + row.height;
+                    var viewport = scroll.availableHeight;
+                    var current = scroll.contentItem.contentY;
+                    if (top < current) scroll.contentItem.contentY = top;
+                    else if (bottom > current + viewport)
+                        scroll.contentItem.contentY = bottom - viewport;
+                }
+                return;
+            }
+        }
+    }
     spacing: Style.space(10)
     Controls.TextField {
         id: search
@@ -27,8 +50,13 @@ ColumnLayout {
             border.width: search.activeFocus ? 1 : 0
             border.color: Qt.alpha(root.ink, 0.5)
         }
-        onAccepted: if (root.results.length === 1 && root.results[0].enabled)
-            root.open(root.results[0].id)
+        Keys.onDownPressed: root.moveSelection(1)
+        Keys.onUpPressed: root.moveSelection(-1)
+        onAccepted: {
+            var index = root.selectedIndex >= 0 ? root.selectedIndex : root.results.length === 1 ? 0 : -1;
+            if (index >= 0 && root.results[index].enabled)
+                root.open(root.results[index].id);
+        }
     }
     function focusSearch() {
         search.forceActiveFocus();
@@ -66,6 +94,7 @@ ColumnLayout {
         font.pixelSize: Style.space(12)
     }
     Controls.ScrollView {
+        id: scroll
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.preferredHeight: Math.min(Style.space(248), rows.implicitHeight)
@@ -76,13 +105,17 @@ ColumnLayout {
             width: parent.width
             spacing: Style.space(6)
             Repeater {
+                id: resultRows
                 model: root.results
                 delegate: Rectangle {
                     required property var modelData
+                    required property int index
                     Layout.fillWidth: true
                     implicitHeight: Style.space(56)
                     radius: Style.space(8)
-                    color: Qt.alpha(root.ink, 0.04)
+                    color: Qt.alpha(root.ink, root.selectedIndex === index ? 0.12 : 0.04)
+                    border.width: root.selectedIndex === index ? 1 : 0
+                    border.color: Qt.alpha(root.ink, 0.4)
                     RowLayout {
                         anchors.fill: parent
                         anchors.margins: Style.space(8)
