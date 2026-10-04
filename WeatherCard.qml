@@ -58,7 +58,7 @@ ColumnLayout {
                     font.pixelSize: Style.space(10)
                 }
                 Text {
-                    text: Math.round(modelData.temperature) + "°"
+                    text: root.state.temperature ? root.state.temperature(modelData.temperature) : Math.round(modelData.temperature) + "°"
                     color: root.ink
                     font.pixelSize: Style.space(15)
                 }

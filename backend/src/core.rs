@@ -146,6 +146,8 @@ impl Store {
             "notifications",
             "integrations",
             "usage-claude",
+            "reminders",
+            "hydration",
         ]
         .contains(&name)
         {

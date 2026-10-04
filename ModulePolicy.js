@@ -1,5 +1,12 @@
 // Built-in cards and validated plugin launch IDs; never executable paths.
 var catalog = [
+    {id:"trash",title:"Trash",glyph:"▱",page:"trash"},
+    {id:"business",title:"Business",glyph:"▥",page:"business"},
+    {id:"storage",title:"Storage",glyph:"▥",page:"storage"},
+    {id:"dock",title:"Edit dock",glyph:"▦",page:"dock"},
+    {id:"reminders",title:"Reminders",glyph:"✓",page:"reminders"},
+    {id:"hydration",title:"Hydration",glyph:"◒",page:"hydration"},
+    {id:"windows",title:"Running windows",glyph:"▣",page:"windows"},
     {id:"usage",title:"AI usage",glyph:"◴",page:"usage"},
     {id:"music", title:"Music", glyph:"♫", page:"music"},
     {id:"timer", title:"Timers", glyph:"◷", page:"timer"},
@@ -20,6 +27,8 @@ function pluginId(id) {
     return value.length <= 160 && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) && value !== "io.github.tcballard.perch" && value.indexOf("omarchy.") !== 0 ? value : "";
 }
 function get(id) {
+    if (typeof id === "string" && /^weather:[a-z0-9-]{1,32}$/.test(id)) return {id:id,title:"Weather",glyph:"☀",page:id};
+    if (typeof id === "string" && /^dock:[a-z0-9][a-z0-9-]{0,63}$/.test(id)) return {id:id,title:"Dock item",glyph:"◇",page:"dock",custom:true};
     var target = pluginId(id);
     if (target) return {id:id, title:target, glyph:"◇", page:"plugins", pluginId:target};
     return catalog.find(function(m) { return m.id === id; }) || null;
@@ -28,7 +37,7 @@ function clean(value) {
     if (!Array.isArray(value)) return defaults.slice();
     var result = [];
     value.slice(0, 64).forEach(function(id) {
-        if (get(id) && result.indexOf(id) < 0 && result.length < 8) result.push(id);
+        if (get(id) && result.indexOf(id) < 0 && result.length < 24) result.push(id);
     });
     return result.length ? result : defaults.slice();
 }
@@ -41,7 +50,7 @@ function toggle(value, id) {
     var result = clean(value), index = result.indexOf(id);
     if (!get(id)) return result;
     if (index >= 0) { if (result.length > 1) result.splice(index, 1); }
-    else if (result.length < 8) result.push(id);
+    else if (result.length < 24) result.push(id);
     return result;
 }
 function search(plugins, query) {

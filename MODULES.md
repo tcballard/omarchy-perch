@@ -1,7 +1,7 @@
 # Native Perch modules
 
 Perch offers two compact presentations: **Notch**, showing one useful context,
-and **Plugin Perch**, keeping up to eight chosen tools at the edge. Both open the
+and **Plugin Perch**, keeping up to 24 chosen tools at the edge. Both open the
 same cards and pinned plugins. Notch is the default; explicit strip preferences
 remain on Plugin Perch.
 Choose modules in Perch Settings. Drag tiles to reorder them, use Ctrl+arrow keys on a
@@ -68,7 +68,7 @@ card is visible; results are cleared from module state when the card closes.
 ## Stats
 
 Reads Linux `/proc/stat`, `/proc/meminfo` and root-filesystem usage through the
-existing isolated Python helper. CPU uses deltas between samples; the first
+compiled Rust helper. CPU uses deltas between samples; the first
 sample displays Measuring rather than a fabricated zero. Memory uses
 MemAvailable; storage is the `/` filesystem. Thirty CPU samples are kept in
 memory only. Sampling runs at 2, 5 or 10 seconds (default 5), only while the stats
@@ -126,3 +126,10 @@ Discovery and summon each have a three-second deadline and bounded output.
 No new polling or dependencies are added. Participating plugins expose native
 cards through [PLUGIN-CARDS.md](PLUGIN-CARDS.md); unsupported plugins retain the
 full-panel fallback. This does not relocate existing bar widgets.
+
+## Dock layouts
+
+See [DOCKS.md](DOCKS.md) for mixed tiles, profiles, backups and the added cards.
+Wide descriptors also expose `compactDetail` and `fraction` for secondary text
+and bounded progress. Dynamic custom/weather IDs resolve through the same trusted
+registry; saved preferences never contain a QML component path.

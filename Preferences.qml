@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "PreferencesPolicy.js" as Prefs
+import "DockPolicy.js" as Docks
 
 Item {
     id: root
@@ -29,7 +30,7 @@ Item {
             error = "Settings are not ready. Try again after the shell loads.";
             return false;
         }
-        var next = Object.assign({}, record, patch);
+        var next = Docks.update(record, patch);
         if (JSON.stringify(next) === JSON.stringify(record))
             return true;
         try {

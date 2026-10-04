@@ -1,4 +1,5 @@
 import QtQuick
+import QtQml.Models
 import "MediaPolicy.js" as Media
 
 Item {
@@ -9,19 +10,145 @@ Item {
         id: builtins
         host: root.host
     }
-    readonly property var modules: [usage, clipboard, stats, weather, module_hub, module_shelf, module_calendar, module_setup, module_inbox, module_lyrics, module_desktop, module_timer, module_system, module_activity, module_players, module_music]
+    readonly property var modules: [trash, business, storage, dockEditor, reminders, hydration, windows, folder, usage, clipboard, stats, weather, module_hub, module_shelf, module_calendar, module_setup, module_inbox, module_lyrics, module_desktop, module_timer, module_system, module_activity, module_players, module_music]
     PerchModule {
         id: usage
         moduleId: "usage"
         title: PerchStrings.t("AI usage")
-        compactText: PerchStrings.t("Usage")
+        compactText: {
+            var usage = root.host.media && root.host.media.usage !== undefined ? root.host.media.usage : null;
+            var source = usage ? usage.sources.find(p => p.windows.length) : null;
+            return source ? source.name + " " + Math.round(100 - source.windows[0].used) + "%" : "Usage";
+        }
         card: Component {
             UsageCard {
                 state: root.host.media && root.host.media.usage !== undefined ? root.host.media.usage : null
             }
         }
     }
+    PerchModule {
+        id: dockEditor
+        moduleId: "dock"
+        title: "Your dock"
+        compactText: "Edit dock"
+        card: Component {
+            DockEditor {
+                state: root.host.dockState
+                registry: root
+                pluginState: root.host.pluginState
+            }
+        }
+    }
+    PerchModule {
+        id: reminders
+        moduleId: "reminders"
+        title: "Reminders"
+        compactText: root.host.utilityState ? root.host.utilityState.remainingCount + " remaining" : "Reminders"
+        card: Component {
+            RemindersCard {
+                state: root.host.utilityState
+            }
+        }
+    }
+    PerchModule {
+        id: hydration
+        moduleId: "hydration"
+        title: "Hydration"
+        compactText: root.host.utilityState ? (root.host.utilityState.drinkDue ? "Time for water" : root.host.utilityState.todayVolume + " mL") : "Water"
+        card: Component {
+            HydrationCard {
+                state: root.host.utilityState
+            }
+        }
+    }
+    PerchModule {
+        id: windows
+        moduleId: "windows"
+        title: "Running windows"
+        compactText: root.host.utilityState ? root.host.utilityState.windows.length + " windows" : "Windows"
+        card: Component {
+            WindowsCard {
+                state: root.host.utilityState
+            }
+        }
+    }
+    PerchModule {
+        id: folder
+        moduleId: "folder"
+        title: "Browse folder"
+        card: Component {
+            FolderCard {
+                state: root.host.dockState
+            }
+        }
+    }
+    PerchModule {
+        id: storage
+        moduleId: "storage"
+        title: "Storage"
+        compactText: "Storage"
+        card: Component {
+            StorageCard {
+                state: root.host.utilityState
+            }
+        }
+    }
+    PerchModule {
+        id: business
+        moduleId: "business"
+        title: "Business"
+        compactText: root.host.businessState && root.host.businessState.report ? root.host.businessState.report.provider : "Business"
+        card: Component {
+            BusinessCard {
+                state: root.host.businessState
+            }
+        }
+    }
+    property int instanceRevision: 0
+    Instantiator {
+        id: weatherDefinitions
+        model: root.host.weatherInstances ? root.host.weatherInstances.ids : []
+        delegate: PerchModule {
+            id: definition
+            required property string modelData
+            moduleId: modelData
+            title: "Weather"
+            state: root.host.weatherInstances ? root.host.weatherInstances.get(modelData) : null
+            compactText: state && state.weather ? state.temperature(state.weather.temperature) : "Weather"
+            compactDetail: state ? state.weatherConfig.name || "Choose a city" : ""
+            card: Component {
+                WeatherCard {
+                    state: definition.state
+                }
+            }
+            settings: Component {
+                WeatherSettings {
+                    state: definition.state
+                }
+            }
+        }
+        onObjectAdded: root.instanceRevision++
+        onObjectRemoved: root.instanceRevision++
+    }
+    PerchModule {
+        id: trash
+        moduleId: "trash"
+        title: "Trash"
+        compactText: root.host.utilityState ? (root.host.utilityState.trashPartial ? "≥ " : "") + root.host.utilityState.trashCount + " items" : "Trash"
+        card: Component {
+            TrashCard {
+                state: root.host.utilityState
+            }
+        }
+    }
     function get(id) {
+        var dependency = instanceRevision;
+        for (var i = 0; i < weatherDefinitions.count; i++) {
+            var item = weatherDefinitions.objectAt(i);
+            if (item && item.moduleId === id)
+                return item;
+        }
+
         return modules.find(function (m) {
             return m.moduleId === id;
         }) || null;
@@ -48,6 +175,8 @@ Item {
     PerchModule {
         id: stats
         moduleId: "stats"
+        compactDetail: state && state.sample ? "RAM " + Math.round(state.sample.memory) + "%" : "System activity"
+        fraction: state && state.cpu >= 0 ? state.cpu / 100 : -1
         title: PerchStrings.t("System stats")
         compactText: state && !state.statsError && state.cpu >= 0 ? "CPU " + Math.round(state.cpu) + "%" : PerchStrings.t("Stats")
         state: root.state
@@ -72,8 +201,9 @@ Item {
     PerchModule {
         id: weather
         moduleId: "weather"
+        compactDetail: state && state.weather ? (state.weatherConfig.name || "Weather") + " · " + state.weather.wind + " km/h" : "Choose a city"
         title: PerchStrings.t("Weather")
-        compactText: state && state.weather && !state.weatherError ? Math.round(state.weather.temperature) + "°C" : PerchStrings.t("Weather")
+        compactText: state && state.weather && !state.weatherError ? (state.temperature ? state.temperature(state.weather.temperature) : Math.round(state.weather.temperature) + "°C") : PerchStrings.t("Weather")
         state: root.state
         status: !state ? "unavailable" : !state.weatherEnabled ? "unconfigured" : state.weatherError ? "offline" : state.weather ? "ready" : "loading"
         actions: [
@@ -112,6 +242,7 @@ Item {
     PerchModule {
         id: module_calendar
         moduleId: "calendar"
+        compactDetail: root.host.work && root.host.work.nextEvent ? root.host.work.nextEvent.title : "No upcoming meeting"
         title: PerchStrings.t("Calendar")
         compactText: root.host.work && root.host.work.meetingSummary ? root.host.work.meetingSummary : PerchStrings.t("Calendar")
         state: root.host.media
@@ -152,6 +283,7 @@ Item {
     PerchModule {
         id: module_timer
         moduleId: "timer"
+        compactDetail: root.host.live && root.host.live.timerActive ? root.host.live.timerLabel || "Timer running" : "Start a focus timer"
         title: PerchStrings.t("Timer")
         compactText: root.host.live && root.host.live.timerActive ? (root.host.live.timerStatus === "done" ? "Finished" : Media.time(root.host.live.remaining)) : PerchStrings.t("Timers")
         state: root.host.media
@@ -168,6 +300,7 @@ Item {
     PerchModule {
         id: module_activity
         moduleId: "activity"
+        compactDetail: root.host.live && root.host.live.attentionItems ? root.host.live.attentionItems.length + " need attention" : "Agent sessions"
         title: PerchStrings.t("Activity")
         compactText: root.host.live && root.host.live.focused ? root.host.live.focused.title : PerchStrings.t("Activity")
         state: root.host.media
@@ -184,6 +317,7 @@ Item {
     PerchModule {
         id: module_music
         moduleId: "music"
+        compactDetail: root.host.hasPlayer ? root.host.media.artist : "Play something"
         title: PerchStrings.t("Music")
         compactText: root.host.hasPlayer ? root.host.media.title : PerchStrings.t("Music")
         state: root.host.media

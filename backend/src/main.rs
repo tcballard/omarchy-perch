@@ -1,10 +1,13 @@
 mod agents;
+mod business;
 mod calendar;
 mod cli;
 mod core;
 mod desktop;
+mod dock;
 mod setup;
 mod sockets;
+mod usage_history;
 use core::*;
 use serde_json::{json, Value};
 fn tools(op: &str, p: &Value) -> Result<Value> {
@@ -17,7 +20,10 @@ fn tools(op: &str, p: &Value) -> Result<Value> {
         "codex-server-status" => sockets::codex(p),
         "request-get" | "request-reply" => sockets::tools(op, p),
         "usage" => agents::usage(),
+        "usage-history" => usage_history::history(p),
+        "business-metrics" => business::read_metrics(p),
         _ if op.starts_with("agent-") => agents::handle(op, p),
+        _ if op.starts_with("dock-") => dock::handle(op, p),
         _ if op.starts_with("calendar-") => calendar::handle(op, p),
         _ => desktop::handle(op, p),
     }

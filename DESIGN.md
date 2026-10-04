@@ -169,3 +169,29 @@ timer IDs route into the existing timer card. Collapsed context changes do not
 launch plugins or animate each tick. No new polling; hidden stats/weather tiles
 are suspended in collapsed Notch. Four-edge, keyboard activation and mode/pin
 preservation are exercised in Qt fixtures; live XPS acceptance remains required.
+
+## Dockset parity programme — 4 October 2026
+
+Tom explicitly requested a Dockset-like Perch and continued implementation toward
+near feature parity. This supersedes the earlier small eight-module strip limit.
+Retain the Perch name and hosted Quattro lifecycle; implement independently from
+Dockset's public manual, without copying its proprietary assets or source.
+
+The existing notch remains available. The persistent dock gains named layouts,
+compact/wide tiles, scrolling, app/file/link/spacer items, a visual editor and
+searchable tool library. Profiles own dock composition, sizing and shortcuts;
+monitor policies, credentials, notification preferences, timers and agent setup
+remain outside layouts. Profile edits save through the scoped preferences API;
+backup/restore excludes integration secrets and requires explicit replacement.
+
+Native utilities: local reminder lists/completion/undo, hydration history and
+reminder timing, bounded directory browsing and disk scans, live Hyprland window
+selection, weather location search/units, and usage presentation/history where
+supported. Helpers use existing Rust ToolJob boundaries and private locked state;
+no arbitrary provider QML, shell command strings, privileged setup or automatic
+changes to other plugins. Plugin pins retain the direct host launcher from #40.
+
+Acceptance: production service and card tests, all-edge overflow/keyboard/drag
+checks, isolated backend state tests, strict lint/build/package checks and fixture
+renders. Actual Hyprland focus, edge input, hotplug and account integrations must
+be recorded separately from host-stub evidence. Track concrete status in GAPS.md.

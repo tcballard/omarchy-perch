@@ -564,6 +564,28 @@ fn stats() -> Result<Value> {
     if values.len() < 4 {
         return err("CPU statistics unavailable");
     };
+    let cores = proc.lines().skip(1).take_while(|line| line.starts_with("cpu")).take(256).filter_map(|line| {
+        let numbers=line.split_whitespace().skip(1).take(8).map(str::parse::<u64>).collect::<std::result::Result<Vec<_>,_>>().ok()?;
+        if numbers.len()<4{return None;}
+        Some(json!({"total":numbers.iter().sum::<u64>(),"idle":numbers[3]+numbers.get(4).unwrap_or(&0)}))
+    }).collect::<Vec<_>>();
+    let load = fs::read_to_string("/proc/loadavg")
+        .unwrap_or_default()
+        .split_whitespace()
+        .take(3)
+        .filter_map(|x| x.parse::<f64>().ok())
+        .collect::<Vec<_>>();
+    let uptime = fs::read_to_string("/proc/uptime")
+        .ok()
+        .and_then(|s| s.split_whitespace().next()?.parse::<f64>().ok());
+    let pressure = fs::read_to_string("/proc/pressure/memory")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("some "))?
+                .split_whitespace()
+                .find_map(|p| p.strip_prefix("avg10=")?.parse::<f64>().ok())
+        });
     let mem = fs::read_to_string("/proc/meminfo")?;
     let find = |key: &str| -> Option<u64> {
         mem.lines()
@@ -582,7 +604,7 @@ fn stats() -> Result<Value> {
     let disk_total = disk.f_blocks * disk.f_frsize;
     let disk_free = disk.f_bfree * disk.f_frsize;
     Ok(
-        json!({"sample":{"total":values.iter().sum::<u64>(),"idle":values[3]+values.get(4).unwrap_or(&0),"memory":(1000.0*(total-available) as f64/total as f64).round()/10.0,"memoryUsed":total-available,"memoryTotal":total,"disk":(1000.0*(disk_total-disk_free) as f64/disk_total as f64).round()/10.0,"diskFree":disk.f_bavail*disk.f_frsize}}),
+        json!({"sample":{"cores":cores,"load":load,"uptime":uptime,"memoryPressure":pressure,"swapTotal":find("SwapTotal:"),"swapFree":find("SwapFree:"),"total":values.iter().sum::<u64>(),"idle":values[3]+values.get(4).unwrap_or(&0),"memory":(1000.0*(total-available) as f64/total as f64).round()/10.0,"memoryUsed":total-available,"memoryTotal":total,"disk":(1000.0*(disk_total-disk_free) as f64/disk_total as f64).round()/10.0,"diskFree":disk.f_bavail*disk.f_frsize}}),
     )
 }
 fn weather(p: &Value) -> Result<Value> {

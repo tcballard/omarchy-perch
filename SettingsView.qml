@@ -27,7 +27,7 @@ ColumnLayout {
         {
             id: "modules",
             title: PerchStrings.t("Your strip"),
-            detail: PerchStrings.t("Choose and arrange up to eight tools and plugin pins.")
+            detail: PerchStrings.t("Choose and arrange up to 24 tools and plugin pins.")
         },
         {
             id: "plugins",
@@ -346,7 +346,7 @@ ColumnLayout {
                             {
                                 key: "rememberSessions",
                                 title: PerchStrings.t("Remember agent sessions"),
-                                detail: PerchStrings.t("Keep up to eight last-seen sessions for one day across shell restarts. Pending requests are never saved.")
+                                detail: PerchStrings.t("Keep up to 24 last-seen sessions for one day across shell restarts. Pending requests are never saved.")
                             },
                             {
                                 key: "quietMode",
@@ -447,6 +447,16 @@ ColumnLayout {
                             root.host.settingsOpen = false;
                             root.host.page = "setup";
                         }
+                    }
+                }
+                PerchAction {
+                    visible: root.section === "modules"
+                    text: "Open visual dock editor"
+                    ink: root.host.ink
+                    surface: root.host.surface
+                    onClicked: {
+                        root.host.settingsOpen = false;
+                        root.host.page = "dock";
                     }
                 }
                 ModuleSettings {

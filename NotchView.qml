@@ -15,16 +15,30 @@ FocusScope {
     readonly property var pluginState: media && media.pluginPins !== undefined ? media.pluginPins : null
     readonly property var cardState: media && media.pluginCards !== undefined ? media.pluginCards : null
     signal pluginLaunchRequested(string id)
+    signal windowLaunchRequested
     property bool surfaceVisible: true
     readonly property var moduleState: media && media.modules !== undefined ? media.modules : null
-    readonly property var moduleItems: Modules.clean(displaySettings.modules)
+    readonly property var dockState: media && media.dock !== undefined ? media.dock : null
+    readonly property var weatherInstances: media && media.weatherInstances !== undefined ? media.weatherInstances : null
+    readonly property var businessState: media && media.business !== undefined ? media.business : null
+    readonly property var utilityState: media && media.utilities !== undefined ? media.utilities : null
+    readonly property var moduleItems: {
+        var rows = Modules.clean(displaySettings.modules);
+        if (displaySettings.showRunningApps && rows.indexOf("windows") < 0)
+            rows = rows.concat(["windows"]);
+        return rows;
+    }
     readonly property var moduleShortcuts: Shortcuts.clean(displaySettings.moduleShortcuts, moduleItems)
     readonly property bool stripVertical: Edges.vertical(edge)
-    readonly property real stripLength: Style.space(46 * moduleItems.length + 8)
+    readonly property real dockScale: Math.max(0.8, Math.min(1.5, displaySettings.dockScale || 1))
+    readonly property real stripLength: Math.min(Style.space(720), Style.space(moduleItems.reduce((n, id) => n + ((displaySettings.tileSizes || {})[id] === "wide" ? 140 : 46), 8) * dockScale))
+    readonly property bool wideTiles: moduleItems.some(id => (displaySettings.tileSizes || {})[id] === "wide")
+    readonly property real dockThickness: Style.space(wideTiles ? (stripVertical ? 140 : 80) : 52) * dockScale
     readonly property bool perchMode: displaySettings.layoutMode === "strip"
     readonly property var notchContext: NotchPolicy.context(media, displaySettings)
-    readonly property real compactWidth: perchMode ? (stripVertical ? Style.space(52) : stripLength) : Style.space(stripVertical ? 48 : notchContext.id === "idle" ? 100 : 210)
-    readonly property real compactHeight: perchMode ? (stripVertical ? stripLength : Style.space(52)) : Style.space(stripVertical ? 76 : 36)
+    readonly property bool dockHidden: perchMode && displaySettings.dockAutoHide === true && !expanded
+    readonly property real compactWidth: dockHidden ? Style.space(stripVertical ? 8 : 96) : perchMode ? (stripVertical ? dockThickness : stripLength) : Style.space(stripVertical ? 48 : notchContext.id === "idle" ? 100 : 210)
+    readonly property real compactHeight: dockHidden ? Style.space(stripVertical ? 96 : 8) : perchMode ? (stripVertical ? stripLength : dockThickness) : Style.space(stripVertical ? 76 : 36)
     readonly property real bodyTop: Style.space(page === "event" ? 58 : 116)
     property string eventId: ""
     readonly property var selectedEvent: live && eventId ? live.items.find(function (item) {
@@ -37,6 +51,11 @@ FocusScope {
         var descriptor = Modules.get(id);
         if (!descriptor)
             return;
+        if (descriptor.custom) {
+            if (!pointer && dockState)
+                dockState.open(id);
+            return;
+        }
         if (descriptor.pluginId) {
             if (pointer)
                 return;
@@ -57,6 +76,60 @@ FocusScope {
         page = descriptor.page;
         if (!expanded)
             expandRequested();
+    }
+    Binding {
+        target: root.weatherInstances
+        property: "activeIds"
+        when: !!root.weatherInstances
+        value: root.surfaceVisible && !root.dockHidden && !root.settingsOpen ? (root.perchMode || root.expanded ? root.moduleItems.filter(id => id.indexOf("weather:") === 0) : []).concat(root.expanded && root.page.indexOf("weather:") === 0 ? [root.page] : []) : []
+    }
+    Binding {
+        target: root.businessState
+        property: "active"
+        when: !!root.businessState
+        value: root.surfaceVisible && !root.dockHidden && (root.expanded && root.page === "business" || root.perchMode && root.moduleItems.indexOf("business") >= 0)
+    }
+    Binding {
+        target: root.utilityState
+        property: "active"
+        when: !!root.utilityState
+        value: root.surfaceVisible && !root.dockHidden && (root.expanded || root.perchMode)
+    }
+    Binding {
+        target: root.utilityState
+        property: "windowsVisible"
+        when: !!root.utilityState
+        value: root.surfaceVisible && !root.dockHidden && (root.expanded && root.page === "windows" || root.perchMode && root.moduleItems.indexOf("windows") >= 0)
+    }
+    Connections {
+        target: root.dockState
+        function onLaunchRequested() {
+            root.windowLaunchRequested();
+        }
+        function onLaunched() {
+            root.collapseRequested();
+        }
+    }
+    Connections {
+        target: root.utilityState
+        function onLaunchRequested() {
+            root.windowLaunchRequested();
+        }
+        function onLaunched() {
+            root.collapseRequested();
+        }
+    }
+    Shortcut {
+        sequence: "Ctrl+PgDown"
+        enabled: root.expanded && root.activeFocus
+        onActivated: if (root.dockState)
+            root.dockState.cycle(1)
+    }
+    Shortcut {
+        sequence: "Ctrl+PgUp"
+        enabled: root.expanded && root.activeFocus
+        onActivated: if (root.dockState)
+            root.dockState.cycle(-1)
     }
     ModuleRegistry {
         id: moduleRegistry
@@ -117,13 +190,13 @@ FocusScope {
         target: root.media && root.media.usage !== undefined ? root.media.usage : null
         property: "active"
         when: !!root.media && root.media.usage !== undefined
-        value: root.expanded && root.surfaceVisible && !root.settingsOpen && root.page === "usage"
+        value: root.surfaceVisible && !root.dockHidden && !root.settingsOpen && (root.expanded && root.page === "usage" || root.perchMode && root.moduleItems.indexOf("usage") >= 0)
     }
     Binding {
         target: root.moduleState
         property: "statsVisible"
         when: !!root.moduleState
-        value: root.surfaceVisible && ((root.perchMode || root.expanded) && !root.settingsOpen && root.moduleItems.indexOf("stats") >= 0 || root.expanded && !root.settingsOpen && root.page === "stats")
+        value: root.surfaceVisible && !root.dockHidden && ((root.perchMode || root.expanded) && !root.settingsOpen && root.moduleItems.indexOf("stats") >= 0 || root.expanded && !root.settingsOpen && root.page === "stats")
     }
     Binding {
         target: root.moduleState
@@ -135,7 +208,7 @@ FocusScope {
         target: root.moduleState
         property: "weatherVisible"
         when: !!root.moduleState
-        value: root.surfaceVisible && ((root.perchMode || root.expanded) && !root.settingsOpen && root.moduleItems.indexOf("weather") >= 0 || root.expanded && !root.settingsOpen && root.page === "weather")
+        value: root.surfaceVisible && !root.dockHidden && ((root.perchMode || root.expanded) && !root.settingsOpen && root.moduleItems.indexOf("weather") >= 0 || root.expanded && !root.settingsOpen && root.page === "weather")
     }
     property string page: "music"
     property bool showClock: true
@@ -354,6 +427,27 @@ FocusScope {
             y: root.edge === "bottom" ? parent.height - height : 1
         }
     }
+    Rectangle {
+        anchors.centerIn: parent
+        visible: root.dockHidden
+        width: root.stripVertical ? Style.space(3) : Style.space(54)
+        height: root.stripVertical ? Style.space(54) : Style.space(3)
+        radius: 2
+        color: Qt.alpha(root.ink, 0.5)
+    }
+    MouseArea {
+        anchors.fill: parent
+        visible: root.dockHidden
+        hoverEnabled: true
+        onEntered: hideIntent.restart()
+        onExited: hideIntent.stop()
+        onClicked: root.expandRequested()
+        Timer {
+            id: hideIntent
+            interval: 150
+            onTriggered: root.expandRequested()
+        }
+    }
     ContextNotch {
         objectName: "context-notch"
         anchors.fill: parent
@@ -372,8 +466,24 @@ FocusScope {
     }
     ModuleStrip {
         anchors.fill: parent
-        visible: root.perchMode && !root.expanded
+        visible: root.perchMode && !root.expanded && !root.dockHidden
         items: root.moduleItems
+        customItems: root.dockState ? root.dockState.items : []
+        tileSizes: root.displaySettings.tileSizes || {}
+        scaleFactor: root.dockScale
+        onConfigureRequested: {
+            root.settingsOpen = false;
+            root.page = "dock";
+            if (!root.expanded)
+                root.expandRequested();
+        }
+        onBrowseRequested: path => {
+            if (root.dockState)
+                root.dockState.browse(path);
+            root.page = "folder";
+            if (!root.expanded)
+                root.expandRequested();
+        }
         registry: moduleRegistry
         pluginState: root.pluginState
         vertical: root.stripVertical
@@ -419,6 +529,15 @@ FocusScope {
                 font.pixelSize: Style.space(root.settingsOpen ? 16 : 10)
                 font.bold: root.settingsOpen
             }
+            PerchAction {
+                text: root.dockState ? root.dockState.activeName : "Edit dock"
+                ink: root.ink
+                surface: root.surface
+                onClicked: {
+                    root.settingsOpen = false;
+                    root.page = "dock";
+                }
+            }
             NotchButton {
                 objectName: "open-inbox"
                 glyph: "bell"
@@ -461,8 +580,25 @@ FocusScope {
             y: Style.space(45)
             width: parent.width - Style.space(8)
             height: Style.space(60)
-            slot: (width - Style.space(8)) / root.moduleItems.length
+            detailed: false
+            slot: Style.space(46)
             items: root.moduleItems
+            customItems: root.dockState ? root.dockState.items : []
+            tileSizes: root.displaySettings.tileSizes || {}
+            scaleFactor: root.dockScale
+            onConfigureRequested: {
+                root.settingsOpen = false;
+                root.page = "dock";
+                if (!root.expanded)
+                    root.expandRequested();
+            }
+            onBrowseRequested: path => {
+                if (root.dockState)
+                    root.dockState.browse(path);
+                root.page = "folder";
+                if (!root.expanded)
+                    root.expandRequested();
+            }
             registry: moduleRegistry
             pluginState: root.pluginState
             selectedId: root.page

@@ -3,7 +3,7 @@ const m = require('../ModulePolicy.js');
 assert.deepEqual(m.clean(['stats','../evil.qml','stats','weather']), ['stats','weather']);
 assert.deepEqual(m.clean([]), m.defaults);
 assert.deepEqual(m.clean(null), m.defaults);
-assert.equal(m.clean(m.catalog.map(x=>x.id)).length, 8);
+assert.equal(m.clean(m.catalog.map(x=>x.id)).length, m.catalog.length);
 assert.deepEqual(m.move(['stats','weather','clipboard'],'stats',2), ['weather','clipboard','stats']);
 assert.deepEqual(m.move(['stats','weather'],'stats',-1), ['stats','weather']);
 assert.deepEqual(m.toggle(['stats'],'stats'), ['stats']);
