@@ -33,6 +33,26 @@ Item {
         id: usageState
         preferences: prefsStore
     }
+    property alias weatherInstances: weatherInstances
+    WeatherInstances {
+        id: weatherInstances
+        preferences: prefsStore
+    }
+    property alias business: businessState
+    BusinessState {
+        id: businessState
+        preferences: prefsStore
+    }
+    property alias dock: dockState
+    DockState {
+        id: dockState
+        preferences: prefsStore
+    }
+    property alias utilities: utilityState
+    UtilityState {
+        id: utilityState
+        preferences: prefsStore
+    }
     property alias modules: moduleState
     ModuleState {
         id: moduleState
@@ -313,6 +333,13 @@ Item {
     // Diagnostics contain no media metadata.
     IpcHandler {
         target: "io.github.tcballard.perch"
+        function profile(id: string): string {
+            return dockState.activate(id) ? "ok" : dockState.error;
+        }
+        function nextProfile(): string {
+            dockState.cycle(1);
+            return dockState.activeName;
+        }
         function feedback(payload: string): string {
             if (payload.length > 4096)
                 return "error: too large";

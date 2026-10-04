@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — Dock layouts
+
+- Add the visual dock editor, mixed app/file/folder/link/tool tiles, wide tiles,
+  spacers, scrolling, auto-hide, saved profiles, schedules and backups.
+- Add local reminders and hydration history, running-window focus and opt-in
+  previews, bounded folder storage scans, Trash, multiple weather locations and
+  city search, richer Linux stats and local Codex/Claude activity charts.
+- Add bounded read-only Stripe/Paddle/Shopify metrics with private credential files.
+- Preserve existing hosted cards, integrations and scoped preference writes.
+- Document platform differences and live compositor/provider acceptance gates.
+
 ## 0.0.2 — Rust backend preview (2026-09-30)
 
 Perch now runs its backend in Rust. The native QML interface stays in place.

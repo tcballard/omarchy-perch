@@ -322,3 +322,93 @@ fn invalid_payloads_do_not_spawn_actions() {
         assert!(tools(op, &p).is_err(), "{op}");
     }
 }
+
+#[test]
+fn business_metrics_do_not_mix_currencies_or_invent_missing_values() {
+    use crate::business;
+    let revenue = json!({"data":{"currency_code":"GBP","timeseries":[{"timestamp":"2026-10-01T00:00:00Z","amount":"1000"},{"timestamp":"2026-10-02T00:00:00Z","amount":"2500"}]}});
+    let mrr = json!({"data":{"currency_code":"GBP","timeseries":[{"amount":"10000"}]}});
+    let result = business::paddle_result(&revenue, &mrr).unwrap();
+    assert_eq!(result["metrics"][0]["value"], 35.0);
+    assert_eq!(result["metrics"][2]["value"], 1200.0);
+    assert!(business::paddle_result(
+        &revenue,
+        &json!({"data":{"currency_code":"USD","timeseries":[]}})
+    )
+    .is_err());
+    assert!(business::paddle_result(
+        &json!({"data":{"currency_code":"GBP","timeseries":[{"amount":"garbage"}]}}),
+        &mrr
+    )
+    .is_err());
+    let rows = vec![
+        json!({"currency":"gbp","type":"charge","amount":10000,"net":9700,"created":1790812800}),
+        json!({"currency":"usd","type":"charge","amount":999999,"net":999999,"created":1790812800}),
+        json!({"currency":"gbp","type":"refund","amount":-1000,"net":-1000,"created":1790812800}),
+        json!({"currency":"gbp","type":"payout","amount":-5000,"net":-5000,"created":1790812800}),
+    ];
+    let subs = vec![
+        json!({"status":"active","customer":"cus_one","items":{"has_more":false,"data":[{"quantity":2,"price":{"currency":"gbp","billing_scheme":"per_unit","unit_amount":6000,"recurring":{"interval":"year","interval_count":1,"usage_type":"licensed"}}}]}}),
+    ];
+    let stripe = business::stripe_result(&rows, &subs, "GBP").unwrap();
+    assert_eq!(stripe["metrics"][0]["value"], 90.0);
+    assert_eq!(stripe["metrics"][1]["value"], 87.0);
+    assert_eq!(stripe["metrics"][2]["value"], 10.0);
+    let discounted = vec![json!({"status":"active","discounts":["di_one"]})];
+    assert_eq!(
+        business::stripe_result(&rows, &discounted, "GBP").unwrap()["metrics"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    let orders = vec![
+        json!({"test":false,"cancelledAt":null,"createdAt":"2026-10-01T12:00:00Z","currentTotalPriceSet":{"shopMoney":{"amount":"24.99","currencyCode":"GBP"}}}),
+        json!({"test":true,"cancelledAt":null}),
+    ];
+    let shop = business::shopify_result(&orders, "GBP").unwrap();
+    assert_eq!(shop["metrics"][0]["value"], 24.99);
+    assert_eq!(shop["metrics"][1]["value"], 1.0);
+    assert!(business::shopify_result(&orders, "USD").is_err());
+    assert_eq!(
+        business::shopify_result(&[], "GBP").unwrap()["metrics"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+}
+#[test]
+fn business_credentials_require_owned_private_regular_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("credentials.json");
+    fs::write(&path, b"{\"provider\":\"stripe\",\"apiKey\":\"fictional\"}").unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+    assert!(crate::business::load_credentials(&path).is_err());
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+    assert_eq!(
+        crate::business::load_credentials(&path).unwrap()["provider"],
+        "stripe"
+    );
+    let link = dir.path().join("link");
+    std::os::unix::fs::symlink(&path, &link).unwrap();
+    assert!(crate::business::load_credentials(&link).is_err());
+}
+
+#[test]
+fn local_usage_history_deduplicates_cumulative_and_streamed_counters() {
+    use crate::usage_history::counters;
+    let events=[100,150,150,200].map(|n|string_json(&json!({"timestamp":"2026-10-04T10:00:00Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":n}}}}))).join("\n");
+    assert_eq!(
+        counters(&events, "codex", false).unwrap()["days"][0]["tokens"],
+        200
+    );
+    assert_eq!(
+        counters(&events, "codex", true).unwrap()["days"][0]["tokens"],
+        100
+    );
+    let messages=[10,15].map(|n|string_json(&json!({"timestamp":"2026-10-04T10:00:00Z","type":"assistant","message":{"id":"same","content":"never returned","usage":{"input_tokens":20,"output_tokens":n,"cache_read_input_tokens":5}}}))).join("\n");
+    let result = counters(&messages, "claude", false).unwrap();
+    assert_eq!(result["days"][0]["tokens"], 40);
+    assert!(!string_json(&result).contains("never returned"));
+}

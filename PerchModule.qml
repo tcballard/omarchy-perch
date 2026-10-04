@@ -6,6 +6,8 @@ QtObject {
     property string moduleId: ""
     property string title: ""
     property string compactText: title
+    property string compactDetail: ""
+    property real fraction: -1
     property string status: "ready"
     property var state: null
     property Component card: null

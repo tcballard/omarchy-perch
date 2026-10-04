@@ -238,3 +238,31 @@ On Omarchy, verify sound themes contain each selected event, sound preview failu
 ## Interactive request bridge
 
 Decision-schema, input-bound and question-answer tests run locally. Production-QML tests verify responses are disabled before loading and after expiry. `tests/test_requests.py` additionally exercises real one-shot same-user Unix sockets, timeout cleanup and replay rejection when the environment permits socket creation; this Work execution sandbox prohibits sockets, so that section reports an explicit skip here. CI/Linux and the XPS must run it before release. Live Claude acceptance must cover allow once, deny, question choices/free text, terminal fallback, concurrent requests and shell restart. No test stub is evidence of a real agent permission decision.
+
+
+## Dock layouts — 2026-10-04
+
+The portable `./tests/run` suite passed for the dock expansion: Rust fmt/clippy,
+16 Rust tests, compiled-helper fixtures, JavaScript policies, existing CLI and
+integration checks, production QML and notification QML. Local socket creation
+is blocked by this execution environment; the existing tests report that skip
+and CI requires the socket fixtures. No real account credentials were used.
+
+New coverage includes mixed-tile bounds, profile isolation/autosave, schedule
+boundaries, credential-free backup round-trips, reminder/hydration persistence
+and undo, symlink/path boundaries, bounded folder scans, window PID/address
+revalidation, business currency/math/private-file rules, Shopify form-token and
+JSON query transport, and cumulative/deduplicated local usage fixtures.
+
+`tests/test_dock_qml.py` instantiates all added production cards at 344/600px,
+checks all editor tabs, profile changes/save failures/import, multiple weather
+instances, optional preview component loading and stopping pollers when hidden.
+It fails on QML warnings. `docs/dock-editor.png` and `docs/dock-strip.png` render
+production components with explicitly fictional data and host stubs.
+
+Still required on Omarchy: four-edge drag/scroll and overflow, keyboard focus
+release, auto-hide hit regions, display hotplug/DPI, native file dialogs, real
+ScreencopyView capture and compositor minimization, persisted schedules across
+restart, weather requests and real read-only provider account reports. Stubbed
+capture does not establish protocol availability. Account calculations must be
+compared using the definitions in BUSINESS.md, not assumed to match dashboards.

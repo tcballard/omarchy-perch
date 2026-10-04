@@ -1,31 +1,37 @@
-# Gap audit — rc.5 plus unreleased native modules
+# Dockset comparison — implementation audit
 
-Every comparison category has an implementation or an explicit platform boundary. This is not a claim that Perch now equals every macOS notch app. Feature presence and actual desktop acceptance are separate.
+Reference: [Dockset manual](https://dockset.app/manual), reviewed 2026-10-04.
+This checklist describes the unreleased branch. It is not a claim of complete
+feature parity, a macOS port, or successful hardware/provider acceptance.
 
-| Category | Implemented in this candidate | Remaining boundary / live gate |
+| Dockset area | Perch implementation | Remaining difference |
 |---|---|---|
-| Compact UX | Context priority, direct actions, wheel context cycling, header swipe, stable-surface animation | Real input-region, scaling and frame smoothness on XPS |
-| Files | Persistent reference shelf, drag in/out, text/image preview, open/reveal, LocalSend handoff | App-specific Wayland drag interoperability; no AirDrop/Quick Look framework |
-| Setup/lifecycle | Health/dependency page, explicit integration enable/disable, durable setup job, coordinated removal | Host cannot automatically run our cleanup on arbitrary core removal; use Prepare removal first |
-| Notifications | Durable history/DND/mutes, unread state, app filter, theme icons, native actions, supported replies | Sender must support replies; native DBus ownership and restore need live acceptance |
-| Devices/system | Audio output/input selection, mic mute, battery, paired Bluetooth controls/status, brightness, optional replacement OSD | Hardware capabilities vary; no Apple private AirPods/Continuity APIs |
-| Calendar | Local/synced ICS agenda, meeting countdown, Join, timezone-aware daily/weekly recurrence and exceptions | Account OAuth/sync is external; complex recurrence is reported partial |
-| Music | MPRIS seek/player controls, optional bounded remote covers, local synchronized lyrics/reader | Player capabilities vary; no lyrics-provider account or audio visualizer |
-| Timers | Eight named timers, persistence, repeat/snooze, sound/notification options, fullscreen policy | Wall-clock changes matter; sound requires helper; suspend/device checks live |
-| Activities | Build command, byte-progress download/copy adapters; project-labelled agent sessions, attention queue and Hyprland window return | Explicit producer jobs; no automatic browser-download interception; Codex completion-only; no approval response bridge |
-| Displays | Pinned/focused monitor, per-display edge/width/offset/fullscreen settings | One surface on one selected monitor; unplug/DPI/compositor behavior live |
-| Applications | Installed application picker, eight pins, supported desktop menus | Desktop entries depend on installed apps; no arbitrary shell commands from incoming activity data |
-| Evidence/performance | Production QML tests/render, bounded helper tests, lifecycle tests, diagnostics runner | No invented FPS, battery-life or latency numbers; whole-shell diagnostics need real session |
+| Dock layouts | Four edges, compact/wide tiles, scale, scrolling, spacers, reorder, auto-hide, monitor selection, themes | One surface on one selected monitor; exact macOS styling/animation differs |
+| App/file/link tiles | Installed app picker and icons, local files/folders, HTTP(S) links, plugin pins | No macOS app badges, Finder tags, AirDrop or native Shortcuts integration |
+| Running apps | Verified Hyprland window list/focus; optional compositor thumbnails; native minimize request | Capture needs live verification; Hyprland may ignore minimize; no app badge aggregation |
+| Saved docks | 12 profiles, autosave, templates, manual/keyboard switching, JSON file/text backups | Focus-mode integration replaced by optional local weekday/time schedules; no app-window layout restoration |
+| Calendar | Local/synced ICS agenda, recurrence, meeting countdown and Join | Account synchronization is external; no Apple Calendar integration; complex recurrence reported partial |
+| Reminders | Local named lists, add/complete/reopen/remove and undo | No Apple Reminders/cloud synchronization, due-date editor or notification scheduling |
+| Hydration | Intervals, due Notch context, optional volume/history, daily totals, delete/undo | No system-notification prompt; no cloud health integration |
+| Music | MPRIS playback/seek/player selection, covers, local synchronized lyrics and full reader | Depends on player capabilities; no lyrics subscription provider or audio visualizer |
+| Files and clipboard | Reference shelf, drag/drop, previews, open/reveal, LocalSend, clipboard search/copy | Wayland app interoperability needs live testing; no automatic paste; deletion uses the system clipboard tool |
+| Weather | City search, C/F units, hourly forecast, five locations including primary | Open-Meteo source; no Apple Weather attribution/service |
+| Stats/storage | CPU/per-core, RAM, swap, pressure, load, uptime, root disk, bounded folder scan, home Trash | No GPU/process inspector or destructive cleanup; home Trash count excludes other volumes |
+| AI allowance tiles | Codex and Claude usage sources | Dockset's Cursor/Gemini/Copilot/Grok/Antigravity quota adapters remain unimplemented |
+| AI activity history | Bounded local Codex/Claude daily token charts with partial markers | No account-wide billing totals, Cursor/Gemini history or cost estimates |
+| Stripe | Currency-isolated revenue/net, fixed-subscription MRR/ARR/ARPU estimates and chart | No churn/LTV/prior-period comparisons; complex subscriptions excluded; one business connection at a time |
+| Paddle | Provider net revenue/MRR, derived ARR and chart | No expanded subscription/churn metrics or simultaneous accounts |
+| Shopify | Order sales/count/AOV and chart using client credentials | Same-organization app required; UTC order totals differ from store analytics; no simultaneous stores |
+| Perch-specific tools | Timers, device controls, notifications, activities/agent requests and plugin cards | These remain native Perch features, with their existing live acceptance requirements |
 
-## Candidate acceptance
+## Verification boundary
 
-Portable suite and fixture render pass. `TESTING.md` records the live checks still required. A successful helper or Qt fixture is not proof of actual Bluetooth, portal drag/drop, notification ownership, or compositor smoothness. Keep the release candidate label until these pass on the intended desktop.
+Portable tests exercise real compiled helpers and production QML with host
+stubs. They do not establish real compositor capture, hardware controls,
+notification ownership, file dialogs or cloud-account correctness. See
+[TESTING.md](TESTING.md), [DOCKS.md](DOCKS.md) and [BUSINESS.md](BUSINESS.md).
 
-## Unreleased Sidekick/Sidedoor comparison work
-
-Implemented: single reorderable module strip, native card/settings/actions
-contract, clipboard history browser/copy, compact CPU/RAM/root-disk stats, and
-opt-in weather. All existing tools and secondary pages use the shared card host. No external widget loader or new
-runtime. Remaining: image clipboard thumbnails, in-Perch history deletion,
-first-class URL pins, per-item shortcut recorder, AI usage/quota integrations,
-and hardware/compositor acceptance. See MODULES.md for exact supported limits.
+Before release, test four edges and scaling on Omarchy, hidden input regions,
+focus release after launching, display hotplug, preview capture, native dialogs,
+profile persistence across a shell restart and real read-only provider accounts.
+Do not remove the preview label based on portable checks alone.

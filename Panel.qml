@@ -122,6 +122,9 @@ Item {
     onServiceChanged: applyPreferences()
     Connections {
         target: root.service ? root.service.preferences : null
+        function onRecordChanged() {
+            root.applyPreferences();
+        }
         function onLoaded() {
             root.applyPreferences();
         }
@@ -166,7 +169,7 @@ Item {
         keyboardMode = p.pointer !== true;
         opened = true;
         expanded = true;
-        if (["usage", "music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup", "clipboard", "stats", "weather"].indexOf(p.page) >= 0)
+        if (["dock", "reminders", "hydration", "windows", "storage", "business", "trash", "usage", "music", "timer", "system", "activity", "players", "inbox", "desktop", "hub", "shelf", "calendar", "setup", "clipboard", "stats", "weather"].indexOf(p.page) >= 0)
             view.page = p.page;
         if (event && !demo) {
             view.settingsOpen = false;
@@ -416,6 +419,7 @@ Item {
             hoverOpen: root.hoverOpen
             eventBanners: root.eventBanners
             settingsError: root.service ? root.service.preferences.error : "Settings service loading"
+            onWindowLaunchRequested: root.prepareSessionJump()
             onPreferenceChanged: function (key, value) {
                 root.savePreference(key, value);
             }

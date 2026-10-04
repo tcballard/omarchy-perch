@@ -15,6 +15,8 @@ function context(media, settings) {
         return {id:"system",page:"system",title:media.system.banner,glyph:"☷",attention:false};
     if (media && media.workspace && media.workspace.meetingSummary)
         return {id:"calendar",page:"calendar",title:media.workspace.meetingSummary,glyph:"▦",attention:false};
+    if (!settings.quietMode && media && media.utilities && media.utilities.drinkDue)
+        return {id:"hydration",page:"hydration",title:"Time for a drink",glyph:"◒",attention:false};
     if (live && live.timerActive)
         return {id:"timer",page:"timer",timerId:live.selectedTimer,title:live.summary || "Timer",glyph:"◷",attention:false};
     if (media && media.state === "playing")

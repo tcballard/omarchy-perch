@@ -18,7 +18,7 @@ ColumnLayout {
     signal changed(var order)
     Text {
         visible: root.showModules
-        text: PerchStrings.t("Strip modules · up to eight")
+        text: PerchStrings.t("Strip modules · up to 24")
         color: root.ink
         font.pixelSize: Style.space(13)
     }
@@ -130,7 +130,7 @@ ColumnLayout {
             delegate: PerchAction {
                 required property var modelData
                 text: "+ " + PerchStrings.t(modelData.title)
-                enabled: root.items.length < 8
+                enabled: root.items.length < 24
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.changed(Modules.toggle(root.items, modelData.id))
@@ -178,7 +178,7 @@ ColumnLayout {
             PerchAction {
                 readonly property bool pinned: root.items.indexOf("plugin:" + modelData.id) >= 0
                 text: pinned ? PerchStrings.t("Unpin") : PerchStrings.t("Pin")
-                enabled: pinned ? root.items.length > 1 : modelData.enabled && root.items.length < 8
+                enabled: pinned ? root.items.length > 1 : modelData.enabled && root.items.length < 24
                 ink: root.ink
                 surface: root.surface
                 onClicked: root.changed(Modules.toggle(root.items, "plugin:" + modelData.id))

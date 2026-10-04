@@ -4,17 +4,19 @@ import "ModulePolicy.js" as Modules
 Item {
     id: root
     property var preferences: null
+    property string instanceId: ""
     property bool statsVisible: false
     property bool clipboardVisible: false
     property bool weatherVisible: false
     readonly property var config: preferences ? preferences.record : ({})
-    readonly property var weatherConfig: config.moduleWeather || ({})
+    readonly property var weatherConfig: (instanceId ? (config.weatherInstances || {})[instanceId] : config.moduleWeather) || ({})
     readonly property string weatherKey: JSON.stringify(weatherConfig)
     readonly property bool weatherEnabled: weatherConfig.enabled === true
     property var sample: null
     property var previousSample: null
     property real cpu: -1
     property var cpuHistory: []
+    property var coreUsage: []
     property string statsError: ""
     readonly property bool statsBusy: statsJob.busy
     property var clips: []
@@ -27,6 +29,32 @@ Item {
     property string clipboardRequest: ""
     property var weather: null
     property string weatherError: ""
+    property var locations: []
+    property string locationError: ""
+    readonly property bool locationBusy: locationJob.busy
+    readonly property string temperatureUnit: weatherConfig.unit === "F" ? "F" : "C"
+    function temperature(value) {
+        return Math.round(temperatureUnit === "F" ? value * 9 / 5 + 32 : value) + "°" + temperatureUnit;
+    }
+    function searchLocation(query) {
+        locations = [];
+        locationError = "";
+        return locationJob.run("dock-weather-search", {
+            query: query
+        });
+    }
+    function setUnit(unit) {
+        return saveWeatherConfig(Object.assign({}, weatherConfig, {
+            unit: unit === "F" ? "F" : "C"
+        }));
+    }
+    ToolJob {
+        id: locationJob
+        onCompleted: (op, r) => {
+            root.locations = r.ok ? r.rows : [];
+            root.locationError = r.ok ? (r.rows.length ? "" : "No locations found") : r.error;
+        }
+    }
     property string requestedWeatherKey: ""
     property real weatherUpdated: 0
     readonly property bool weatherBusy: weatherJob.busy
@@ -36,6 +64,10 @@ Item {
             return;
         var delta = previousSample ? s.total - previousSample.total : 0;
         cpu = delta > 0 ? Math.max(0, Math.min(100, 100 * (1 - (s.idle - previousSample.idle) / delta))) : -1;
+        coreUsage = Array.isArray(s.cores) && previousSample && Array.isArray(previousSample.cores) ? s.cores.map((c, i) => {
+            var old = previousSample.cores[i], delta = old ? c.total - old.total : 0;
+            return delta > 0 ? Math.max(0, Math.min(100, 100 * (1 - (c.idle - old.idle) / delta))) : -1;
+        }) : [];
         previousSample = s;
         sample = s;
         if (cpu >= 0)
@@ -71,6 +103,19 @@ Item {
             longitude: weatherConfig.longitude
         });
     }
+    function saveWeatherConfig(value) {
+        if (!preferences)
+            return false;
+        if (!instanceId)
+            return preferences.update({
+                moduleWeather: value
+            });
+        var instances = Object.assign({}, config.weatherInstances || {});
+        instances[instanceId] = value;
+        return preferences.update({
+            weatherInstances: instances
+        });
+    }
     function saveWeather(name, latitude, longitude, enabled) {
         if (!preferences)
             return false;
@@ -78,13 +123,12 @@ Item {
             weatherError = "Enter a latitude (−90 to 90) and longitude (−180 to 180).";
             return false;
         }
-        return preferences.update({
-            moduleWeather: {
-                name: String(name).slice(0, 80),
-                latitude: Number(latitude),
-                longitude: Number(longitude),
-                enabled: enabled
-            }
+        return saveWeatherConfig({
+            name: String(name).slice(0, 80),
+            latitude: Number(latitude),
+            longitude: Number(longitude),
+            enabled: enabled,
+            unit: temperatureUnit
         });
     }
     onStatsVisibleChanged: {

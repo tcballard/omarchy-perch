@@ -8,6 +8,19 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 
 ![Notch and Plugin Perch, rendered from production QML with fictional data](notch-preview.png)
 
+## Dock layouts (unreleased)
+
+The [Dock editor](DOCKS.md) adds mixed app/file/link/tool tiles, wide tiles,
+spacers, scrolling, auto-hide, saved profiles, schedules and backups. New cards
+cover reminders, hydration, running windows, storage, Trash, multiple weather
+locations, local AI activity charts and read-only business metrics.
+
+![Dock editor rendered from production QML with fictional data](docs/dock-editor.png)
+
+See the [Dockset comparison](GAPS.md) for the exact remaining differences and
+[provider setup](BUSINESS.md) for business-account requirements. Live Omarchy
+and real-provider acceptance remain outstanding.
+
 ## What you get
 
 - **Tools at the edge:** configurable tiles open their native cards; live labels show music, timer countdowns and module status. Header swipes cycle selected tools. Four edges, monitor pinning, per-display width/offset/edge/fullscreen preferences, reduced motion.
