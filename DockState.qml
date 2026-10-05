@@ -65,6 +65,7 @@ Item {
             dockAutoHide: false,
             moduleWeather: {},
             weatherInstances: {},
+            businessTiles: {},
             moduleStatsInterval: 5
         };
         Docks.profileKeys.forEach(k => {
@@ -160,6 +161,23 @@ Item {
             modules: order.concat([item.id])
         });
     }
+    function addBusiness() {
+        var entries = Object.assign({}, record.businessTiles || {}), order = Modules.clean(record.modules);
+        if (Object.keys(entries).length >= 8 || order.length >= 24) {
+            error = "Up to eight business tiles fit in Perch.";
+            return false;
+        }
+        var id = "business:" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+        entries[id] = {
+            period: "7d",
+            currency: "USD",
+            chart: true
+        };
+        return save({
+            businessTiles: entries,
+            modules: order.concat([id])
+        });
+    }
     function addWeather() {
         var entries = Object.assign({}, record.weatherInstances || {}), order = Modules.clean(record.modules);
         if (Object.keys(entries).length >= 4 || order.length >= 24) {
@@ -177,9 +195,12 @@ Item {
         });
     }
     function removeItem(id) {
+        var business = Object.assign({}, record.businessTiles || {});
+        delete business[id];
         var order = Modules.clean(record.modules).filter(x => x !== id);
         return save({
             modules: order.length ? order : ["dock"],
+            businessTiles: business,
             dockItems: items.filter(p => p.id !== id)
         });
     }
@@ -253,6 +274,7 @@ Item {
                 dockAutoHide: false,
                 moduleWeather: {},
                 weatherInstances: {},
+                businessTiles: {},
                 moduleStatsInterval: 5
             }, data.current, {
                 dockProfiles: data.dockProfiles,

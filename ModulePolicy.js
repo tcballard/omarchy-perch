@@ -27,6 +27,7 @@ function pluginId(id) {
     return value.length <= 160 && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) && value !== "io.github.tcballard.perch" && value.indexOf("omarchy.") !== 0 ? value : "";
 }
 function get(id) {
+    if(typeof id === "string" && /^business:[a-z0-9-]{1,32}$/.test(id))return {id:id,title:"Business",glyph:"▥",page:id};
     if (typeof id === "string" && /^weather:[a-z0-9-]{1,32}$/.test(id)) return {id:id,title:"Weather",glyph:"☀",page:id};
     if (typeof id === "string" && /^dock:[a-z0-9][a-z0-9-]{0,63}$/.test(id)) return {id:id,title:"Dock item",glyph:"◇",page:"dock",custom:true};
     var target = pluginId(id);

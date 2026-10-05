@@ -1,5 +1,7 @@
 mod agents;
 mod business;
+mod business_accounts;
+mod business_period;
 mod calendar;
 mod cli;
 mod core;
@@ -21,7 +23,8 @@ fn tools(op: &str, p: &Value) -> Result<Value> {
         "request-get" | "request-reply" => sockets::tools(op, p),
         "usage" => agents::usage(),
         "usage-history" => usage_history::history(p),
-        "business-metrics" => business::read_metrics(p),
+        "business-metrics" => business_accounts::metrics(p),
+        _ if op.starts_with("business-account-") => business_accounts::handle(op, p),
         _ if op.starts_with("agent-") => agents::handle(op, p),
         _ if op.starts_with("dock-") => dock::handle(op, p),
         _ if op.starts_with("calendar-") => calendar::handle(op, p),

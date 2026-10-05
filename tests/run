@@ -12,7 +12,9 @@ python3 "$root/scripts/validate_manifest.py" "$root"
 node "$root/tests/test_policy.cjs"
 node "$root/tests/test_modules.cjs"
 node "$root/tests/test_dock_policy.cjs"
+node "$root/tests/test_business_policy.cjs"
 python3 "$root/tests/test_dock_backend.py"
+python3 "$root/tests/test_business_backend.py"
 node "$root/tests/test_language.cjs"
 node "$root/tests/test_notch.cjs"
 node "$root/tests/test_extensions.mjs"
@@ -31,6 +33,7 @@ python3 "$root/tests/test_helper.py"
 if python3 -c 'import PySide6' >/dev/null 2>&1; then
   python3 "$root/tests/test_qml.py"
   python3 "$root/tests/test_dock_qml.py"
+  python3 "$root/tests/test_business_qml.py"
   python3 "$root/tests/test_notifications.py"
 else
   printf 'Qt runtime tests skipped: install PySide6-Essentials to run production view/service tests with stubs.\n'

@@ -97,12 +97,33 @@ Item {
         id: business
         moduleId: "business"
         title: "Business"
-        compactText: root.host.businessState && root.host.businessState.report ? root.host.businessState.report.provider : "Business"
+        compactText: root.host.businessState ? root.host.businessState.headline : "Business"
+        compactDetail: root.host.businessState ? (root.host.businessState.account ? root.host.businessState.account.name + " · " : "") + root.host.businessState.selectedLabel : ""
         card: Component {
             BusinessCard {
                 state: root.host.businessState
             }
         }
+    }
+    Instantiator {
+        id: businessDefinitions
+        model: root.host.businessInstances ? root.host.businessInstances.ids : []
+        delegate: PerchModule {
+            id: businessDefinition
+            required property string modelData
+            moduleId: modelData
+            title: "Business"
+            state: root.host.businessInstances ? root.host.businessInstances.get(modelData) : null
+            compactText: state ? state.headline : "Business"
+            compactDetail: state ? (state.account ? state.account.name + " · " : "") + state.selectedLabel : ""
+            card: Component {
+                BusinessCard {
+                    state: businessDefinition.state
+                }
+            }
+        }
+        onObjectAdded: root.instanceRevision++
+        onObjectRemoved: root.instanceRevision++
     }
     property int instanceRevision: 0
     Instantiator {
@@ -149,6 +170,11 @@ Item {
                 return item;
         }
 
+        for (var b = 0; b < businessDefinitions.count; b++) {
+            var businessItem = businessDefinitions.objectAt(b);
+            if (businessItem && businessItem.moduleId === id)
+                return businessItem;
+        }
         return modules.find(function (m) {
             return m.moduleId === id;
         }) || null;

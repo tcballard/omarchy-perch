@@ -256,6 +256,12 @@ Controls.ScrollView {
                 surface: root.surface
                 onClicked: root.state.addWeather()
             }
+            PerchAction {
+                text: "+ Another business metric"
+                ink: root.ink
+                surface: root.surface
+                onClicked: root.state.addBusiness()
+            }
             RowLayout {
                 PerchAction {
                     text: "Choose app"

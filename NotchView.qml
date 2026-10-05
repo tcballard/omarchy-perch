@@ -20,6 +20,7 @@ FocusScope {
     readonly property var moduleState: media && media.modules !== undefined ? media.modules : null
     readonly property var dockState: media && media.dock !== undefined ? media.dock : null
     readonly property var weatherInstances: media && media.weatherInstances !== undefined ? media.weatherInstances : null
+    readonly property var businessInstances: media && media.businessInstances !== undefined ? media.businessInstances : null
     readonly property var businessState: media && media.business !== undefined ? media.business : null
     readonly property var utilityState: media && media.utilities !== undefined ? media.utilities : null
     readonly property var moduleItems: {
@@ -87,7 +88,7 @@ FocusScope {
         target: root.businessState
         property: "active"
         when: !!root.businessState
-        value: root.surfaceVisible && !root.dockHidden && (root.expanded && root.page === "business" || root.perchMode && root.moduleItems.indexOf("business") >= 0)
+        value: root.surfaceVisible && !root.dockHidden && !root.settingsOpen && (root.expanded && root.page === "business" || root.perchMode && root.moduleItems.indexOf("business") >= 0)
     }
     Binding {
         target: root.utilityState
@@ -100,6 +101,18 @@ FocusScope {
         property: "windowsVisible"
         when: !!root.utilityState
         value: root.surfaceVisible && !root.dockHidden && (root.expanded && root.page === "windows" || root.perchMode && root.moduleItems.indexOf("windows") >= 0)
+    }
+    Binding {
+        target: root.businessInstances
+        property: "activeIds"
+        when: !!root.businessInstances
+        value: root.surfaceVisible && !root.dockHidden && !root.settingsOpen ? (root.perchMode || root.expanded ? root.moduleItems.filter(id => id.indexOf("business:") === 0) : []).concat(root.expanded && root.page.indexOf("business:") === 0 ? [root.page] : []) : []
+    }
+    Connections {
+        target: root.media && root.media.businessManager !== undefined ? root.media.businessManager : null
+        function onDialogRequested() {
+            root.windowLaunchRequested();
+        }
     }
     Connections {
         target: root.dockState

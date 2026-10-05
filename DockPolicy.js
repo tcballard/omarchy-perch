@@ -1,5 +1,5 @@
 // Versioned, bounded user layouts. No executable code or credentials in profiles.
-var profileKeys = ['modules','moduleShortcuts','dockItems','tileSizes','layoutMode','dockScale','showRunningApps','hoverOpen','dockAutoHide','moduleWeather','weatherInstances','moduleStatsInterval'];
+var profileKeys = ['modules','moduleShortcuts','dockItems','tileSizes','layoutMode','dockScale','showRunningApps','hoverOpen','dockAutoHide','moduleWeather','weatherInstances','businessTiles','moduleStatsInterval'];
 function name(value) { return typeof value === 'string' ? value.replace(/[\u0000-\u001f]/g,' ').trim().slice(0,60) : ''; }
 function customId(id) { return typeof id === 'string' && /^dock:[a-z0-9][a-z0-9-]{0,63}$/.test(id); }
 function items(raw) {

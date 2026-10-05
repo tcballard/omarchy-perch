@@ -1,52 +1,56 @@
 import QtQuick
+import "BusinessPolicy.js" as Business
 
 Item {
     id: root
     property var preferences: null
+    property var manager: null
+    property string instanceId: "business"
     property bool active: false
-    readonly property var config: preferences ? preferences.record.business || {} : ({})
+    readonly property var config: Business.tile(preferences ? (preferences.record.businessTiles || {})[instanceId] : {})
+    readonly property var account: manager ? manager.account(config.accountId) : null
+    readonly property string configKey: Business.key(config, account)
     property var report: null
     property string error: ""
-    readonly property bool busy: job.busy
-    property string requestKey: ""
-    readonly property string configKey: JSON.stringify(config)
-    function configure(path, days, currency, enabled) {
-        if (!preferences)
-            return false;
-        return preferences.update({
-            business: {
-                path: path,
-                days: days,
-                currency: currency,
-                enabled: enabled
-            }
-        });
+    property bool busy: false
+    readonly property var selectedMetric: Business.metric(report, config, account)
+    readonly property string selectedLabel: config.metric || ((Business.labels[account ? account.provider : ''] || [])[0]) || "Choose metric"
+    readonly property var points: report ? (report.series || {})[selectedLabel] || [] : []
+    readonly property string headline: selectedMetric ? (selectedMetric.currency ? selectedMetric.currency.toUpperCase() + " " : "") + Number(selectedMetric.value).toLocaleString(Qt.locale(), 'f', selectedMetric.currency ? 2 : 0) : account ? "—" : "Connect"
+    function configure(patch) {
+        return manager && manager.saveTile(instanceId, patch);
     }
-    function refresh() {
-        if (!active || !config.enabled || busy)
+    function refresh(force) {
+        if (!active || !account || !manager)
             return;
-        requestKey = configKey;
-        job.run("business-metrics", {
-            path: config.path,
-            days: config.days || 7,
-            currency: config.currency || "USD"
-        });
+        busy = true;
+        manager.enqueue(root, force === true);
     }
-    onActiveChanged: if (active && (!report || Date.now() / 1000 - report.updatedAt > 300))
-        refresh()
+    onActiveChanged: {
+        if (active) {
+            if (manager && !manager.loaded && !manager.busy)
+                manager.reload();
+            refresh(false);
+        } else
+            busy = false;
+    }
     onConfigKeyChanged: {
         report = null;
         error = "";
-        refresh();
+        busy = false;
+        refreshSoon.restart();
     }
-    ToolJob {
-        id: job
-        timeout: 45000
-        onCompleted: (op, r) => {
-            if (root.requestKey !== root.configKey) {
-                Qt.callLater(root.refresh);
+    Timer {
+        id: refreshSoon
+        interval: 0
+        onTriggered: root.refresh(false)
+    }
+    Connections {
+        target: root.manager
+        function onReportReady(key, r) {
+            if (key !== root.configKey)
                 return;
-            }
+            root.busy = false;
             root.error = r.ok ? "" : r.error;
             if (r.ok)
                 root.report = r;
@@ -55,7 +59,7 @@ Item {
     Timer {
         interval: 300000
         repeat: true
-        running: root.active && root.config.enabled === true
-        onTriggered: root.refresh()
+        running: root.active && !!root.account
+        onTriggered: root.refresh(true)
     }
 }

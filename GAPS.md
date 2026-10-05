@@ -19,9 +19,9 @@ feature parity, a macOS port, or successful hardware/provider acceptance.
 | Stats/storage | CPU/per-core, RAM, swap, pressure, load, uptime, root disk, bounded folder scan, home Trash | No GPU/process inspector or destructive cleanup; home Trash count excludes other volumes |
 | AI allowance tiles | Codex and Claude usage sources | Dockset's Cursor/Gemini/Copilot/Grok/Antigravity quota adapters remain unimplemented |
 | AI activity history | Bounded local Codex/Claude daily token charts with partial markers | No account-wide billing totals, Cursor/Gemini history or cost estimates |
-| Stripe | Currency-isolated revenue/net, fixed-subscription MRR/ARR/ARPU estimates and chart | No churn/LTV/prior-period comparisons; complex subscriptions excluded; one business connection at a time |
-| Paddle | Provider net revenue/MRR, derived ARR and chart | No expanded subscription/churn metrics or simultaneous accounts |
-| Shopify | Order sales/count/AOV and chart using client credentials | Same-organization app required; UTC order totals differ from store analytics; no simultaneous stores |
+| Stripe | Named accounts, independent revenue/net/MRR/ARR/ARPU tiles, comparisons and persistent subscription charts | No churn/LTV; complex subscriptions excluded; observations start locally |
+| Paddle | Multiple accounts, independent net-revenue/MRR/ARR charts and prior-period comparisons | No expanded subscription/churn metrics |
+| Shopify | Multiple stores, independent order-value/count/AOV tiles, store-local periods and comparisons | Same-organization app required; order totals differ from store analytics; comparison limited by 60-day access |
 | Perch-specific tools | Timers, device controls, notifications, activities/agent requests and plugin cards | These remain native Perch features, with their existing live acceptance requirements |
 
 ## Verification boundary

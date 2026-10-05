@@ -148,8 +148,10 @@ impl Store {
             "usage-claude",
             "reminders",
             "hydration",
+            "business-accounts",
         ]
         .contains(&name)
+            && !valid(name, "^business-history-[a-f0-9]{24}$")
         {
             return err("Unknown state store");
         };
