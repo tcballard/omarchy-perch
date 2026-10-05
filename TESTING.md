@@ -266,3 +266,34 @@ ScreencopyView capture and compositor minimization, persisted schedules across
 restart, weather requests and real read-only provider account reports. Stubbed
 capture does not establish protocol availability. Account calculations must be
 compared using the definitions in BUSINESS.md, not assumed to match dashboards.
+
+
+## Business accounts and tiles — 2026-10-05
+
+The complete portable suite passed for the follow-up, including 18 Rust tests,
+compiled helper/provider fixtures and production QML. Targeted checks also cover
+stable dynamic tile instances during configuration and cancellation of refresh
+work when a tile is removed. Local socket checks remain explicitly unavailable
+in this workspace and are required in GitHub CI.
+
+- Backend: independently stored accounts; keyring stdin transport; private-file
+  modes; idempotent legacy import; connect cancellation and keyring failure;
+  disconnect cleanup; 401/403/429/server failures; provider-specific charts and
+  comparisons; currency isolation; repeated helper invocations reading/writing
+  daily history. All credentials/provider/native processes are fixture data.
+- Math: spring/fall DST boundaries, month-to-date ranges, missing and zero
+  comparison baselines, daily gaps, unsupported subscription observations and
+  history isolation by currency/time zone.
+- Production QML: two independent account tiles; metric/chart changes reusing
+  report identity; late replies; retaining data after failure; clearing after
+  account changes/removal; report/config/account/confirmation views at 344/600px;
+  legacy migration preserving currency/period/UTC; warnings treated as failures.
+
+`docs/business-report.png` is a production-QML fixture render, with fictional
+business values and explicit host-stub labelling. It is not an account screenshot.
+
+Live acceptance still required: native Zenity input/focus/cancellation; real
+Secret Service unlock/store/lookup/removal; real Stripe/Paddle/Shopify credentials
+and dashboard reconciliation with matching definitions; Omarchy profile changes,
+restart persistence and hidden-tile polling. Portable fixtures do not prove any
+of these live behaviors.

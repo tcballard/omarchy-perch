@@ -38,10 +38,22 @@ Item {
         id: weatherInstances
         preferences: prefsStore
     }
+    property alias businessManager: businessManager
+    BusinessManager {
+        id: businessManager
+        preferences: prefsStore
+    }
+    property alias businessInstances: businessInstances
+    BusinessInstances {
+        id: businessInstances
+        preferences: prefsStore
+        manager: businessManager
+    }
     property alias business: businessState
     BusinessState {
         id: businessState
         preferences: prefsStore
+        manager: businessManager
     }
     property alias dock: dockState
     DockState {

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Business accounts
+
+- Add named Stripe/Paddle/Shopify accounts, colours, guided credential setup,
+  explicit Secret Service/private-file storage, connection tests and disconnect.
+- Add up to eight independent business tiles with metric, account, period,
+  currency/time-zone and chart configuration, plus shared request caching.
+- Add month-to-date and previous-period comparisons using IANA/DST boundaries,
+  Shopify store zones and explicit unavailable/zero-baseline states.
+- Persist bounded Stripe subscription observations without invented backfill.
+  Preserve legacy single-account settings through an idempotent migration.
+- Keep real account, native keyring/dialog and Omarchy acceptance outstanding.
+
 ## Unreleased — Dock layouts
 
 - Add the visual dock editor, mixed app/file/folder/link/tool tiles, wide tiles,

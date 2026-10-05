@@ -195,3 +195,35 @@ Acceptance: production service and card tests, all-edge overflow/keyboard/drag
 checks, isolated backend state tests, strict lint/build/package checks and fixture
 renders. Actual Hyprland focus, edge input, hotplug and account integrations must
 be recorded separately from host-stub evidence. Track concrete status in GAPS.md.
+
+## Business accounts and independent tiles — 2026-10-05
+
+Accepted follow-up: named accounts/stores, independently configured metric tiles,
+calendar periods and comparisons, persistent Stripe subscription observations,
+and guided credential setup. Remains inside the existing hosted Item/service
+architecture, using the reviewed bounded Rust process runner and private Store.
+
+- Up to 12 backend-owned accounts. QML receives IDs, display names/colours,
+  provider/sandbox/storage metadata only. Secret Service uses `secret-tool` with
+  Perch-specific attributes and stdin. Explicit private-file storage is also
+  available; it is owner-only, not encrypted. A `zenity --forms` dialog collects
+  credentials directly into the helper; import preserves existing private files.
+- Up to eight profile-owned business tiles reference account IDs. Credentials,
+  registry and observations never enter shell preferences or dock exports.
+  Imported profiles on a different machine require local account selection.
+- One shared report worker, bounded queue and 16-entry in-memory cache, shared by
+  identical account/period/currency/zone requests. Metric/chart changes reuse the
+  report. Hidden tiles stop requesting. Late responses cannot replace a changed
+  account/configuration; owned timers cancel on tile removal.
+- chrono-tz 0.10.4 supplies IANA/DST boundaries. Stripe defaults to local time;
+  migrated connections retain UTC. Paddle uses UTC and Shopify reads the store's
+  IANA zone/currency. Comparisons disclose their date range and incomplete day.
+  Shopify comparisons beyond standard 60-day access are explicitly unavailable.
+- Stripe history records successful visible-tile refreshes, up to 400 daily
+  account/currency/zone observations per account. Missing/unsupported days remain
+  gaps. No invented backfill, LTV or churn calculations. Disconnect removes
+  Perch credentials/history while preserving externally imported source files.
+- Acceptance: compiled-helper account/provider fixtures, failure/cancellation and
+  private-store checks, deterministic DST/history math, production QML at narrow
+  and normal widths, migration, stale-response isolation and teardown. Real
+  keyring/native-dialog/provider/Omarchy acceptance remains a separate live gate.

@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),p=require('../BusinessPolicy.js'),d=require('../DockPolicy.js');
+const account={id:'a'.repeat(24),revision:'one',provider:'stripe'};
+const c=p.tile({accountId:account.id,metric:'MRR estimate',period:'mtd',currency:'GBP',timeZone:'Europe/London'});
+assert.equal(c.accountId,account.id);assert.equal(c.period,'mtd');
+assert.equal(p.tile({accountId:'../secret',timeZone:'x;echo hi',metric:'run code'}).accountId,'');
+assert.equal(p.key(c,account),p.key({...c,metric:'Revenue',chart:false},account));
+assert.notEqual(p.key(c,account),p.key({...c,currency:'USD'},account));
+assert.notEqual(p.key(c,account),p.key(c,{...account,revision:'two'}));
+assert.equal(Object.keys(p.tiles(Object.fromEntries(Array.from({length:20},(_,i)=>['business:'+i,c])))).length,8);
+const backup=d.backup({businessTiles:{business:c},business:{path:'/private/key'},businessAccounts:[{apiKey:'secret'}],dockProfiles:[]});
+assert(!backup.includes('secret'));assert(!backup.includes('/private/key'));assert.equal(JSON.parse(backup).current.businessTiles.business.period,'mtd');
+assert.equal(p.metric({metrics:[{label:'Revenue',value:4}]},c,account),null);
+console.log('Business tile bounds, account/request isolation, metric selection and secret-free profiles passed.');

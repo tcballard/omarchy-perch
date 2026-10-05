@@ -47,7 +47,6 @@ fn fetch(url: &str, headers: &[String], body: Option<&Value>) -> Result<Value> {
             "--disable",
             "--config",
             "-",
-            "--fail",
             "--silent",
             "--proto",
             "=https",
@@ -55,6 +54,8 @@ fn fetch(url: &str, headers: &[String], body: Option<&Value>) -> Result<Value> {
             "7",
             "--max-filesize",
             "1048576",
+            "--write-out",
+            "\n%{http_code}",
         ],
         8.0,
         1048576,
@@ -63,7 +64,19 @@ fn fetch(url: &str, headers: &[String], body: Option<&Value>) -> Result<Value> {
     .map_err(|_| {
         "Provider request failed. Check the read-only credentials, permissions and connection."
     })?;
-    serde_json::from_slice(&bytes).map_err(|_| "Provider returned an invalid response".into())
+    let bytes = bytes.trim_ascii_end();
+    let split = bytes
+        .iter()
+        .rposition(|b| *b == b'\n')
+        .ok_or("Provider response status unavailable")?;
+    let status = std::str::from_utf8(&bytes[split + 1..]).unwrap_or("");
+    match status {
+        "200"=>serde_json::from_slice(&bytes[..split]).map_err(|_| "Provider returned an invalid response".into()),
+        "401"=>err("Credentials rejected or expired; reconnect this account"),
+        "403"=>err("Permission denied. Stripe: Balance and Subscriptions read; Paddle: metrics.read; Shopify: installed read_orders scope"),
+        "429"=>err("Provider rate limit reached; wait before refreshing"),
+        _=>err("Provider request failed; service unavailable or unsupported request. Last successful values are retained."),
+    }
 }
 pub fn load_credentials(path: &Path) -> Result<Value> {
     let meta = fs::symlink_metadata(path)?;
@@ -335,19 +348,104 @@ pub fn read_metrics(p: &Value) -> Result<Value> {
     if !path.is_absolute() {
         return err("Choose an absolute credential file path");
     }
-    let credentials = load_credentials(path)?;
-    let provider = s(&credentials, "provider");
-    let days = p["days"]
-        .as_i64()
-        .filter(|n| [1, 7, 30].contains(n))
-        .ok_or("Choose 1, 7 or 30 days")?;
-    let today = Utc::now().date_naive();
-    let start = today - Duration::days(days - 1);
-    let end = today + Duration::days(1);
+    report(&load_credentials(path)?, p)
+}
+pub fn report(credentials: &Value, p: &Value) -> Result<Value> {
+    use crate::business_period::{compare, period, zone};
+    let provider = s(credentials, "provider");
+    let key = if !s(p, "period").is_empty() {
+        s(p, "period")
+    } else {
+        match p["days"].as_i64().unwrap_or(7) {
+            1 => "today",
+            7 => "7d",
+            30 => "30d",
+            _ => return err("Invalid reporting period"),
+        }
+    };
     let started = Instant::now();
-    let mut result = match provider {
+    let now = Utc::now();
+    let mut currency = s(p, "currency").to_uppercase();
+    if currency.is_empty() {
+        currency = "USD".into();
+    }
+    let mut zone_name = s(p, "timeZone").to_string();
+    let mut shop_headers = Vec::new();
+    let mut shop_sandbox = Value::Null;
+    if provider == "shopify" {
+        let shop = s(credentials, "shop");
+        if !valid(shop, "^[a-z0-9][a-z0-9-]{0,62}\\.myshopify\\.com$") {
+            return err("Use the store's myshopify.com domain");
+        }
+        let auth = fetch(
+            &format!("https://{shop}/admin/oauth/access_token"),
+            &[],
+            Some(
+                &json!({"grant_type":"client_credentials","client_id":secret(s(credentials,"clientId"))?,"client_secret":secret(s(credentials,"clientSecret"))?}),
+            ),
+        )?;
+        shop_headers.push(format!(
+            "X-Shopify-Access-Token: {}",
+            secret(s(&auth, "access_token"))?
+        ));
+        let info = fetch(
+            &format!("https://{shop}/admin/api/2026-07/graphql.json"),
+            &shop_headers,
+            Some(&json!({"query":"{shop{currencyCode ianaTimezone plan{partnerDevelopment}}}"})),
+        )?;
+        if info.get("errors").is_some() {
+            return err(
+                "Shopify store query denied; verify the installed app and read_orders scope",
+            );
+        }
+        shop_sandbox = info["data"]["shop"]["plan"]["partnerDevelopment"].clone();
+        currency = s(&info["data"]["shop"], "currencyCode").into();
+        zone_name = s(&info["data"]["shop"], "ianaTimezone").into();
+        if zone_name.is_empty() {
+            return err("Shopify did not report its time zone");
+        }
+    } else if provider == "paddle" {
+        zone_name = "UTC".into();
+    }
+    let period = period(key, zone(&zone_name)?, now)?;
+    let mut series = json!({});
+    let mut comparison_unavailable = false;
+    let (mut current, previous) = match provider {
+        "stripe" => {
+            let key = secret(s(credentials, "apiKey"))?;
+            if !key.starts_with("rk_live_") && !key.starts_with("rk_test_") {
+                return err("Use a Stripe restricted read-only key");
+            }
+            exponent(&currency)?;
+            let rows = stripe_pages(
+                "balance_transactions",
+                key,
+                &format!(
+                    "created[gte]={}&created[lt]={}",
+                    period.previous_start.timestamp(),
+                    period.end.timestamp()
+                ),
+                started,
+            )?;
+            let subs = stripe_pages("subscriptions", key, "status=all", started)?;
+            let select = |start: i64, end: i64| {
+                rows.iter()
+                    .filter(|r| r["created"].as_i64().is_some_and(|t| t >= start && t < end))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            };
+            let current_rows = select(period.start.timestamp(), period.end.timestamp());
+            let prior_rows = select(
+                period.previous_start.timestamp(),
+                period.previous_end.timestamp(),
+            );
+            let mut previous = stripe_result(&prior_rows, &[], &currency)?;
+            previous["metrics"].as_array_mut().unwrap().truncate(2); // No invented historical subscription snapshot.
+            series_for_rows(&current_rows, &period, &currency, true, &mut series)?;
+            (stripe_result(&current_rows, &subs, &currency)?, previous)
+        }
         "paddle" => {
-            let key = secret(s(&credentials, "apiKey"))?;
+            let key = secret(s(credentials, "apiKey"))?;
             let host = if key.starts_with("pdl_sdbx_apikey_") {
                 "sandbox-api.paddle.com"
             } else if key.starts_with("pdl_live_apikey_") {
@@ -356,61 +454,86 @@ pub fn read_metrics(p: &Value) -> Result<Value> {
                 return err("Use a Paddle Billing API key");
             };
             let headers = [format!("Authorization: Bearer {key}")];
-            let a = fetch(
-                &format!("https://{host}/metrics/revenue?from={start}&to={end}"),
+            let end = period.last + Duration::days(1);
+            let revenue = fetch(
+                &format!(
+                    "https://{host}/metrics/revenue?from={}&to={end}",
+                    period.previous_first
+                ),
                 &headers,
                 None,
             )?;
-            let b = fetch(
-                &format!("https://{host}/metrics/monthly-recurring-revenue?from={start}&to={end}"),
+            let mrr = fetch(
+                &format!(
+                    "https://{host}/metrics/monthly-recurring-revenue?from={}&to={end}",
+                    period.previous_first
+                ),
                 &headers,
                 None,
             )?;
-            paddle_result(&a, &b)?
-        }
-        "stripe" => {
-            let key = secret(s(&credentials, "apiKey"))?;
-            if !key.starts_with("rk_live_") && !key.starts_with("rk_test_") {
-                return err("Use a Stripe restricted read-only key");
-            }
-            let currency = s(p, "currency");
-            exponent(currency)?;
-            let from = start.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
-            let query = format!("created[gte]={from}");
-            let rows = stripe_pages("balance_transactions", key, &query, started)?;
-            let subs = stripe_pages("subscriptions", key, "status=all", started)?;
-            stripe_result(&rows, &subs, currency)?
+            let slice = |v: &Value,
+                         first: chrono::NaiveDate,
+                         last: chrono::NaiveDate|
+             -> Result<Value> {
+                let rows = v["data"]["timeseries"]
+                    .as_array()
+                    .ok_or("Paddle series unavailable")?;
+                if rows.len() > 64 {
+                    return err("Provider returned an oversized series");
+                }
+                let rows = rows
+                    .iter()
+                    .filter(|r| {
+                        let day = cut(s(r, "timestamp"), 10);
+                        day >= first.to_string() && day <= last.to_string()
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>();
+                Ok(
+                    json!({"data":{"timeseries":rows,"currency_code":v["data"]["currency_code"],"updated_at":v["data"]["updated_at"]}}),
+                )
+            };
+            let a = slice(&revenue, period.first, period.last)?;
+            let b = slice(&mrr, period.first, period.last)?;
+            currency = s(&a["data"], "currency_code").into();
+            let current = paddle_result(&a, &b)?;
+            series["Net revenue"] = current["chart"].clone();
+            let divisor = 10f64.powi(exponent(s(&b["data"], "currency_code"))? as i32);
+            let points=b["data"]["timeseries"].as_array().unwrap().iter().map(|r|Ok(json!({"date":cut(s(r,"timestamp"),10),"value":amount(&r["amount"])? as f64/divisor}))).collect::<Result<Vec<_>>>()?;
+            series["MRR"] = json!(points);
+            series["ARR"] = json!(points
+                .iter()
+                .map(|p| json!({"date":p["date"],"value":p["value"].as_f64().unwrap()*12.0}))
+                .collect::<Vec<_>>());
+            (
+                current,
+                paddle_result(
+                    &slice(&revenue, period.previous_first, period.previous_last)?,
+                    &slice(&mrr, period.previous_first, period.previous_last)?,
+                )?,
+            )
         }
         "shopify" => {
-            let shop = s(&credentials, "shop");
-            if !valid(shop, "^[a-z0-9][a-z0-9-]{0,62}\\.myshopify\\.com$") {
-                return err("Use the store's myshopify.com domain");
-            }
-            let client = secret(s(&credentials, "clientId"))?;
-            let key = secret(s(&credentials, "clientSecret"))?;
-            let auth = fetch(
-                &format!("https://{shop}/admin/oauth/access_token"),
-                &[],
-                Some(
-                    &json!({"grant_type":"client_credentials","client_id":client,"client_secret":key}),
-                ),
-            )?;
-            let token = secret(s(&auth, "access_token"))?;
-            let headers = [format!("X-Shopify-Access-Token: {token}")];
-            let query="query($after:String,$query:String!){shop{currencyCode} orders(first:100,after:$after,query:$query,sortKey:CREATED_AT){nodes{createdAt cancelledAt test currentTotalPriceSet{shopMoney{amount currencyCode}}}pageInfo{hasNextPage endCursor}}}";
+            let shop = s(credentials, "shop");
+            comparison_unavailable = period.previous_start < now - Duration::days(60);
+            let query_start = if comparison_unavailable {
+                period.start
+            } else {
+                period.previous_start
+            };
+            let query="query($after:String,$query:String!){orders(first:100,after:$after,query:$query,sortKey:CREATED_AT){nodes{createdAt cancelledAt test currentTotalPriceSet{shopMoney{amount currencyCode}}}pageInfo{hasNextPage endCursor}}}";
             let mut after = Value::Null;
             let mut rows = Vec::new();
             let mut complete = false;
-            let mut currency = String::new();
             for _ in 0..100 {
                 if started.elapsed().as_secs() > 35 {
                     return err("Report exceeded its time budget; no partial total shown");
                 }
                 let result = fetch(
                     &format!("https://{shop}/admin/api/2026-07/graphql.json"),
-                    &headers,
+                    &shop_headers,
                     Some(
-                        &json!({"query":query,"variables":{"after":after,"query":format!("created_at:>={start} created_at:<{end}")}}),
+                        &json!({"query":query,"variables":{"after":after,"query":format!("created_at:>='{}' created_at:<'{}'",query_start.to_rfc3339(),period.end.to_rfc3339())}}),
                     ),
                 )?;
                 if result.get("errors").is_some() {
@@ -418,7 +541,6 @@ pub fn read_metrics(p: &Value) -> Result<Value> {
                         "Shopify query failed; check read_orders permissions and API compatibility",
                     );
                 }
-                currency = s(&result["data"]["shop"], "currencyCode").into();
                 let orders = &result["data"]["orders"];
                 let batch = orders["nodes"].as_array().ok_or("Orders unavailable")?;
                 if batch.len() > 100 {
@@ -436,13 +558,135 @@ pub fn read_metrics(p: &Value) -> Result<Value> {
                 after = next.clone();
             }
             if !complete {
-                return err("Report exceeds 10,000 orders; no partial total shown");
+                return err("Report exceeds 10,000 orders including the comparison period; no partial total shown");
             }
-            shopify_result(&rows, &currency)?
+            let select =
+                |start: chrono::DateTime<Utc>, end: chrono::DateTime<Utc>| -> Result<Vec<Value>> {
+                    let mut result = Vec::new();
+                    for row in &rows {
+                        let at = chrono::DateTime::parse_from_rfc3339(s(row, "createdAt"))?
+                            .with_timezone(&Utc);
+                        if at >= start && at < end {
+                            result.push(row.clone());
+                        }
+                    }
+                    Ok(result)
+                };
+            let current = select(period.start, period.end)?;
+            let previous = select(period.previous_start, period.previous_end)?;
+            series_for_rows(&current, &period, &currency, false, &mut series)?;
+            (
+                shopify_result(&current, &currency)?,
+                shopify_result(&previous, &currency)?,
+            )
         }
         _ => return err("Credential provider must be stripe, paddle or shopify"),
     };
-    result["provider"] = provider.into();
-    result["updatedAt"] = now().into();
-    Ok(result)
+    let previous = if comparison_unavailable {
+        json!({"metrics":[]})
+    } else {
+        previous
+    };
+    compare(&mut current, &previous);
+    for points in series
+        .as_object_mut()
+        .ok_or("Invalid chart data")?
+        .values_mut()
+    {
+        let observed = points.as_array().ok_or("Invalid chart series")?.clone();
+        let mut filled = Vec::new();
+        let mut day = period.first;
+        while day <= period.last {
+            let value = observed
+                .iter()
+                .find(|p| s(p, "date") == day.to_string())
+                .map(|p| p["value"].clone())
+                .unwrap_or(Value::Null);
+            filled.push(json!({"date":day.to_string(),"value":value}));
+            day += Duration::days(1);
+        }
+        *points = json!(filled);
+    }
+    let first_label = current["metrics"]
+        .as_array()
+        .and_then(|m| m.first())
+        .map(|m| s(m, "label"))
+        .unwrap_or("");
+    current["chart"] = series[first_label].clone();
+    current["series"] = series;
+    current["period"] = period.metadata();
+    if provider == "paddle" {
+        current["period"]["comparisonLabel"] =
+            "Previous equal-length UTC day range; current day may be incomplete".into();
+    }
+    current["note"] = s(&current, "note")
+        .replace(
+            "UTC days.",
+            "See reporting time zone and comparison dates below.",
+        )
+        .into();
+    current["sandbox"] = match provider {
+        "stripe" => json!(s(credentials, "apiKey").starts_with("rk_test_")),
+        "paddle" => json!(s(credentials, "apiKey").starts_with("pdl_sdbx_")),
+        _ => shop_sandbox,
+    };
+    if comparison_unavailable {
+        current["period"]["comparisonLabel"]="Comparison unavailable: this period extends beyond Shopify’s standard 60-day order access".into();
+    }
+    current["provider"] = provider.into();
+    current["updatedAt"] = now.timestamp().into();
+    current["currency"] = currency.into();
+    Ok(current)
+}
+fn series_for_rows(
+    rows: &[Value],
+    period: &crate::business_period::Period,
+    currency: &str,
+    stripe: bool,
+    series: &mut Value,
+) -> Result<()> {
+    let mut grouped = std::collections::BTreeMap::<String, Vec<Value>>::new();
+    for row in rows {
+        let at = if stripe {
+            row["created"].as_i64().ok_or("Missing date")?
+        } else {
+            chrono::DateTime::parse_from_rfc3339(s(row, "createdAt"))?.timestamp()
+        };
+        grouped
+            .entry(period.day(at)?)
+            .or_default()
+            .push(row.clone());
+    }
+    let labels = if stripe {
+        vec!["Revenue", "Net after fees"]
+    } else {
+        vec!["Order value", "Orders", "Average order value"]
+    };
+    for label in &labels {
+        series[*label] = json!([]);
+    }
+    let mut date = period.first;
+    while date <= period.last {
+        let rows = grouped.remove(&date.to_string()).unwrap_or_default();
+        let result = if stripe {
+            stripe_result(&rows, &[], currency)?
+        } else {
+            shopify_result(&rows, currency)?
+        };
+        for label in &labels {
+            let value = result["metrics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|m| s(m, "label") == *label)
+                .map(|m| m["value"].clone())
+                .unwrap_or(Value::Null);
+            series[*label]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"date":date.to_string(),"value":value}));
+        }
+        date += Duration::days(1);
+    }
+    Ok(())
 }

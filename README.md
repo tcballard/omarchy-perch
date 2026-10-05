@@ -13,7 +13,9 @@ Music, files, meetings, timers and live progress at any edge of your Omarchy des
 The [Dock editor](DOCKS.md) adds mixed app/file/link/tool tiles, wide tiles,
 spacers, scrolling, auto-hide, saved profiles, schedules and backups. New cards
 cover reminders, hydration, running windows, storage, Trash, multiple weather
-locations, local AI activity charts and read-only business metrics.
+locations, local AI activity charts and read-only business metrics. Business
+tiles support named accounts, guided setup, independent metrics, period
+comparisons and persistent Stripe subscription history.
 
 ![Dock editor rendered from production QML with fictional data](docs/dock-editor.png)
 

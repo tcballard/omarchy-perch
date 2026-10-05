@@ -412,3 +412,62 @@ fn local_usage_history_deduplicates_cumulative_and_streamed_counters() {
     assert_eq!(result["days"][0]["tokens"], 40);
     assert!(!string_json(&result).contains("never returned"));
 }
+
+#[test]
+fn business_periods_follow_calendar_and_dst() {
+    use crate::business_period::*;
+    use chrono::{TimeZone, Utc};
+    let london = zone("Europe/London").unwrap();
+    let p = period(
+        "today",
+        london,
+        Utc.with_ymd_and_hms(2026, 3, 29, 12, 0, 0).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(p.start.to_rfc3339(), "2026-03-29T00:00:00+00:00");
+    assert_eq!(p.previous_end.to_rfc3339(), "2026-03-28T13:00:00+00:00");
+    let p = period(
+        "today",
+        london,
+        Utc.with_ymd_and_hms(2026, 10, 25, 12, 0, 0).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(p.start.to_rfc3339(), "2026-10-24T23:00:00+00:00");
+    let p = period(
+        "mtd",
+        london,
+        Utc.with_ymd_and_hms(2026, 10, 5, 12, 0, 0).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(p.first.to_string(), "2026-10-01");
+    assert_eq!(p.previous_first.to_string(), "2026-09-26");
+    assert!(zone("../UTC").is_err());
+    assert!(period("annual", london, Utc::now()).is_err());
+    let mut current = json!({"metrics":[{"label":"Revenue","currency":"GBP","value":5},{"label":"MRR","currency":"GBP","value":3}]});
+    compare(
+        &mut current,
+        &json!({"metrics":[{"label":"Revenue","currency":"GBP","value":0},{"label":"MRR","currency":"USD","value":2}]}),
+    );
+    assert!(current["metrics"][0]["changePercent"].is_null());
+    assert!(current["metrics"][1]["previous"].is_null());
+}
+#[test]
+fn business_history_keeps_gaps_and_currency_isolation() {
+    use crate::business_accounts::update_history;
+    let mut samples = vec![
+        json!({"date":"2026-10-03","zone":"Europe/London","currency":"GBP","values":{"MRR estimate":100},"at":10}),
+        json!({"date":"2026-10-03","zone":"Europe/London","currency":"USD","values":{"MRR estimate":999},"at":11}),
+    ];
+    let report = || json!({"period":{"first":"2026-10-03","last":"2026-10-05","previousLast":"2026-10-03","timeZone":"Europe/London"},"currency":"GBP","updatedAt":100,"series":{},"metrics":[{"label":"MRR estimate","currency":"gbp","value":150}]});
+    let mut r = report();
+    update_history(&mut samples, &mut r).unwrap();
+    assert_eq!(r["metrics"][0]["changePercent"].as_f64(), Some(50.0));
+    assert_eq!(r["series"]["MRR estimate"][0]["value"], 100);
+    assert!(r["series"]["MRR estimate"][1]["value"].is_null());
+    let mut r = report();
+    update_history(&mut samples, &mut r).unwrap();
+    assert_eq!(samples.len(), 3);
+    r["metrics"] = json!([]);
+    update_history(&mut samples, &mut r).unwrap();
+    assert!(r["series"]["MRR estimate"][2]["value"].is_null());
+}

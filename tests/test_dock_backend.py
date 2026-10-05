@@ -45,15 +45,16 @@ else:raise SystemExit(1)
     (fake/'curl').write_text("""#!/usr/bin/env python3
 import json,sys
 config=sys.stdin.read()
-assert sys.argv[1:]==['--disable','--config','-','--fail','--silent','--proto','=https','--max-time','7','--max-filesize','1048576']
+assert sys.argv[1:]==['--disable','--config','-','--silent','--proto','=https','--max-time','7','--max-filesize','1048576','--write-out','\\n%{http_code}']
 if '/admin/oauth/access_token' in config:
     assert 'Content-Type: application/x-www-form-urlencoded' in config
     assert 'data-urlencode = "client_secret=fixture-secret"' in config
     print(json.dumps({'access_token':'fixture-token'}))
 elif '/graphql.json' in config:
     assert 'X-Shopify-Access-Token: fixture-token' in config
-    print(json.dumps({'data':{'shop':{'currencyCode':'USD'},'orders':{'nodes':[],'pageInfo':{'hasNextPage':False}}}}))
+    print(json.dumps({'data':{'shop':{'currencyCode':'USD','ianaTimezone':'America/New_York'},'orders':{'nodes':[],'pageInfo':{'hasNextPage':False}}}}))
 else: raise SystemExit(1)
+print('200')
 """);(fake/'curl').chmod(0o755)
     credentials=home/'business.json'
     credentials.write_text(json.dumps({'provider':'shopify','shop':'fixture.myshopify.com','clientId':'fixture-client','clientSecret':'fixture-secret'}));credentials.chmod(0o600)

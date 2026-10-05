@@ -60,7 +60,9 @@ are excluded. Only one dock/profile is active at a time.
   charts. Charts scan bounded metadata from their local session logs, never
   display prompts, and are not account-wide billing totals. Truncation is marked.
 - **Business:** read-only Stripe, Paddle or Shopify metrics and daily charts.
-  See [BUSINESS.md](BUSINESS.md) for setup and exact metric definitions.
+  Up to 12 named accounts and eight independent tiles, guided setup, reporting
+  comparisons and persistent Stripe history. See [BUSINESS.md](BUSINESS.md) for
+  setup and exact metric definitions.
 
 Existing music, ICS calendar/meetings, timers, file shelf, clipboard, device
 controls, notifications and agent activities remain available in the Library.
